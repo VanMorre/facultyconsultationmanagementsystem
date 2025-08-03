@@ -9,7 +9,7 @@ import { AiOutlineMail, AiOutlineLock } from "react-icons/ai";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 
 import CryptoJS from "crypto-js";
 import Link from "next/link";
@@ -17,12 +17,13 @@ import Link from "next/link";
 const SECRET_KEY = "my_secret_key_123456";
 
 export default function AdminLogin() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [captchaText, setCaptchaText] = useState("");
   const [captchaInput, setCaptchaInput] = useState("");
   const captchaCanvasRef = useRef(null);
-   const router = useRouter();
+
+  const navigate = useNavigate();
   const [isLocked, setIsLocked] = useState(false);
   const [lockoutTime, setLockoutTime] = useState(0);
 
@@ -104,14 +105,11 @@ export default function AdminLogin() {
         case "admin":
           navigate("/admin-dashboard");
           break;
-        case "purchaser":
+        case "teacher":
           navigate("/purchaser-dashboard");
           break;
-        case "store":
+        case "student":
           navigate("/store-dashboard");
-          break;
-        case "warehouse":
-          navigate("/warehouse-dashboard");
           break;
         default:
           sessionStorage.clear();
@@ -148,7 +146,7 @@ export default function AdminLogin() {
     try {
       const response = await axios.post(
         "http://localhost/rai/app/api_raielectrical/loginphp/loginform.php",
-        { username, password }
+        { email, password }
       );
 
       if (response.data.success) {
@@ -251,7 +249,7 @@ export default function AdminLogin() {
           >
             <div className="relative w-[320px] h-auto ">
               <Image
-                src="/images/rai.png"
+                src="/images/coclogo-removebg.png"
                 alt="Logo"
                 width={320}
                 height={170}
@@ -262,7 +260,7 @@ export default function AdminLogin() {
 
             <br />
             <h1 className="text-black font-semibold text-xl">
-              Phinma Cagayan de oro City
+              Phinma Cagayan de oro College
             </h1>
             <h1 className="text-black font-semibold text-xl ml-6">
               Max Sunniel St. Cagayan de oro City
@@ -292,17 +290,17 @@ export default function AdminLogin() {
             variants={containerVariants}
           >
             <motion.div variants={itemVariants} className="relative">
-              <Label htmlFor="username" className="text-black mb-2">
-                Username
+              <Label htmlFor="email" className="text-black mb-2">
+                Email
               </Label>
               <div className="relative">
                 <AiOutlineMail className="absolute top-1/2 left-3 transform -translate-y-1/2 text-black-400" />
                 <Input
-                  id="username"
+                  id="email"
                   type="text"
                   className="pl-10 w-full h-10 border border-gray-500 bg-transparent text-black rounded-md"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   autoFocus
                 />
               </div>
