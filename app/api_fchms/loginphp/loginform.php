@@ -18,13 +18,13 @@ if ($_SERVER["REQUEST_METHOD"] == "OPTIONS") {
 $data = json_decode(file_get_contents("php://input"), true);
 
 // Validate input
-if (!isset($data['username'], $data['password'])) {
-    echo json_encode(['success' => false, 'message' => 'Invalid request! Missing username or password.']);
+if (!isset($data['email'], $data['password'])) {
+    echo json_encode(['success' => false, 'message' => 'Invalid request! Missing email  or password.']);
     exit;
 }
 
 
-$username = trim($data['username']);
+$email = trim($data['email']);
 $password = trim($data['password']);
 $hashedPassword = sha1($password); // ⚠️ For production, use password_hash and password_verify
 
@@ -35,9 +35,9 @@ $stmt = $conn->prepare("
            r.role_name 
     FROM tbl_users u 
     JOIN tbl_role r ON u.role_id = r.role_id
-    WHERE BINARY u.username = :username
+    WHERE BINARY u.email  = :email 
 ");
-$stmt->bindParam(':username', $username, PDO::PARAM_STR);
+$stmt->bindParam(':username', $email , PDO::PARAM_STR);
 $stmt->execute();
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 

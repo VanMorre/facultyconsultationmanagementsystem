@@ -106,10 +106,10 @@ export default function AdminLogin() {
           navigate("/admin-dashboard");
           break;
         case "teacher":
-          navigate("/purchaser-dashboard");
+          navigate("/teacher-dashboard");
           break;
         case "student":
-          navigate("/store-dashboard");
+          navigate("/student-dashboard");
           break;
         default:
           sessionStorage.clear();
