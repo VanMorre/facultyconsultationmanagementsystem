@@ -134,7 +134,7 @@ export default function AdminLogin() {
 
     try {
       const response = await axios.post(
-        "http://localhost/rai/app/api_raielectrical/loginphp/loginform.php",
+        "http://localhost/fchms/app/api_fchms/loginphp/loginform.php",
         { email, password }
       );
 
@@ -157,15 +157,13 @@ export default function AdminLogin() {
             case "admin":
               navigate("/admin-dashboard");
               break;
-            case "purchaser":
-              navigate("/purchaser-dashboard");
+            case "teacher":
+              navigate("/teacher-dashboard");
               break;
-            case "store":
-              navigate("/store-dashboard");
+            case "student":
+              navigate("/student-dashboard");
               break;
-            case "warehouse":
-              navigate("/warehouse-dashboard");
-              break;
+       
             default:
               toast.error("Unauthorized role!");
               sessionStorage.clear();

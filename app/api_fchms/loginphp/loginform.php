@@ -6,7 +6,7 @@ header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json");
 
 session_start();
-include '../dbconnection.php'; // Make sure this file sets up $conn (PDO)
+include '../dbconnection.php'; 
 
 // Handle preflight request
 if ($_SERVER["REQUEST_METHOD"] == "OPTIONS") {
