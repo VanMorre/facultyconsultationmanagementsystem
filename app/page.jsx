@@ -1,6 +1,6 @@
 "use client";
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
-import ProtectedRoute from "./pages/routes/ProtectedRoute";
+import ProtectedRoute from "./users/routes/ProtectedRoute";
 import AdminDashboard from "./users/admin/admindashboard/page";
 import TeacherDashboard from "./users/teacher/teacherdashboard/page";
 import StudentDashboard from "./users/student/studentdashboard/page";
@@ -25,7 +25,7 @@ function App() {
           path="/teacher-dashboard"
           element={
             <ProtectedRoute allowedRoles={["teacher"]}>
-              <PurchaserDashboard />
+              <TeacherDashboard />
             </ProtectedRoute>
           }
         />
@@ -33,7 +33,7 @@ function App() {
           path="/student-dashboard"
           element={
             <ProtectedRoute allowedRoles={["student"]}>
-              <StoreDashboard />
+              <StudentDashboard />
             </ProtectedRoute>
           }
         />

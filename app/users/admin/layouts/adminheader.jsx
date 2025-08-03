@@ -22,7 +22,7 @@ import {
 import axios from "axios";
 
 import { Menu, LogOut, ChevronDown, Plus } from "lucide-react";
-import useLogout from "@/app/pages/hooks/logout";
+import useLogout from "@/app/users/hooks/logout";
 import CryptoJS from "crypto-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TbUserFilled } from "react-icons/tb";
