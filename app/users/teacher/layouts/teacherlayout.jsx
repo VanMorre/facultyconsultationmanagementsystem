@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import TeacherSidebar from '../../teacher/layouts/adminsidebar';
+import TeacherSidebar from '../../teacher/layouts/teachersidebar';
 import TeacherHeader from '../../teacher/layouts/teacherheader';
 
 const TeacherLayout = ({ children, currentView, setCurrentView }) => {

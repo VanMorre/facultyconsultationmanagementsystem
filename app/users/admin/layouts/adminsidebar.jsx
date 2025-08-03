@@ -5,8 +5,9 @@ import { LayoutDashboard } from "lucide-react";
 import {
   TbCalendarCheck,
   TbClipboardText,
-  TbSchool,
+  TbUsers,
   TbBuildingCommunity,
+  TbReport
 } from "react-icons/tb";
 
 const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
@@ -47,9 +48,9 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
         <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
-            currentView === "users" ? "bg-gray-200" : ""
+            currentView === "availability" ? "bg-gray-200" : ""
           }`}
-          onClick={() => setCurrentView("users")}
+          onClick={() => setCurrentView("availability")}
         >
           <TbCalendarCheck
             className="mr-1"
@@ -63,9 +64,9 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
         <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
-            currentView === "reports" ? "bg-gray-200" : ""
+            currentView === "consultation" ? "bg-gray-200" : ""
           }`}
-          onClick={() => setCurrentView("reports")}
+          onClick={() => setCurrentView("consultation")}
         >
           <TbClipboardText
             className="mr-1"
@@ -83,7 +84,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           }`}
           onClick={() => setCurrentView("faculty")}
         >
-          <TbSchool
+          <TbUsers
             className="mr-1"
             style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
           />
@@ -103,6 +104,23 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           />
           {!collapsed && (
             <span className="pr-8 font-semibold">Departments</span>
+          )}
+        </Button>
+
+
+          <Button
+          variant="ghost"
+          className={`w-full justify-start text-black ${
+            currentView === "reports" ? "bg-gray-200" : ""
+          }`}
+          onClick={() => setCurrentView("reports")}
+        >
+          <TbReport
+            className="mr-1"
+            style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
+          />
+          {!collapsed && (
+            <span className="pr-8 font-semibold">Reports</span>
           )}
         </Button>
       </nav>

@@ -91,7 +91,7 @@ const TeacherDashboard = () => {
   };
 
   return (
-    <AdminLayout
+    <TeacherLayout
       currentView={currentView}
       setCurrentView={(v) => {
         if (v !== currentView) {
@@ -120,7 +120,7 @@ const TeacherDashboard = () => {
               >
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-lg font-bold text-black">
-                    Teacher consultation render hours
+                    Number of Book Consultation
                   </h2>
                   <motion.select
                     whileHover={{ scale: 1.05 }}
@@ -166,7 +166,7 @@ const TeacherDashboard = () => {
                       ],
                       datasets: [
                         {
-                          label: "RenderHours",
+                          label: "Book Consultation",
                           data: [5, 8, 6, 10, 7, 12, 9, 11, 6, 8, 10, 7], // sample values
                           borderColor: "#246919ff", // green-800
                           backgroundColor: "rgba(31, 118, 110, 0.2)", // light fill of green-800
@@ -202,7 +202,7 @@ const TeacherDashboard = () => {
           </>
         )}
       </motion.div>
-    </AdminLayout>
+    </TeacherLayout>
   );
 };
 export default TeacherDashboard;

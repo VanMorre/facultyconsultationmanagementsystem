@@ -5,7 +5,7 @@ import { LayoutDashboard } from "lucide-react";
 import {
   TbCalendarCheck,
   TbClipboardText,
-  TbSchool,
+  TbMailFilled,
   TbBuildingCommunity,
 } from "react-icons/tb";
 
@@ -47,62 +47,48 @@ const TeacherSidebar = ({ collapsed, setCurrentView, currentView }) => {
         <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
-            currentView === "users" ? "bg-gray-200" : ""
+            currentView === "availability" ? "bg-gray-200" : ""
           }`}
-          onClick={() => setCurrentView("users")}
+          onClick={() => setCurrentView("availability")}
         >
           <TbCalendarCheck
             className="mr-1"
             style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
           />
           {!collapsed && (
-            <span className="pr-8 font-semibold">Availability</span>
+            <span className="pr-8 font-semibold"> My Availability</span>
           )}
         </Button>
 
         <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
-            currentView === "reports" ? "bg-gray-200" : ""
+            currentView === "consultation" ? "bg-gray-200" : ""
           }`}
-          onClick={() => setCurrentView("reports")}
+          onClick={() => setCurrentView("consultation")}
         >
           <TbClipboardText
             className="mr-1"
             style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
           />
           {!collapsed && (
-            <span className="pr-8 font-semibold">Consultation</span>
+            <span className="pr-8 font-semibold">My Consultation</span>
           )}
         </Button>
 
         <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
-            currentView === "faculty" ? "bg-gray-200" : ""
+            currentView === "studentrequest" ? "bg-gray-200" : ""
           }`}
-          onClick={() => setCurrentView("faculty")}
+          onClick={() => setCurrentView("studentrequest")}
         >
-          <TbSchool
-            className="mr-1"
-            style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
-          />
-          {!collapsed && <span className="pr-8 font-semibold">Faculty</span>}
-        </Button>
-
-        <Button
-          variant="ghost"
-          className={`w-full justify-start text-black ${
-            currentView === "departments" ? "bg-gray-200" : ""
-          }`}
-          onClick={() => setCurrentView("departments")}
-        >
-          <TbBuildingCommunity
+          <TbMailFilled
             className="mr-1"
             style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
           />
           {!collapsed && (
-            <span className="pr-8 font-semibold">Departments</span>
+            <span className="pr-8 font-semibold">Student Request</span>
           )}
         </Button>
       </nav>

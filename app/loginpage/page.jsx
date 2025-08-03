@@ -224,6 +224,9 @@ export default function AdminLogin() {
           <h1 className="text-white font-semibold text-xl text-center">
             Phinma Cagayan de Oro College
           </h1>
+          <h1 className="text-white font-semibold text-xl text-center">
+            FCHMS PORTAL
+          </h1>
           <h2 className="text-white text-md text-center mt-1">
             Max Sunniel St. Cagayan de Oro City
           </h2>
