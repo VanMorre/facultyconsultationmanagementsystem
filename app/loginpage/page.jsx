@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import CryptoJS from "crypto-js";
 import Link from "next/link";
 import { AiOutlineLogin } from "react-icons/ai"; // Make sure this is imported
+
 const SECRET_KEY = "my_secret_key_123456";
 
 export default function AdminLogin() {
@@ -51,16 +52,26 @@ export default function AdminLogin() {
     },
   };
 
-  const logoVariants = {
-    hidden: { scale: 0.8, opacity: 0 },
+  const leftPanelVariants = {
+    hidden: { opacity: 0, x: -50 },
     visible: {
-      scale: 1,
       opacity: 1,
+      x: 0,
+      transition: { duration: 0.6, ease: "easeOut" },
+    },
+  };
+
+  const leftItemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i = 1) => ({
+      opacity: 1,
+      y: 0,
       transition: {
-        duration: 0.5,
+        delay: i * 0.2,
+        duration: 0.4,
         ease: "easeOut",
       },
-    },
+    }),
   };
 
   const generateCaptcha = () => {
@@ -214,24 +225,54 @@ export default function AdminLogin() {
 
   return (
     <div className="flex min-h-screen">
-      {/* LEFT GREEN PANEL - Background Only */}
-      <div className="w-1/2 bg-green-800 flex flex-row items-center justify-center text-white p-8 gap-6">
+      <motion.div
+        className="w-1/2 bg-green-800 flex flex-row items-center justify-center text-white p-8 gap-6"
+        variants={leftPanelVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* Text Block on Left */}
-        <div className="flex flex-col items-end text-right space-y-1">
-          <h1 className="font-semibold text-xl ">
+        <motion.div
+          className="flex flex-col items-end text-right space-y-1"
+          custom={1}
+          variants={leftItemVariants}
+        >
+          <motion.h1
+            className="font-semibold text-xl"
+            custom={1}
+            variants={leftItemVariants}
+          >
             Phinma Cagayan de Oro College
-          </h1>
-          <h1 className="font-semibold text-xl mr-18">FCHMS PORTAL</h1>
-          <h2 className="text-md mt-1 mr-5 font-semibold">
+          </motion.h1>
+          <motion.h1
+            className="font-semibold text-xl mr-18"
+            custom={2}
+            variants={leftItemVariants}
+          >
+            FCHMS PORTAL
+          </motion.h1>
+          <motion.h2
+            className="text-md mt-1 mr-5 font-semibold"
+            custom={3}
+            variants={leftItemVariants}
+          >
             Max Sunniel St. Cagayan de Oro City
-          </h2>
-        </div>
+          </motion.h2>
+        </motion.div>
 
         {/* Vertical Line in Center */}
-        <div className="w-px h-32 bg-white mx-4" />
+        <motion.div
+          className="w-px h-32 bg-white mx-4"
+          custom={4}
+          variants={leftItemVariants}
+        />
 
         {/* Image on Right */}
-        <div className="relative w-[400px] h-[160px] mb-52">
+        <motion.div
+          className="relative w-[400px] h-[160px] mb-52"
+          custom={5}
+          variants={leftItemVariants}
+        >
           <Image
             src="/images/coclogo-removebg.png"
             alt="COC Logo"
@@ -240,12 +281,15 @@ export default function AdminLogin() {
             className="mx-auto"
             priority
           />
-        </div>
-        
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* RIGHT FORM PANEL */}
-      <div className="w-1/2 flex items-center justify-center bg-white">
+      <div className="w-1/2 flex items-center justify-center bg-white relative overflow-hidden">
+        {/* Decorative Sideway Stripes */}
+        <div className="absolute top-2 right-0 w-46 h-4 bg-green-800 rotate-45 translate-x-4 -translate-y-2 shadow-md"></div>
+        <div className="absolute top-10 right-0 w-46 h-4 bg-green-800 rotate-45 translate-x-4 -translate-y-2 shadow-md"></div>
+
         <ToastContainer
           position="top-right"
           autoClose={1000}
@@ -254,7 +298,7 @@ export default function AdminLogin() {
         />
 
         <motion.div
-          className="w-full max-w-md p-10"
+          className="w-full max-w-xl min-h-[700px] p-10 bg-white rounded-lg shadow-2xl flex flex-col justify-center"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
@@ -325,6 +369,7 @@ export default function AdminLogin() {
                 className="w-full h-12 text-base p-3 border border-gray-400 rounded-md text-black"
               />
             </motion.div>
+
             <motion.div variants={itemVariants}>
               <Button
                 type="submit"
@@ -334,7 +379,7 @@ export default function AdminLogin() {
                 }`}
               >
                 {isLocked ? `Try again in ${lockoutTime}s` : "LOGIN"}
-                <AiOutlineLogin className="!w-8 !h-8 !w-8 !h-8" />
+                <AiOutlineLogin className="!w-6 !h-6" />
               </Button>
             </motion.div>
 
