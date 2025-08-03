@@ -12,7 +12,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import CryptoJS from "crypto-js";
 import Link from "next/link";
-import { AiOutlineLogin } from "react-icons/ai"; // Make sure this is imported
+
 const SECRET_KEY = "my_secret_key_123456";
 
 export default function AdminLogin() {
@@ -71,9 +71,7 @@ export default function AdminLogin() {
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let captcha = "";
     for (let i = 0; i < 6; i++) {
-      captcha += characters.charAt(
-        Math.floor(Math.random() * characters.length)
-      );
+      captcha += characters.charAt(Math.floor(Math.random() * characters.length));
     }
     setCaptchaText(captcha);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -91,9 +89,7 @@ export default function AdminLogin() {
 
   useEffect(() => {
     generateCaptcha();
-    const isAuthenticated = decryptData(
-      sessionStorage.getItem("isAuthenticated")
-    );
+    const isAuthenticated = decryptData(sessionStorage.getItem("isAuthenticated"));
     const userRole = decryptData(sessionStorage.getItem("role"));
     if (isAuthenticated && userRole) {
       switch (userRole) {
@@ -143,17 +139,7 @@ export default function AdminLogin() {
       );
 
       if (response.data.success) {
-        const {
-          user_id,
-          username,
-          role_name,
-          photo_url,
-          email,
-          address,
-          age,
-          contact,
-          fullname,
-        } = response.data;
+        const { user_id, username, role_name, photo_url, email, address, age, contact, fullname } = response.data;
         sessionStorage.setItem("isAuthenticated", encryptData("true"));
         sessionStorage.setItem("user_id", encryptData(user_id));
         sessionStorage.setItem("username", encryptData(username));
@@ -177,7 +163,7 @@ export default function AdminLogin() {
             case "student":
               navigate("/student-dashboard");
               break;
-
+       
             default:
               toast.error("Unauthorized role!");
               sessionStorage.clear();
@@ -186,9 +172,7 @@ export default function AdminLogin() {
         }, 3000);
       } else {
         if (response.data.message.includes("Maximum attempts reached")) {
-          toast.error(
-            "Too many failed login attempts. Please try again in 3 minutes."
-          );
+          toast.error("Too many failed login attempts. Please try again in 3 minutes.");
           setIsLocked(true);
           setLockoutTime(180);
           const interval = setInterval(() => {
@@ -213,51 +197,45 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="flex min-h-screen">
-      {/* LEFT GREEN PANEL - Background Only */}
-      <div className="w-1/2 bg-green-800 flex flex-row items-center justify-center text-white p-8 gap-6">
-        {/* Text Block on Left */}
-        <div className="flex flex-col items-end text-right space-y-1">
-          <h1 className="font-semibold text-xl ">
+    <div className="flex min-h-screen items-center justify-center bg-cover bg-center bg-gray-100">
+      <ToastContainer position="top-right" autoClose={1000} theme="light" transition={Bounce} />
+
+      <motion.div
+        className="flex w-[1000px] h-[630px] bg-white/96 overflow-hidden shadow-xl rounded-lg"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {/* LEFT PANEL */}
+        <motion.div
+          className="flex flex-col items-center justify-center w-1/2 text-white p-8 bg-green-800"
+          variants={logoVariants}
+        >
+          <div className="relative w-[300px] h-[160px] mb-36">
+            <Image
+              src="/images/coclogo-removebg.png"
+              alt="COC Logo"
+              width={300}
+              height={160}
+              className="mx-auto"
+              priority
+            />
+          </div>
+          <h1 className="text-white font-semibold text-xl text-center">
             Phinma Cagayan de Oro College
           </h1>
-          <h1 className="font-semibold text-xl mr-18">FCHMS PORTAL</h1>
-          <h2 className="text-md mt-1 mr-5 font-semibold">
+          <h1 className="text-white font-semibold text-xl text-center">
+            FCHMS PORTAL
+          </h1>
+          <h2 className="text-white text-md text-center mt-1">
             Max Sunniel St. Cagayan de Oro City
           </h2>
-        </div>
+        </motion.div>
 
-        {/* Vertical Line in Center */}
-        <div className="w-px h-32 bg-white mx-4" />
-
-        {/* Image on Right */}
-        <div className="relative w-[400px] h-[160px] mb-52">
-          <Image
-            src="/images/coclogo-removebg.png"
-            alt="COC Logo"
-            width={400}
-            height={160}
-            className="mx-auto"
-            priority
-          />
-        </div>
-        
-      </div>
-
-      {/* RIGHT FORM PANEL */}
-      <div className="w-1/2 flex items-center justify-center bg-white">
-        <ToastContainer
-          position="top-right"
-          autoClose={1000}
-          theme="light"
-          transition={Bounce}
-        />
-
+        {/* RIGHT PANEL */}
         <motion.div
-          className="w-full max-w-md p-10"
+          className="w-1/2 bg-transparent p-10 flex flex-col justify-center"
           variants={containerVariants}
-          initial="hidden"
-          animate="visible"
         >
           <motion.h2
             variants={itemVariants}
@@ -271,22 +249,19 @@ export default function AdminLogin() {
           >
             Enter your email and password to login.
           </motion.p>
-
           <motion.form
             className="space-y-4"
             onSubmit={handleSubmit}
             variants={containerVariants}
           >
             <motion.div variants={itemVariants}>
-              <Label htmlFor="email" className="text-black mb-1">
-                Email
-              </Label>
+              <Label htmlFor="email" className="text-black mb-1">Email</Label>
               <div className="relative">
                 <AiOutlineMail className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
                 <Input
                   id="email"
                   type="text"
-                  className="pl-12 w-full h-12 text-base border border-gray-400 bg-transparent text-black rounded-md"
+                  className="pl-10 w-full h-10 border border-gray-400 bg-transparent text-black rounded-md"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoFocus
@@ -295,15 +270,13 @@ export default function AdminLogin() {
             </motion.div>
 
             <motion.div variants={itemVariants}>
-              <Label htmlFor="password" className="text-black mb-1">
-                Password
-              </Label>
+              <Label htmlFor="password" className="text-black mb-1">Password</Label>
               <div className="relative">
                 <AiOutlineLock className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
                 <Input
                   id="password"
                   type="password"
-                  className="pl-12 w-full h-12 text-base border border-gray-400 bg-transparent text-black rounded-md"
+                  className="pl-10 w-full h-10 border border-gray-400 bg-transparent text-black rounded-md"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -322,19 +295,19 @@ export default function AdminLogin() {
                 placeholder="Enter CAPTCHA"
                 value={captchaInput}
                 onChange={(e) => setCaptchaInput(e.target.value)}
-                className="w-full h-12 text-base p-3 border border-gray-400 rounded-md text-black"
+                className="w-full p-2 border border-gray-400 rounded-md text-black"
               />
             </motion.div>
+
             <motion.div variants={itemVariants}>
               <Button
                 type="submit"
                 disabled={isLocked}
-                className={`w-full h-10 rounded-md flex items-center justify-center gap-2 ${
+                className={`w-full h-10 rounded-md ${
                   isLocked ? "bg-gray-400" : "bg-green-700 hover:bg-green-800"
                 }`}
               >
                 {isLocked ? `Try again in ${lockoutTime}s` : "LOGIN"}
-                <AiOutlineLogin className="!w-8 !h-8 !w-8 !h-8" />
               </Button>
             </motion.div>
 
@@ -345,7 +318,7 @@ export default function AdminLogin() {
             </motion.div>
           </motion.form>
         </motion.div>
-      </div>
+      </motion.div>
     </div>
   );
 }
