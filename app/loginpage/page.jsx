@@ -10,7 +10,6 @@ import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-
 import CryptoJS from "crypto-js";
 import Link from "next/link";
 
@@ -67,23 +66,18 @@ export default function AdminLogin() {
   const generateCaptcha = () => {
     const canvas = captchaCanvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
     const characters =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let captcha = "";
     for (let i = 0; i < 6; i++) {
-      captcha += characters.charAt(
-        Math.floor(Math.random() * characters.length)
-      );
+      captcha += characters.charAt(Math.floor(Math.random() * characters.length));
     }
     setCaptchaText(captcha);
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = "30px Arial";
     ctx.fillStyle = "#000";
     ctx.fillText(captcha, 10, 35);
-
     for (let i = 0; i < 5; i++) {
       ctx.beginPath();
       ctx.moveTo(Math.random() * 200, Math.random() * 50);
@@ -95,11 +89,8 @@ export default function AdminLogin() {
 
   useEffect(() => {
     generateCaptcha();
-    const isAuthenticated = decryptData(
-      sessionStorage.getItem("isAuthenticated")
-    );
+    const isAuthenticated = decryptData(sessionStorage.getItem("isAuthenticated"));
     const userRole = decryptData(sessionStorage.getItem("role"));
-
     if (isAuthenticated && userRole) {
       switch (userRole) {
         case "admin":
@@ -127,15 +118,13 @@ export default function AdminLogin() {
     try {
       const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
       return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-    } catch (error) {
-      console.error("Decryption failed", error);
+    } catch {
       return null;
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (captchaInput !== captchaText) {
       toast.error("Invalid CAPTCHA. Please try again.");
       generateCaptcha();
@@ -150,8 +139,7 @@ export default function AdminLogin() {
       );
 
       if (response.data.success) {
-        const { user_id, username, role_name, photo_url , email , address , age, contact , fullname} = response.data;
-
+        const { user_id, username, role_name, photo_url, email, address, age, contact, fullname } = response.data;
         sessionStorage.setItem("isAuthenticated", encryptData("true"));
         sessionStorage.setItem("user_id", encryptData(user_id));
         sessionStorage.setItem("username", encryptData(username));
@@ -186,12 +174,9 @@ export default function AdminLogin() {
         }, 3000);
       } else {
         if (response.data.message.includes("Maximum attempts reached")) {
-          toast.error(
-            "Too many failed login attempts. Please try again in 3 minutes."
-          );
+          toast.error("Too many failed login attempts. Please try again in 3 minutes.");
           setIsLocked(true);
           setLockoutTime(180);
-
           const interval = setInterval(() => {
             setLockoutTime((prev) => {
               if (prev <= 1) {
@@ -206,7 +191,7 @@ export default function AdminLogin() {
           toast.error(response.data.message || "Invalid username or password.");
         }
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred during login.");
       generateCaptcha();
       setCaptchaInput("");
@@ -214,60 +199,39 @@ export default function AdminLogin() {
   };
 
   return (
-    <div
-      className="flex min-h-screen items-center justify-center bg-cover bg-center"
-      style={{ backgroundImage: "url('/images/ss.jpg')" }}
-    >
-      <ToastContainer
-        position="top-right"
-        autoClose={1000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-        transition={Bounce}
-      />
+    <div className="flex min-h-screen items-center justify-center bg-cover bg-center bg-gray-100">
+      <ToastContainer position="top-right" autoClose={1000} theme="light" transition={Bounce} />
 
       <motion.div
-        className="flex w-[1000px] h-[630px] bg-white/96 overflow-hidden"
+        className="flex w-[1000px] h-[630px] bg-white/96 overflow-hidden shadow-xl rounded-lg"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
+        {/* LEFT PANEL */}
         <motion.div
-          className="flex flex-col items-center justify-center w-1/2 text-white p-8 border-r border-black bg-white-400 bg-opacity-90"
+          className="flex flex-col items-center justify-center w-1/2 text-white p-8 bg-green-800"
           variants={logoVariants}
         >
-          <motion.div
-            initial={{ rotate: -10 }}
-            animate={{ rotate: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="relative w-[320px] h-auto ">
-              <Image
-                src="/images/coclogo-removebg.png"
-                alt="Logo"
-                width={320}
-                height={170}
-                className="ml-4 h-auto"
-                priority
-              />
-            </div>
-
-            <br />
-            <h1 className="text-black font-semibold text-xl">
-              Phinma Cagayan de oro College
-            </h1>
-            <h1 className="text-black font-semibold text-xl ml-6">
-              Max Sunniel St. Cagayan de oro City
-            </h1>
-          </motion.div>
+          <div className="relative w-[300px] h-[160px] mb-36">
+            <Image
+              src="/images/coclogo-removebg.png"
+              alt="COC Logo"
+              width={300}
+              height={160}
+              className="mx-auto"
+              priority
+            />
+          </div>
+          <h1 className="text-white font-semibold text-xl text-center">
+            Phinma Cagayan de Oro College
+          </h1>
+          <h2 className="text-white text-md text-center mt-1">
+            Max Sunniel St. Cagayan de Oro City
+          </h2>
         </motion.div>
 
+        {/* RIGHT PANEL */}
         <motion.div
           className="w-1/2 bg-transparent p-10 flex flex-col justify-center"
           variants={containerVariants}
@@ -280,25 +244,23 @@ export default function AdminLogin() {
           </motion.h2>
           <motion.p
             variants={itemVariants}
-            className="text-sm text-black-600 mb-6 mt-2"
+            className="text-sm text-black mb-6 mt-2"
           >
-            Please login your credentials.
+            Enter your email and password to login.
           </motion.p>
           <motion.form
             className="space-y-4"
             onSubmit={handleSubmit}
             variants={containerVariants}
           >
-            <motion.div variants={itemVariants} className="relative">
-              <Label htmlFor="email" className="text-black mb-2">
-                Email
-              </Label>
+            <motion.div variants={itemVariants}>
+              <Label htmlFor="email" className="text-black mb-1">Email</Label>
               <div className="relative">
-                <AiOutlineMail className="absolute top-1/2 left-3 transform -translate-y-1/2 text-black-400" />
+                <AiOutlineMail className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
                 <Input
                   id="email"
                   type="text"
-                  className="pl-10 w-full h-10 border border-gray-500 bg-transparent text-black rounded-md"
+                  className="pl-10 w-full h-10 border border-gray-400 bg-transparent text-black rounded-md"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoFocus
@@ -306,36 +268,33 @@ export default function AdminLogin() {
               </div>
             </motion.div>
 
-            <motion.div variants={itemVariants} className="relative">
-              <Label htmlFor="password" className="text-black mb-2">
-                Password
-              </Label>
+            <motion.div variants={itemVariants}>
+              <Label htmlFor="password" className="text-black mb-1">Password</Label>
               <div className="relative">
-                <AiOutlineLock className="absolute top-1/2 left-3 transform -translate-y-1/2 text-black-400" />
+                <AiOutlineLock className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
                 <Input
                   id="password"
                   type="password"
-                  className="pl-10 w-full h-10 border border-gray-500 bg-transparent text-black rounded-md"
+                  className="pl-10 w-full h-10 border border-gray-400 bg-transparent text-black rounded-md"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  autoFocus
                 />
               </div>
             </motion.div>
 
-            <motion.div variants={itemVariants} className="mt-8">
+            <motion.div variants={itemVariants}>
               <canvas
                 ref={captchaCanvasRef}
                 width="200"
                 height="50"
-                className="border mb-6 border-black"
+                className="border mb-4 border-black"
               />
-              <motion.input
-                whileFocus={{ scale: 1.02 }}
+              <Input
                 type="text"
+                placeholder="Enter CAPTCHA"
                 value={captchaInput}
                 onChange={(e) => setCaptchaInput(e.target.value)}
-                className="w-full p-2 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-red-400 text-black"
+                className="w-full p-2 border border-gray-400 rounded-md text-black"
               />
             </motion.div>
 
@@ -344,7 +303,7 @@ export default function AdminLogin() {
                 type="submit"
                 disabled={isLocked}
                 className={`w-full h-10 rounded-md ${
-                  isLocked ? "bg-gray-400" : "bg-red-500 hover:bg-red-600"
+                  isLocked ? "bg-gray-400" : "bg-green-700 hover:bg-green-800"
                 }`}
               >
                 {isLocked ? `Try again in ${lockoutTime}s` : "LOGIN"}
@@ -352,7 +311,7 @@ export default function AdminLogin() {
             </motion.div>
 
             <motion.div variants={itemVariants} className="text-center">
-              <Button variant="link" className="text-sm text-black-400">
+              <Button variant="link" className="text-sm text-black-600">
                 <Link href="/recoveraccountform">Forgotten Your Password?</Link>
               </Button>
             </motion.div>
@@ -362,5 +321,3 @@ export default function AdminLogin() {
     </div>
   );
 }
-
-

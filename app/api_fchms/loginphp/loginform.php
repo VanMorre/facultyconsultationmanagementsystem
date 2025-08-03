@@ -37,7 +37,7 @@ $stmt = $conn->prepare("
     JOIN tbl_role r ON u.role_id = r.role_id
     WHERE BINARY u.email  = :email 
 ");
-$stmt->bindParam(':username', $email , PDO::PARAM_STR);
+$stmt->bindParam(':email', $email , PDO::PARAM_STR);
 $stmt->execute();
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
