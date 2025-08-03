@@ -17,23 +17,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
-import { Label } from "@/components/ui/label";
 
 import axios from "axios";
-import { FaBell, FaExclamationTriangle } from "react-icons/fa";
+
 import { Menu, LogOut, ChevronDown, Plus } from "lucide-react";
 import useLogout from "@/app/pages/hooks/logout";
 import CryptoJS from "crypto-js";

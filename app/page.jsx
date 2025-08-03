@@ -9,7 +9,8 @@ import { AiOutlineMail, AiOutlineLock } from "react-icons/ai";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
+
 import CryptoJS from "crypto-js";
 import Link from "next/link";
 
@@ -21,7 +22,7 @@ export default function AdminLogin() {
   const [captchaText, setCaptchaText] = useState("");
   const [captchaInput, setCaptchaInput] = useState("");
   const captchaCanvasRef = useRef(null);
-  const navigate = useNavigate();
+   const router = useRouter();
   const [isLocked, setIsLocked] = useState(false);
   const [lockoutTime, setLockoutTime] = useState(0);
 
@@ -261,10 +262,10 @@ export default function AdminLogin() {
 
             <br />
             <h1 className="text-black font-semibold text-xl">
-              Electrical Supply & General Merchandize
+              Phinma Cagayan de oro City
             </h1>
             <h1 className="text-black font-semibold text-xl ml-6">
-              Capistrato St, Cagayan De Oro City
+              Max Sunniel St. Cagayan de oro City
             </h1>
           </motion.div>
         </motion.div>

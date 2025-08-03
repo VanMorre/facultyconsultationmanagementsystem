@@ -30,7 +30,7 @@ import CryptoJS from "crypto-js";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect , useRef } from "react";
-import ProfileView from "./components/profileview";
+
 import AdminLayout from "../layouts/adminlayout";
 
 
@@ -210,7 +210,7 @@ const AdminDashboard = () => {
                         ],
                         datasets: [
                           {
-                            label: "Receiveds",
+                            label: "RenderHours",
                          
                             borderColor: "#00856F",
                             backgroundColor: "#d1fae5",
@@ -248,7 +248,7 @@ const AdminDashboard = () => {
 
           </>
         )}
-        {currentView === "profile" && <ProfileView />}
+   
        
       </motion.div>
     </AdminLayout>
