@@ -1,13 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  TbArrowsExchange,
-  TbHomePlus,
-  TbTruckLoading,
-  TbCornerDownRight,
-  TbSettings2,
-  TbCalendarUp
-} from "react-icons/tb";
+
 
 import { LayoutDashboard } from "lucide-react";
 
@@ -53,12 +46,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
 
 
 
-        
-
-
-  
-
-  
+    
       </nav>
     </aside>
   );

@@ -25,19 +25,14 @@ ChartJS.register(
   Filler
 );
 import { Line } from "react-chartjs-2";
-import { TbTruckLoading, TbArrowsExchange } from "react-icons/tb";
+
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect , useRef } from "react";
 import ProfileView from "./components/profileview";
-import WarehouseLayout from "../layouts/warehouselayout";
-import StockReceiving from "./components/stockreceiving";
-import Stockreceivinglogs from "./components/stockreceivinglogs";
-import StoreInventory from "./components/storeinventory";
-import WarehouseInventory from "./components/warehouseinventory";
-import Warehousestocktransfer from "./components/stocktransfer";
-import Warehousedadjustments from "./components/warehouseadjustments";
+import AdminLayout from "../layouts/adminlayout";
+
 
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -55,22 +50,15 @@ ChartJS.register(
 );
 
 
-const WarehouseDashboard = () => {
+const AdminDashboard = () => {
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [currentView, setCurrentView] = useState("dashboard");
   const [fadeTransition, setFadeTransition] = useState(false);
 
   
-  const [selectedMonth, setSelectedMonth] = useState("0");
-  const SECRET_KEY = "my_secret_key_123456";
-  const [transferprods, setTransferprods] = useState([]);
-  const [stockReceiveds, setStockReceiveds] = useState([]);
-  const [monthlyOrderCounts, setMonthlyOrderCounts] = useState(
-    Array(12).fill(0)
-  );
 
-  // show loading until both fetches complete
-  const [isLoading, setIsLoading] = useState(true);
+  const SECRET_KEY = "my_secret_key_123456";
+
 
   // 1) decrypt on mount
   const decryptUserId = () => {
@@ -88,174 +76,14 @@ const WarehouseDashboard = () => {
   };
 
 
-  // 2) once we have an ID, fetch both
-  useEffect(() => {
-    decryptUserId();
-  }, []);
-
   
   useEffect(() => {
-    const fetchData = async () => {
-      if (!loggedInUserId) return;
-
-      await Promise.all([
-      fetchstockreceiving(), 
-      fetchtransferstock (),
-    
-    ]);
-      setIsLoading(false);
-    };
-    fetchData();
-
-    const interval = setInterval(() => {
-      fetchstockreceiving();
-      fetchtransferstock ();
-    }, 1000);
-
-    return () => clearInterval(interval);
+        decryptUserId();
   }, [loggedInUserId]);
 
 
 
 
-useEffect(() => {
-  const stockIds = sessionStorage.getItem("notified_stockreceiving_ids");
-  const transferIds = sessionStorage.getItem("notified_transferstock_ids");
-
-  if (stockIds) {
-    notifiedStockReceivingRef.current = JSON.parse(stockIds);
-  }
-
-  if (transferIds) {
-    notifiedTransferRef.current = JSON.parse(transferIds);
-  }
-}, []);
-
-
-
-const notifiedStockReceivingRef = useRef([]);
-const hasInitialStockReceivingRun = useRef(false);
-const notifiedTransferRef = useRef([]);
-const hasInitialTransferRun = useRef(false);
-
-
-
-const fetchstockreceiving = async () => {
-  try {
-    const response = await axios.get(
-      "http://localhost/rai/app/api_raielectrical/stockreceiving/fetchstockreceiving.php"
-    );
-
-    if (response.data.success) {
-      const orders = response.data.data;
-      setStockReceiveds(orders);
-
-      const orderIds = orders.map((o) => o.receivingheader_id);
-      const newlyAdded = orderIds.filter(
-        (id) => !notifiedStockReceivingRef.current.includes(id)
-      );
-
-      if (hasInitialStockReceivingRun.current && newlyAdded.length > 0) {
-        // Removed toast.success
-
-        notifiedStockReceivingRef.current = [
-          ...notifiedStockReceivingRef.current,
-          ...newlyAdded,
-        ];
-        sessionStorage.setItem(
-          "notified_stockreceiving_ids",
-          JSON.stringify(notifiedStockReceivingRef.current)
-        );
-      }
-
-      hasInitialStockReceivingRun.current = true;
-
-      const counts = Array(12).fill(0);
-      orders.forEach((o) => {
-        const month = new Date(o.receiving_date).getMonth();
-        counts[month]++;
-      });
-      setMonthlyOrderCounts(counts);
-    } else {
-      setStockReceiveds([]);
-      setMonthlyOrderCounts(Array(12).fill(0));
-    }
-  } catch (error) {
-    console.error("Error fetching stock receiving:", error);
-    setStockReceiveds([]);
-    setMonthlyOrderCounts(Array(12).fill(0));
-  }
-};
-
-
-
-
-const fetchtransferstock = async () => {
-  try {
-    const response = await axios.get(
-      "http://localhost/rai/app/api_raielectrical/transferstock/fetchtransferstock.php"
-    );
-
-    if (response.data.success) {
-      const transfers = response.data.data;
-      setTransferprods(transfers);
-
-      const transferIds = transfers.map((t) => t.stocktransferheader_id);
-      const newlyAdded = transferIds.filter(
-        (id) => !notifiedTransferRef.current.includes(id)
-      );
-
-      if (hasInitialTransferRun.current && newlyAdded.length > 0) {
-        // Removed toast.success
-
-        notifiedTransferRef.current = [
-          ...notifiedTransferRef.current,
-          ...newlyAdded,
-        ];
-        sessionStorage.setItem(
-          "notified_transferstock_ids",
-          JSON.stringify(notifiedTransferRef.current)
-        );
-      }
-
-      hasInitialTransferRun.current = true;
-    } else {
-      setTransferprods([]);
-    }
-  } catch (error) {
-    console.error("Error fetching transfer stock:", error);
-    setTransferprods([]);
-  }
-};
-
-
-  const totalReceived = stockReceiveds.length;
-  const totalTransfer = transferprods.length;
-
-  // if "All" show full array, otherwise zero‑out the non‑selected
-  const filteredData =
-    selectedMonth === "0"
-      ? monthlyOrderCounts
-      : monthlyOrderCounts.map((c, i) =>
-          i + 1 === parseInt(selectedMonth, 10) ? c : 0
-        );
-
-  const cardData = [
-    {
-      title: "No. of Purchase Order Received",
-      value: totalReceived,
-      bg: "bg-red-200",
-      iconBg: "bg-red-500",
-      icon: <TbTruckLoading size={28} className="text-white" />,
-    },
-    {
-      title: "No. Products Transfer",
-      value: totalTransfer,
-      bg: "bg-red-200",
-      iconBg: "bg-red-500",
-      icon: <TbArrowsExchange size={28} className="text-white" />,
-    },
-  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -274,7 +102,7 @@ const fetchtransferstock = async () => {
   };
 
   return (
-    <WarehouseLayout
+    <AdminLayout
       currentView={currentView}
       setCurrentView={(v) => {
         if (v !== currentView) {
@@ -334,7 +162,7 @@ const fetchtransferstock = async () => {
                 >
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-lg font-bold text-black">
-                      Received Charts
+                      Teacher consultation render hours
                     </h2>
                     <motion.select
                       whileHover={{ scale: 1.05 }}
@@ -383,7 +211,7 @@ const fetchtransferstock = async () => {
                         datasets: [
                           {
                             label: "Receiveds",
-                            data: filteredData,
+                         
                             borderColor: "#00856F",
                             backgroundColor: "#d1fae5",
                             tension: 0.4,
@@ -421,14 +249,9 @@ const fetchtransferstock = async () => {
           </>
         )}
         {currentView === "profile" && <ProfileView />}
-        {currentView === "stockreceive" && <StockReceiving />}
-        {currentView === "stocklogs" && <Stockreceivinglogs />}
-        {currentView === "warehouse_inventory" && <WarehouseInventory />}
-        {currentView === "store_inventory" && <StoreInventory />}
-        {currentView === "stocktransfer" && <Warehousestocktransfer />}
-        {currentView === "warehouseadjustments" && <Warehousedadjustments />}
+       
       </motion.div>
-    </WarehouseLayout>
+    </AdminLayout>
   );
 };
-export default WarehouseDashboard;
+export default AdminDashboard;
