@@ -7,7 +7,8 @@ import {
   TbClipboardText,
   TbUsers,
   TbBuildingCommunity,
-  TbReport
+  TbReport,
+  TbClipboardList,
 } from "react-icons/tb";
 
 const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
@@ -88,7 +89,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
             className="mr-1"
             style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
           />
-          {!collapsed && <span className="pr-8 font-semibold">Faculty</span>}
+          {!collapsed && <span className="pr-8 font-semibold">Add Faculty</span>}
         </Button>
 
         <Button
@@ -107,8 +108,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           )}
         </Button>
 
-
-          <Button
+        <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
             currentView === "reports" ? "bg-gray-200" : ""
@@ -119,10 +119,24 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
             className="mr-1"
             style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
           />
-          {!collapsed && (
-            <span className="pr-8 font-semibold">Reports</span>
-          )}
+          {!collapsed && <span className="pr-8 font-semibold">Reports</span>}
         </Button>
+
+        <Button
+          variant="ghost"
+          className={`w-full justify-start text-black ${
+            currentView === "auditlogs" ? "bg-gray-200" : ""
+          }`}
+          onClick={() => setCurrentView("auditlogs")}
+        >
+          <TbClipboardList
+            className="mr-1"
+            style={{ height: "28px", width: "35px", color: "#6e7a36" }}
+          />
+          {!collapsed && <span className="pr-8 font-semibold">Audit logs</span>}
+        </Button>
+
+
       </nav>
     </aside>
   );

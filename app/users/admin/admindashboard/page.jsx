@@ -25,7 +25,7 @@ ChartJS.register(
   Filler
 );
 import { Line } from "react-chartjs-2";
-
+import FacultyManagement from "./components/faculty";
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -38,7 +38,6 @@ import {
 } from "react-icons/fa";
 
 import AdminLayout from "../layouts/adminlayout";
-
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -387,6 +386,9 @@ const AdminDashboard = () => {
             />
           </>
         )}
+
+
+        {currentView === "faculty" && <FacultyManagement />}
       </motion.div>
     </AdminLayout>
   );
