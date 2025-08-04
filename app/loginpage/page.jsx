@@ -371,7 +371,7 @@ export default function AdminLogin() {
                   Email
                 </Label>
                 <div className="relative">
-                  <AiOutlineMail className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
+                  <AiOutlineMail className="absolute top-1/2 left-3 transform -translate-y-1/2 text-black" />
                   <Input
                     id="email"
                     type="text"
@@ -388,7 +388,7 @@ export default function AdminLogin() {
                   Password
                 </Label>
                 <div className="relative">
-                  <AiOutlineLock className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
+                  <AiOutlineLock className="absolute top-1/2 left-3 transform -translate-y-1/2 text-black" />
                   <Input
                     id="password"
                     type="password"
@@ -423,7 +423,7 @@ export default function AdminLogin() {
                   }`}
                 >
                   {isLocked ? `Try again in ${lockoutTime}s` : "Sign In"}
-                  <AiOutlineLogin className="!w-6 !h-6" />
+                  <AiOutlineLogin className=" w-6 h-6 !w-6 !h-6" />
                 </Button>
               </motion.div>
 
