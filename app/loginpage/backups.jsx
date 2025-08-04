@@ -241,6 +241,7 @@ export default function AdminLogin() {
             priority
           />
         </div>
+        
       </div>
 
       {/* RIGHT FORM PANEL */}

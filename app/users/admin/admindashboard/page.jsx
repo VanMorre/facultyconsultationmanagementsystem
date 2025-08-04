@@ -53,7 +53,7 @@ ChartJS.register(
   Legend,
   PointElement
 );
-import { TbUser, TbFilter, TbArrowRight , TbArrowDown } from "react-icons/tb";
+import { TbUser, TbFilter, TbArrowRight, TbArrowDown } from "react-icons/tb";
 const AdminDashboard = () => {
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [currentView, setCurrentView] = useState("dashboard");
@@ -123,54 +123,60 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <motion.div
                 variants={itemVariants}
-                className="bg-green-900 p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
-                  <p className="text-sm text-white font-semibold">
+                  <p className="text-sm text-green-800 font-semibold">
                     Total Consultations
                   </p>
-                  <h2 className="text-2xl font-bold text-white">25</h2>
+                  <h2 className="text-2xl font-bold text-green-800">25</h2>
                 </div>
-                <div className="bg-white text-green-900 p-3 rounded-full">
+                <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaClipboardList className="text-xl" />
                 </div>
               </motion.div>
 
               <motion.div
                 variants={itemVariants}
-                className="bg-green-900 p-5 h-25  rounded-lg shadow flex justify-between items-center"
+                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
-                  <p className="text-sm text-white font-semibold">Scheduled</p>
-                  <h2 className="text-2xl font-bold text-white">8</h2>
+                  <p className="text-sm text-green-800 font-semibold">
+                    Scheduled
+                  </p>
+                  <h2 className="text-2xl font-bold text-green-800">8</h2>
                 </div>
-                <div className="bg-white text-green-900 p-3 rounded-full">
+                <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaCalendarCheck className="text-xl" />
                 </div>
               </motion.div>
 
               <motion.div
                 variants={itemVariants}
-                className="bg-green-900 p-5 h-25  rounded-lg shadow flex justify-between items-center"
+                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
-                  <p className="text-sm text-white font-semibold">Complete</p>
-                  <h2 className="text-2xl font-bold text-white">12</h2>
+                  <p className="text-sm text-green-800 font-semibold">
+                    Complete
+                  </p>
+                  <h2 className="text-2xl font-bold text-green-800">12</h2>
                 </div>
-                <div className="bg-white text-green-900 p-3 rounded-full">
+                <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaCheckCircle className="text-xl" />
                 </div>
               </motion.div>
 
               <motion.div
                 variants={itemVariants}
-                className="bg-green-900 p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
-                  <p className="text-sm text-white font-semibold">Cancelled</p>
-                  <h2 className="text-2xl font-bold text-white">5</h2>
+                  <p className="text-sm text-green-800 font-semibold">
+                    Cancelled
+                  </p>
+                  <h2 className="text-2xl font-bold text-green-800">5</h2>
                 </div>
-                <div className="bg-white text-green-900 p-3 rounded-full">
+                <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaTimesCircle className="text-xl" />
                 </div>
               </motion.div>
@@ -325,7 +331,6 @@ const AdminDashboard = () => {
                         Aug 10, 2025 - 1:00 am
                       </p>
                       <p className="text-sm text-black">Project guidance</p>
-                     
                     </div>
                   </div>
 
@@ -339,7 +344,6 @@ const AdminDashboard = () => {
                         Aug 12, 2025 - 9:30 am
                       </p>
                       <p className="text-sm text-black">Assistance help</p>
-                    
                     </div>
                   </div>
 
@@ -355,7 +359,6 @@ const AdminDashboard = () => {
                       <p className="text-sm text-black">
                         Discussion on research
                       </p>
-                     
                     </div>
                   </div>
                 </div>

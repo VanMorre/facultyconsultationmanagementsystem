@@ -225,71 +225,101 @@ export default function AdminLogin() {
 
   return (
     <div className="flex min-h-screen">
-      <motion.div
-        className="w-1/2 bg-green-800 flex flex-row items-center justify-center text-white p-8 gap-6"
-        variants={leftPanelVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {/* Text Block on Left */}
+      <div className="relative w-1/2 h-auto overflow-hidden">
+        {/* Animated Background Image */}
         <motion.div
-          className="flex flex-col items-end text-right space-y-1"
-          custom={1}
-          variants={leftItemVariants}
-        >
-          <motion.h1
-            className="font-semibold text-xl"
-            custom={1}
-            variants={leftItemVariants}
-          >
-            Phinma Cagayan de Oro College
-          </motion.h1>
-          <motion.h1
-            className="font-semibold text-xl mr-18"
-            custom={2}
-            variants={leftItemVariants}
-          >
-            FCHMS PORTAL
-          </motion.h1>
-          <motion.h2
-            className="text-md mt-1 mr-5 font-semibold"
-            custom={3}
-            variants={leftItemVariants}
-          >
-            Max Sunniel St. Cagayan de Oro City
-          </motion.h2>
-        </motion.div>
-
-        {/* Vertical Line in Center */}
-        <motion.div
-          className="w-px h-32 bg-white mx-4"
-          custom={4}
-          variants={leftItemVariants}
-        />
-
-        {/* Image on Right */}
-        <motion.div
-          className="relative w-[400px] h-[160px] mb-52"
-          custom={5}
-          variants={leftItemVariants}
+          className="absolute inset-0 z-0"
+          variants={leftPanelVariants}
+          initial="hidden"
+          animate="visible"
         >
           <Image
-            src="/images/coclogo-removebg.png"
-            alt="COC Logo"
-            width={400}
-            height={160}
-            className="mx-auto"
+            src="/images/bldg.jpg"
+            alt="Building Background"
+            fill
+            className="object-cover opacity-90"
             priority
           />
         </motion.div>
-      </motion.div>
 
-      {/* RIGHT FORM PANEL */}
-      <div className="w-1/2 flex items-center justify-center bg-white relative overflow-hidden">
-        {/* Decorative Sideway Stripes */}
-        <div className="absolute top-2 right-0 w-46 h-4 bg-green-800 rotate-45 translate-x-4 -translate-y-2 shadow-md"></div>
-        <div className="absolute top-10 right-0 w-46 h-4 bg-green-800 rotate-45 translate-x-4 -translate-y-2 shadow-md"></div>
+        {/* Static Green Panel Content */}
+        <div className="relative z-10 w-full h-full min-h-screen bg-green-800/85 text-white p-8 flex flex-col">
+          {/* Centered Content */}
+          <div className="flex flex-row items-center justify-center flex-grow gap-6">
+            {/* Text Block on Left */}
+            <motion.div
+              className="flex flex-col items-end text-right space-y-1"
+              custom={1}
+              variants={leftItemVariants}
+            >
+              <motion.h1
+                className="font-semibold text-xl"
+                custom={1}
+                variants={leftItemVariants}
+              >
+                Phinma Cagayan de Oro College
+              </motion.h1>
+              <motion.h1
+                className="font-semibold text-xl mr-18"
+                custom={2}
+                variants={leftItemVariants}
+              >
+                FCHMS PORTAL
+              </motion.h1>
+              <motion.h2
+                className="text-md mt-1 font-semibold mr-4"
+                custom={3}
+                variants={leftItemVariants}
+              >
+                Max Sunniel St. Cagayan de Oro City
+              </motion.h2>
+            </motion.div>
 
+            {/* Vertical Line in Center */}
+            <motion.div
+              className="w-px h-32 bg-white mx-4"
+              custom={4}
+              variants={leftItemVariants}
+            />
+
+            {/* Image on Right */}
+            <motion.div
+              className="w-[400px] h-[160px] mb-52"
+              custom={5}
+              variants={leftItemVariants}
+            >
+              <Image
+                src="/images/coclogo-removebg.png"
+                alt="COC Logo"
+                width={400}
+                height={160}
+                priority
+              />
+            </motion.div>
+          </div>
+
+          {/* Sticky Footer */}
+          <footer className="text-center text-s font-semibold text-white mt-8">
+            © {new Date().getFullYear()} PHINMA Cagayan de Oro College. All
+            rights reserved.
+          </footer>
+        </div>
+      </div>
+
+      <div className="w-1/2 flex flex-col items-center justify-center bg-white relative overflow-hidden">
+        {/* Circles */}
+        {/* Circles */}
+        <div className="absolute w-32 h-32 bg-green-800 rounded-full -top-6 -left-10 z-0 shadow-[0_20px_40px_rgba(0,100,0,0.6)]"></div>
+        <div className="absolute w-40 h-40 bg-green-800 rounded-full -bottom-16 -right-12 z-0 shadow-[0_20px_40px_rgba(0,100,0,0.6)]"></div>
+        <div className="absolute w-24 h-24 bg-green-800 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 shadow-[0_20px_40px_rgba(0,100,0,0.6)]"></div>
+
+        {/* Parallelograms */}
+        <div className="absolute w-36 h-20 bg-green-800 transform -rotate-6 skew-x-12 top-[40%] left-[6%] z-0 shadow-[0_25px_50px_rgba(0,100,0,0.7)]"></div>
+        <div className="absolute w-36 h-20 bg-gray-200 transform rotate-12 skew-x-12 bottom-[10%] left-[40%] z-0 shadow-[0_25px_50px_rgba(100,100,100,0.4)]"></div>
+        <div className="absolute w-36 h-20 bg-gray-200 transform rotate-12 skew-x-12 top-[6%] left-[40%] z-0 shadow-[0_25px_50px_rgba(100,100,100,0.4)]"></div>
+        <div className="absolute w-44 h-24 bg-green-800 transform rotate-12 skew-x-12 top-1/2 right-10 -translate-y-1/2 z-0 shadow-[0_25px_50px_rgba(0,100,0,0.7)]"></div>
+
+        {/* Toast Notification */}
         <ToastContainer
           position="top-right"
           autoClose={1000}
@@ -297,99 +327,126 @@ export default function AdminLogin() {
           transition={Bounce}
         />
 
-        <motion.div
-          className="w-full max-w-xl min-h-[700px] p-10 bg-white rounded-lg shadow-2xl flex flex-col justify-center"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <motion.h2
-            variants={itemVariants}
-            className="text-2xl font-semibold text-black"
-          >
-            Hello Welcome!
-          </motion.h2>
-          <motion.p
-            variants={itemVariants}
-            className="text-sm text-black mb-6 mt-2"
-          >
-            Enter your email and password to login.
-          </motion.p>
-
-          <motion.form
-            className="space-y-4"
-            onSubmit={handleSubmit}
+        {/* Centering Wrapper */}
+        <div className="flex-1 flex flex-col justify-center items-center w-full relative z-10">
+          {/* Login Form Card */}
+          <motion.div
+            className="w-full max-w-xl p-10 bg-white rounded-lg shadow-2xl flex flex-col justify-center"
             variants={containerVariants}
+            initial="hidden"
+            animate="visible"
           >
-            <motion.div variants={itemVariants}>
-              <Label htmlFor="email" className="text-black mb-1">
-                Email
-              </Label>
-              <div className="relative">
-                <AiOutlineMail className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
+            {/* Header with logo */}
+            <motion.div
+              variants={itemVariants}
+              className="flex items-center justify-between w-full max-w-[600px] mb-6"
+            >
+              <div>
+                <motion.h2 className="text-2xl font-semibold text-black">
+                  Hello Welcome!
+                </motion.h2>
+                <motion.p className="text-sm text-black mt-2">
+                  Enter your email and password to login.
+                </motion.p>
+              </div>
+
+              <Image
+                src="/images/phinmaedlogos.png"
+                alt="COC Logo"
+                width={120}
+                height={90}
+                className="ml-6 pb-6"
+                priority
+              />
+            </motion.div>
+
+            {/* Login Form */}
+            <motion.form
+              className="space-y-4"
+              onSubmit={handleSubmit}
+              variants={containerVariants}
+            >
+              <motion.div variants={itemVariants}>
+                <Label htmlFor="email" className="text-black mb-1">
+                  Email
+                </Label>
+                <div className="relative">
+                  <AiOutlineMail className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
+                  <Input
+                    id="email"
+                    type="text"
+                    className="pl-12 w-full h-12 text-base border border-green-800 bg-transparent text-black rounded-md"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              </motion.div>
+
+              <motion.div variants={itemVariants}>
+                <Label htmlFor="password" className="text-black mb-1">
+                  Password
+                </Label>
+                <div className="relative">
+                  <AiOutlineLock className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
+                  <Input
+                    id="password"
+                    type="password"
+                    className="pl-12 w-full h-12 text-base border border-green-800 bg-transparent text-black rounded-md"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              </motion.div>
+
+              <motion.div variants={itemVariants}>
+                <canvas
+                  ref={captchaCanvasRef}
+                  width="200"
+                  height="50"
+                  className="border mb-4 border-green-800 text-green-800"
+                />
                 <Input
-                  id="email"
                   type="text"
-                  className="pl-12 w-full h-12 text-base border border-gray-400 bg-transparent text-black rounded-md"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoFocus
+                  value={captchaInput}
+                  onChange={(e) => setCaptchaInput(e.target.value)}
+                  className="w-full h-12 text-base p-3 border border-green-800 rounded-md text-black"
                 />
-              </div>
-            </motion.div>
+              </motion.div>
 
-            <motion.div variants={itemVariants}>
-              <Label htmlFor="password" className="text-black mb-1">
-                Password
-              </Label>
-              <div className="relative">
-                <AiOutlineLock className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
-                <Input
-                  id="password"
-                  type="password"
-                  className="pl-12 w-full h-12 text-base border border-gray-400 bg-transparent text-black rounded-md"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </motion.div>
+              <motion.div variants={itemVariants}>
+                <Button
+                  type="submit"
+                  disabled={isLocked}
+                  className={`w-full h-10 rounded-md flex items-center justify-center gap-2 h-12 ${
+                    isLocked ? "bg-gray-400" : "bg-green-800 hover:bg-green-900"
+                  }`}
+                >
+                  {isLocked ? `Try again in ${lockoutTime}s` : "Sign In"}
+                  <AiOutlineLogin className="!w-6 !h-6" />
+                </Button>
+              </motion.div>
 
-            <motion.div variants={itemVariants}>
-              <canvas
-                ref={captchaCanvasRef}
-                width="200"
-                height="50"
-                className="border mb-4 border-black"
-              />
-              <Input
-                type="text"
-                placeholder="Enter CAPTCHA"
-                value={captchaInput}
-                onChange={(e) => setCaptchaInput(e.target.value)}
-                className="w-full h-12 text-base p-3 border border-gray-400 rounded-md text-black"
-              />
-            </motion.div>
+              <motion.div variants={itemVariants} className="text-center">
+                <Button variant="link" className="text-sm text-black-600">
+                  <Link href="/recoveraccountform">
+                    Forgotten Your Password?
+                  </Link>
+                </Button>
+              </motion.div>
+            </motion.form>
+          </motion.div>
+        </div>
 
-            <motion.div variants={itemVariants}>
-              <Button
-                type="submit"
-                disabled={isLocked}
-                className={`w-full h-10 rounded-md flex items-center justify-center gap-2 ${
-                  isLocked ? "bg-gray-400" : "bg-green-700 hover:bg-green-800"
-                }`}
-              >
-                {isLocked ? `Try again in ${lockoutTime}s` : "LOGIN"}
-                <AiOutlineLogin className="!w-6 !h-6" />
-              </Button>
-            </motion.div>
-
-            <motion.div variants={itemVariants} className="text-center">
-              <Button variant="link" className="text-sm text-black-600">
-                <Link href="/recoveraccountform">Forgotten Your Password?</Link>
-              </Button>
-            </motion.div>
-          </motion.form>
-        </motion.div>
+        {/* Footer remains untouched */}
+        <div className="pt-4 pb-8">
+          <motion.footer
+            variants={itemVariants}
+            className="text-green-800 font-semibold text-3xl text-center"
+          >
+            Making Lives Better Through Education #SasamahanKita
+          </motion.footer>
+        </div>
       </div>
     </div>
   );
