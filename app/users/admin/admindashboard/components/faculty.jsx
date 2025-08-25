@@ -5,7 +5,7 @@ import {
   TbEdit,
   TbChevronDown,
   TbEye,
-  TbUsers
+  TbUsers,
 } from "react-icons/tb";
 import {
   Pagination,
@@ -416,7 +416,7 @@ const FacultyManagement = () => {
               <DialogTrigger asChild>
                 <button
                   onClick={() => setDialogOpen(true)}
-                  className="ml-2 px-4 py-2 bg-green-900 text-white text-m font-semibold rounded-lg shadow flex items-center hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-800"
+                  className="ml-2 px-4 py-2 border border-green-800 text-green-800 text-m font-semibold rounded-lg shadow flex items-center hover:bg-green-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-800 transition-colors"
                 >
                   <TbPlus className="mr-2 h-6 w-6 !h-6 !w-6" />
                   Add Faculty
@@ -742,7 +742,7 @@ const FacultyManagement = () => {
               ) : (
                 <tr>
                   <td
-                    className="border px-6 py-3 text-left text-sm"
+                    className="border px-6 py-3 text-center text-sm text-gray-500"
                     colSpan="7"
                   >
                     No users found

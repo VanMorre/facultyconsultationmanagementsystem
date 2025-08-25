@@ -33,6 +33,7 @@ import {
 
 import { TbUser, TbFilter, TbArrowRight, TbArrowDown } from "react-icons/tb";
 import { Line } from "react-chartjs-2";
+import SubjectlistManagement from "./components/subjectslist";
 import StudentrequestManagement from "./components/studentrequest";
 import AvailabilityManagement from "./components/availability";
 import ConsultationManagement from "./components/consultation";
@@ -127,7 +128,7 @@ const TeacherDashboard = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <motion.div
                 variants={itemVariants}
-                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
@@ -142,7 +143,7 @@ const TeacherDashboard = () => {
 
               <motion.div
                 variants={itemVariants}
-                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
@@ -157,7 +158,7 @@ const TeacherDashboard = () => {
 
               <motion.div
                 variants={itemVariants}
-                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
@@ -170,9 +171,9 @@ const TeacherDashboard = () => {
                 </div>
               </motion.div>
 
-                <motion.div
+              <motion.div
                 variants={itemVariants}
-                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
@@ -185,10 +186,9 @@ const TeacherDashboard = () => {
                 </div>
               </motion.div>
 
-
               <motion.div
                 variants={itemVariants}
-                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
@@ -211,8 +211,8 @@ const TeacherDashboard = () => {
                   className="bg-white p-6 rounded-lg shadow-md"
                 >
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-bold text-black">
-                      Total Consultations
+                    <h2 className="text-l font-bold text-black ">
+                      Faculty Consultation Render Hours
                     </h2>
                     <motion.select
                       whileHover={{ scale: 1.05 }}
@@ -282,7 +282,7 @@ const TeacherDashboard = () => {
                   variants={chartVariants}
                   className="bg-white p-6 rounded-lg shadow-md flex-grow"
                 >
-                  <h2 className="text-lg font-bold text-black mb-4">
+                  <h2 className="text-l font-bold text-black mb-4">
                     My Consultation Availability
                   </h2>
                   <div className="border rounded-md overflow-hidden">
@@ -322,7 +322,7 @@ const TeacherDashboard = () => {
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <TbUser className="text-green-800 w-8 h-8 !w-8 !h-8" />
-                    <h2 className="text-lg font-bold text-black">
+                    <h2 className="text-l font-bold text-black">
                       Student Requests
                     </h2>
                   </div>
@@ -339,46 +339,51 @@ const TeacherDashboard = () => {
 
                 {/* Requests list */}
                 <div className="space-y-2">
-                  <div className="p-3 border border-green-800 rounded-md">
-                    <div className="flex justify-between">
-                      <p className="font-semibold text-black">Juan Dela Cruz</p>
-                      <p className="text-sm text-black">
-                        Discussion on research
-                      </p>
-                    </div>
+                  <div className="p-3 bg-gray-50 rounded-md shadow-lg">
                     <div className="flex justify-between items-center">
-                      <p className="text-sm text-black">
-                        Aug 10, 2025 - 1:00 am
-                      </p>
-                      <p className="text-sm text-black">Project guidance</p>
+                      <div>
+                        <p className="font-semibold text-black">
+                          Juan Dela Cruz
+                        </p>
+                        <p className="text-sm text-black">
+                          Discussion on research
+                        </p>
+                        <p className="text-sm text-black">
+                          Aug 10, 2025 - 1:00 am
+                        </p>
+                        <p className="text-sm text-black">Project guidance</p>
+                      </div>
+                      <TbArrowRight className="text-green-800 w-5 h-5 flex-shrink-0" />
                     </div>
                   </div>
 
-                  <div className="p-3 border border-green-800 rounded-md">
-                    <div className="flex justify-between">
-                      <p className="font-semibold text-black">Daniel Smith</p>
-                      <p className="text-sm text-black">Project guidance</p>
-                    </div>
+                  <div className="p-3 bg-gray-50 rounded-md shadow-lg">
                     <div className="flex justify-between items-center">
-                      <p className="text-sm text-black">
-                        Aug 12, 2025 - 9:30 am
-                      </p>
-                      <p className="text-sm text-black">Assistance help</p>
+                      <div>
+                        <p className="font-semibold text-black">Daniel Smith</p>
+                        <p className="text-sm text-black">Project guidance</p>
+                        <p className="text-sm text-black">
+                          Aug 12, 2025 - 9:30 am
+                        </p>
+                        <p className="text-sm text-black">Assistance help</p>
+                      </div>
+                      <TbArrowRight className="text-green-800 w-5 h-5 flex-shrink-0" />
                     </div>
                   </div>
 
-                  <div className="p-3 border border-green-800 rounded-md">
-                    <div className="flex justify-between">
-                      <p className="font-semibold text-black">Anne Reyes</p>
-                      <p className="text-sm text-black">Consultation altoe</p>
-                    </div>
+                  <div className="p-3 bg-gray-50 rounded-md shadow-lg">
                     <div className="flex justify-between items-center">
-                      <p className="text-sm text-black">
-                        Aug 15, 2025 - 11:00 am
-                      </p>
-                      <p className="text-sm text-black">
-                        Discussion on research
-                      </p>
+                      <div>
+                        <p className="font-semibold text-black">Anne Reyes</p>
+                        <p className="text-sm text-black">Consultation altoe</p>
+                        <p className="text-sm text-black">
+                          Aug 15, 2025 - 11:00 am
+                        </p>
+                        <p className="text-sm text-black">
+                          Discussion on research
+                        </p>
+                      </div>
+                      <TbArrowRight className="text-green-800 w-5 h-5 flex-shrink-0" />
                     </div>
                   </div>
                 </div>
@@ -407,7 +412,7 @@ const TeacherDashboard = () => {
             />
           </>
         )}
-
+          {currentView === "subjects" && <SubjectlistManagement />}
         {currentView === "availability" && <AvailabilityManagement />}
         {currentView === "consultation" && <ConsultationManagement />}
         {currentView === "studentrequest" && <StudentrequestManagement />}

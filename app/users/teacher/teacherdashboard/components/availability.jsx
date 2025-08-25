@@ -1,28 +1,4 @@
-import { useState, useEffect } from "react";
-import CryptoJS from "crypto-js"; // Import CryptoJS
-import { motion } from "framer-motion";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import axios from "axios";
-import {
-  TbZoom,
-  TbPlus,
-  TbArrowsDownUp,
-  TbEdit,
-  TbChevronDown,
-} from "react-icons/tb";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { TbZoom, TbClipboardList, TbPlus, TbEye } from "react-icons/tb";
 import {
   Pagination,
   PaginationContent,
@@ -33,47 +9,54 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-
-const SECRET_KEY = "my_secret_key_123456"; // Make sure this matches the key used in the backend
-
+import axios from "axios";
+import { motion } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import CryptoJS from "crypto-js";
 const AvailabilityManagement = () => {
-  const [fetchsuppliertype, setFetchSuppliertype] = useState([]);
+  const [filteredLogs, setFilteredLogs] = useState([]);
+  const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false); // 🔧 FIX: Add this line
+
+  const decryptUserId = () => {
+    const encryptedUserId = sessionStorage.getItem("user_id");
+
+    if (encryptedUserId) {
+      try {
+        const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
+        const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+        setLoggedInUserId(decryptedUserId);
+      } catch (error) {
+        console.error("Error decrypting user ID:", error);
+      }
+    }
+  };
+  useEffect(() => {
+    decryptUserId();
+  }, [loggedInUserId]);
+
   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   const [searchText, setSearchText] = useState("");
+  const filteredlogs = (filteredLogs || [])
+    .filter(
+      (finv) =>
+        String(finv.log_id).toLowerCase().includes(searchText.toLowerCase()) ||
+        String(finv.username)
+          .toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        String(finv.activity_type)
+          .toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        String(finv.action).toLowerCase().includes(searchText.toLowerCase())
+    )
+    .sort((a, b) => a.log_id - b.log_id);
 
-  const itemsPerPage = 10;
-
-  // 1. First, filter the categories based on search text
-  const filteredsupptypes = fetchsuppliertype.filter(
-    (supps) =>
-      supps.suppliertype?.toLowerCase().includes(searchText.toLowerCase()) ||
-      supps.created_at?.toLowerCase().includes(searchText.toLowerCase()) ||
-      supps.updated_at?.toLowerCase().includes(searchText.toLowerCase())
-  );
-
-  // 2. Then calculate total pages based on filtered results
-  const totalPages = Math.ceil(filteredsupptypes.length / itemsPerPage);
-
-  // 3. Calculate pagination indexes
+  const totalPages = Math.ceil(filteredlogs.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredlogs.slice(indexOfFirstItem, indexOfLastItem);
 
-  // 4. Slice the filtered list
-  const currentItems = filteredsupptypes.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
-
-  // Pagination controls
   const goToNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage((prev) => prev + 1);
@@ -90,156 +73,159 @@ const AvailabilityManagement = () => {
     setCurrentPage(pageNumber);
   };
 
-  useEffect(() => {
-    decryptUserId();
-  }, [loggedInUserId]);
-
-  const decryptUserId = () => {
-    const encryptedUserId = sessionStorage.getItem("user_id");
-
-    if (encryptedUserId) {
-      try {
-        const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
-        setLoggedInUserId(decryptedUserId);
-      } catch (error) {
-        console.error("Error decrypting user ID:", error);
-      }
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="bg-white p-6  shadow-md">
-        <h1 className="text-l font-bold mb-4 text-green-800 pb-5 mt-3">
-          Faculty availability Overview
-        </h1>
+      <>
+        <div className="bg-white p-6  shadow-md">
+          <h1 className="text-l font-bold mb-4 text-green-800 pb-5 mt-3 flex items-center gap-2">
+            <TbClipboardList className="text-xl w-6 h-6 !w-6 !h-6" />
+            Availability
+          </h1>
 
-        {/* Search Input with Magnifier Icon and Add Category Button */}
-        <div className="flex items-center justify-between pt-6 mb-4">
-          <div className="relative w-full max-w-md">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-full border border-black text-black placeholder-black rounded-lg pl-4 pr-10 py-2 shadow-sm"
-              value={searchText}
-              onChange={(e) => {
-                setSearchText(e.target.value);
-                setCurrentPage(1); // Important: Reset to page 1 when searching
-              }}
-            />
-            <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
+          {/* Search Input with Magnifier Icon and Button */}
+          <div className="flex items-center gap-4 pt-6 mb-4">
+            {/* Search Input */}
+            <div className="relative w-full max-w-md">
+              <input
+                type="text"
+                placeholder="Search..."
+                className="w-full border border-green-800 rounded-lg pl-4 pr-10 py-2 shadow-sm text-black placeholder-black"
+                value={searchText}
+                onChange={(e) => {
+                  setSearchText(e.target.value);
+                  setCurrentPage(1); // Reset to page 1 when searching
+                }}
+              />
+              <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
+            </div>
+
+            {/* Availability Button */}
+            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+              <TbPlus className="h-5 w-5 transition-colors duration-300" />
+              Set Availability
+            </button>
+
+             <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+              <TbPlus className="h-5 w-5 transition-colors duration-300" />
+              Add Slot
+            </button>
+
+
+              <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+              <TbEye className="h-5 w-5 transition-colors duration-300" />
+             View logs
+            </button>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                onClick={() => setDialogOpen(true)}
-                className="ml-2 px-4 py-2 bg-green-900 text-m font-semibold text-white rounded-lg shadow flex items-center hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-800"
-              >
-                <TbPlus className="w-6 h-6  !w-6 !h-6" />
-                Add availability
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Availability</DialogTitle>
-                <DialogDescription>
-                  Fill in the availability details below and click save to add
-                  it.
-                </DialogDescription>
-              </DialogHeader>
+          <table className="w-full border-collapse bg-white shadow-lg  overflow-hidden mx-auto">
+            <thead className="bg-gray-50 text-gray-500">
+              <tr>
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Date
+                </th>
 
-              <form>
-                <div className="grid gap-4 py-4"></div>
-                <DialogFooter>
-                  <Button type="submit">Save availability</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Time
+                </th>
 
-        <table className="w-full border-collapse bg-white shadow-lg      overflow-hidden">
-          <thead className="bg-green-900 text-white">
-            <tr>
-              {["Day", "Time range", "Recurrence", "Status", "Actions"].map(
-                (header, index) => (
-                  <th
-                    key={index}
-                    className="border px-6 py-3 text-center text-sm font-semibold relative"
-                  >
-                    {header}
-                    {header !== "Action" && (
-                      <div className="absolute top-0 right-2 flex flex-col items-center"></div>
-                    )}
-                  </th>
-                )
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Recurrence
+                </th>
+
+                  <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Subject
+                </th>
+
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Status
+                </th>
+                   <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentItems.length > 0 ? (
+                currentItems.map((log, index) => (
+                  <tr key={index}>
+                    <td className="border px-6 py-2 text-center">
+                      {log.log_id}
+                    </td>
+                    <td className="border px-6 py-2 text-center">
+                      {log.username}
+                    </td>
+                    <td className="border px-6 py-2 text-center">
+                      {log.activity_type}
+                    </td>
+                    <td className="border px-6 py-2 text-center">
+                      {log.action}
+                    </td>
+                    <td className="border px-6 py-2 text-center">
+                      {new Date(log.activity_time).toLocaleString("en-PH", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="22" className="text-center py-4 text-gray-500">
+                  No availability found.
+                  </td>
+                </tr>
               )}
-            </tr>
-          </thead>
+            </tbody>
+          </table>
 
-          <tbody>
-            <tr>
-              <td colSpan={5} className="text-center py-6 text-black">
-                No faculty availability found
-              </td>
-            </tr>
-          </tbody>
-        </table>
+          <div className="flex items-center justify-between mt-14">
+            {/* Entries Text */}
+            <span className="text-sm text-green-800 font-semibold pl-4">
+              Showing {indexOfFirstItem + 1} to{" "}
+              {Math.min(indexOfLastItem, filteredLogs.length)} of{" "}
+              {filteredLogs.length} entries
+            </span>
 
-        <div className="flex items-center justify-between mt-14">
-          <span className="text-sm text-black pl-4">
-            Showing {indexOfFirstItem + 1} to{" "}
-            {Math.min(indexOfLastItem, fetchsuppliertype.length)} of{" "}
-            {fetchsuppliertype.length} entries
-          </span>
-
-          {/* Pagination */}
-          <div className="flex">
-            <Pagination>
-              <PaginationContent className="flex">
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={goToPreviousPage}
-                    disabled={currentPage === 1}
-                  />
-                </PaginationItem>
-                {Array.from({ length: totalPages }, (_, index) => (
-                  <PaginationItem key={index}>
-                    <PaginationLink
-                      onClick={() => goToPage(index + 1)}
-                      className={
-                        currentPage === index + 1 ? "bg-red-900 text-white" : ""
-                      }
-                    >
-                      {index + 1}
-                    </PaginationLink>
+            {/* Pagination */}
+            <div className="flex">
+              <Pagination>
+                <PaginationContent className="flex">
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={goToPreviousPage}
+                      disabled={currentPage === 1}
+                    />
                   </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={goToNextPage}
-                    disabled={currentPage === totalPages}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                  {Array.from({ length: totalPages }, (_, index) => (
+                    <PaginationItem key={index}>
+                      <PaginationLink
+                        onClick={() => goToPage(index + 1)}
+                        className={
+                          currentPage === index + 1
+                            ? "bg-red-900 text-white"
+                            : ""
+                        }
+                      >
+                        {index + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={goToNextPage}
+                      disabled={currentPage === totalPages}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Toast Container */}
-      <ToastContainer
-        position="top-right"
-        autoClose={1000}
-        theme="light"
-        transition={Bounce}
-      />
+      </>
     </motion.div>
   );
 };

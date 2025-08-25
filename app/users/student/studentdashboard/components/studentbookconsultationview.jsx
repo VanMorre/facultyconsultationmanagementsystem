@@ -1,4 +1,4 @@
-import { TbZoom, TbClipboardList, TbPlus, TbEye , TbCalendar, TbHistory } from "react-icons/tb";
+import { TbZoom,  TbCalendar, TbHistory } from "react-icons/tb";
 import {
   Pagination,
   PaginationContent,
@@ -135,6 +135,10 @@ const StudentConsultationManagement = () => {
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Notes
+                </th>
+
+                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Status
                 </th>
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Action

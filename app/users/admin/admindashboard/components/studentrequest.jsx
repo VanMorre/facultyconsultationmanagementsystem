@@ -154,7 +154,7 @@ const StudentrequestManagement = () => {
 
             <tbody>
               <tr>
-                <td colSpan={22} className="text-center py-6 text-gray-500">
+                <td colSpan={22} className="text-center py-6 text-gray-500 ">
                   No student request found
                 </td>
               </tr>

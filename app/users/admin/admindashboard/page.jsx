@@ -38,6 +38,8 @@ ChartJS.register(
 );
 
 import { Line } from "react-chartjs-2";
+import SubjectlistManagement from "./components/subjectslist";
+import StudentrequestManagement from "./components/studentrequest";
 import DepartmentManagement from "./components/department";
 import ConsultationManagement from "./components/consultation";
 import AuditManagement from "./components/auditlogs";
@@ -58,7 +60,7 @@ import {
 import AdminLayout from "../layouts/adminlayout";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { TbUser, TbFilter, TbArrowDown } from "react-icons/tb";
+import { TbUser, TbFilter, TbArrowDown, TbArrowRight } from "react-icons/tb";
 
 const AdminDashboard = () => {
   const [loggedInUserId, setLoggedInUserId] = useState(null);
@@ -135,7 +137,7 @@ const AdminDashboard = () => {
                   <p className="text-sm text-green-800 font-semibold">
                     Total Consultations
                   </p>
-                  <h2 className="text-2xl font-bold text-green-800">25</h2>
+                  <h2 className="text-2xl font-bold text-green-800">1,225</h2>
                 </div>
                 <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaClipboardList className="text-xl" />
@@ -150,7 +152,7 @@ const AdminDashboard = () => {
                   <p className="text-sm text-green-800 font-semibold">
                     Scheduled
                   </p>
-                  <h2 className="text-2xl font-bold text-green-800">8</h2>
+                  <h2 className="text-2xl font-bold text-green-800">78</h2>
                 </div>
                 <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaCalendarCheck className="text-xl" />
@@ -165,7 +167,7 @@ const AdminDashboard = () => {
                   <p className="text-sm text-green-800 font-semibold">
                     Complete
                   </p>
-                  <h2 className="text-2xl font-bold text-green-800">12</h2>
+                  <h2 className="text-2xl font-bold text-green-800">162</h2>
                 </div>
                 <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaCheckCircle className="text-xl" />
@@ -178,9 +180,24 @@ const AdminDashboard = () => {
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
+                    Scheduled
+                  </p>
+                  <h2 className="text-2xl font-bold text-green-800">428</h2>
+                </div>
+                <div className="bg-green-800 text-white p-3 rounded-full">
+                  <FaCalendarCheck className="text-xl" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                variants={itemVariants}
+                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+              >
+                <div>
+                  <p className="text-sm text-green-800 font-semibold">
                     Cancelled
                   </p>
-                  <h2 className="text-2xl font-bold text-green-800">5</h2>
+                  <h2 className="text-2xl font-bold text-green-800">629</h2>
                 </div>
                 <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaTimesCircle className="text-xl" />
@@ -197,8 +214,8 @@ const AdminDashboard = () => {
                   className="bg-white p-6 rounded-lg shadow-md"
                 >
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg text-green-800 font-bold text-black">
-                      Teacher consultation render hours
+                    <h2 className="text-l font-bold text-black">
+                      Faculty Consultation Render Hours
                     </h2>
                     <motion.select
                       whileHover={{ scale: 1.05 }}
@@ -268,7 +285,7 @@ const AdminDashboard = () => {
                   variants={chartVariants}
                   className="bg-white p-6 rounded-lg shadow-md flex-grow"
                 >
-                  <h2 className="text-lg text-green-800 font-bold text-black mb-4">
+                  <h2 className="text-l  font-bold text-black mb-4">
                     My Consultation Availability
                   </h2>
                   <div className="border rounded-md overflow-hidden">
@@ -291,7 +308,11 @@ const AdminDashboard = () => {
                       </div>
                       <div className="border p-4 h-[80px]"></div>
                       <div className="border p-4 h-[80px]"></div>
-                      <div className="border p-4 h-[80px]"></div>
+                      <div className="border p-1 h-[80px] flex items-center justify-center">
+                        <div className="bg-green-900 text-white text-xs px-3 py-1 rounded-md">
+                          7:00pm – 4:00pm
+                        </div>
+                      </div>
                       <div className="border p-4 h-[80px]"></div>
                     </div>
                   </div>
@@ -308,7 +329,7 @@ const AdminDashboard = () => {
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <TbUser className="text-green-800 w-8 h-8 !w-8 !h-8" />
-                    <h2 className="text-lg text-green-800 font-bold ">
+                    <h2 className="text-l font-bold text-black ">
                       Student Requests
                     </h2>
                   </div>
@@ -324,47 +345,58 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Requests list */}
-                <div className="space-y-2">
-                  <div className="p-3 border border-green-800 rounded-md">
-                    <div className="flex justify-between">
-                      <p className="font-semibold text-black">Juan Dela Cruz</p>
-                      <p className="text-sm text-black">
-                        Discussion on research
-                      </p>
-                    </div>
+                <div className="space-y-3">
+                  <div className="p-4 bg-gray-50 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300">
                     <div className="flex justify-between items-center">
-                      <p className="text-sm text-black">
-                        Aug 10, 2025 - 1:00 am
-                      </p>
-                      <p className="text-sm text-black">Project guidance</p>
+                      <div>
+                        <p className="font-semibold text-black">
+                          Juan Dela Cruz
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          Discussion on research
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Aug 10, 2025 - 1:00 am
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          Project guidance
+                        </p>
+                      </div>
+                      <TbArrowRight className="text-green-800 w-5 h-5 flex-shrink-0" />
                     </div>
                   </div>
 
-                  <div className="p-3 border border-green-800 rounded-md">
-                    <div className="flex justify-between">
-                      <p className="font-semibold text-black">Daniel Smith</p>
-                      <p className="text-sm text-black">Project guidance</p>
-                    </div>
+                  <div className="p-4 bg-gray-50 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300">
                     <div className="flex justify-between items-center">
-                      <p className="text-sm text-black">
-                        Aug 12, 2025 - 9:30 am
-                      </p>
-                      <p className="text-sm text-black">Assistance help</p>
+                      <div>
+                        <p className="font-semibold text-black">Daniel Smith</p>
+                        <p className="text-sm text-gray-700">
+                          Project guidance
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Aug 12, 2025 - 9:30 am
+                        </p>
+                        <p className="text-sm text-gray-700">Assistance help</p>
+                      </div>
+                      <TbArrowRight className="text-green-800 w-5 h-5 flex-shrink-0" />
                     </div>
                   </div>
 
-                  <div className="p-3 border border-green-800 rounded-md">
-                    <div className="flex justify-between">
-                      <p className="font-semibold text-black">Anne Reyes</p>
-                      <p className="text-sm text-black">Consultation altoe</p>
-                    </div>
+                  <div className="p-4 bg-gray-50 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300">
                     <div className="flex justify-between items-center">
-                      <p className="text-sm text-black">
-                        Aug 15, 2025 - 11:00 am
-                      </p>
-                      <p className="text-sm text-black">
-                        Discussion on research
-                      </p>
+                      <div>
+                        <p className="font-semibold text-black">Anne Reyes</p>
+                        <p className="text-sm text-gray-700">
+                          Consultation altoe
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Aug 15, 2025 - 11:00 am
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          Discussion on research
+                        </p>
+                      </div>
+                      <TbArrowRight className="text-green-800 w-5 h-5 flex-shrink-0" />
                     </div>
                   </div>
                 </div>
@@ -395,6 +427,8 @@ const AdminDashboard = () => {
         )}
 
         {currentView === "faculty" && <FacultyManagement />}
+        {currentView === "subjects" && <SubjectlistManagement />}
+         {currentView === "studentrequest" && <StudentrequestManagement />}
         {currentView === "auditlogs" && <AuditManagement />}
         {currentView === "availability" && <AvailabilityManagement />}
         {currentView === "consultation" && <ConsultationManagement />}

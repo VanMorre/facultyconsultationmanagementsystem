@@ -1,4 +1,11 @@
-import { TbZoom, TbClipboardList, TbPlus, TbEye , TbCalendar } from "react-icons/tb";
+import {
+  TbZoom,
+  TbClipboardList,
+  TbPlus,
+  TbEye,
+  TbCalendar,
+  TbFilter,
+} from "react-icons/tb";
 import {
   Pagination,
   PaginationContent,
@@ -114,6 +121,12 @@ const ConsultationManagement = () => {
               <TbCalendar className="h-5 w-5 transition-colors duration-300" />
               Filter Consultation Date
             </button>
+
+            {/* Filter Date Button */}
+            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+              <TbFilter className="h-5 w-5 transition-colors duration-300" />
+              Filter Status
+            </button>
           </div>
 
           <table className="w-full border-collapse bg-white shadow-lg  overflow-hidden mx-auto">
@@ -128,7 +141,11 @@ const ConsultationManagement = () => {
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Time
+                  Start time
+                </th>
+
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Ended time
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
@@ -165,7 +182,7 @@ const ConsultationManagement = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="text-center py-4">
+                  <td colSpan="22" className="text-center py-4 text-gray-500">
                     No consultation found.
                   </td>
                 </tr>

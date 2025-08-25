@@ -155,7 +155,7 @@ const DepartmentManagement = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="text-center py-4">
+                  <td colSpan="5" className="text-center py-4 text-gray-500">
                   No department found.
                   </td>
                 </tr>

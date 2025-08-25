@@ -148,22 +148,27 @@ const BookConsultationManagement = () => {
       transition={{ duration: 0.5 }}
     >
       <div className="bg-white p-6 shadow-md">
-        <h1 className="text-l font-bold mb-4 text-green-800 pb-5 mt-3 flex items-center gap-2">
+        <h1 className="text-l font-bold mb-4 text-green-800  mt-3 flex items-center gap-2">
           <TbHistory className="text-xl w-6 h-6" /> Book Consultation
         </h1>
+        <p className="text-gray-600 text-sm mb-12">
+          Here you can schedule and manage your consultations.
+          Select a faculty availability, choose a time for consultations, and pick a convenient time to
+          ensure you get the assistance you need.
+        </p>
 
         {/* Calendar Header */}
         <div className="relative flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrevMonth}
-              className="p-2 rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors duration-200"
+              className="p-2 rounded border border-green-800 text-black hover:bg-green-900 hover:text-white transition-colors duration-200"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               onClick={handleNextMonth}
-              className="p-2 rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors duration-200"
+              className="p-2 rounded border border-green-800 text-black hover:bg-green-900 hover:text-white transition-colors duration-200"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -172,7 +177,7 @@ const BookConsultationManagement = () => {
                 setCurrentMonth(today.getMonth());
                 setCurrentYear(today.getFullYear());
               }}
-              className="ml-2 px-3 py-1 rounded border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors duration-200"
+              className="ml-2 px-3 py-1 rounded border border-green-800 text-black hover:bg-green-900 hover:text-white transition-colors duration-200"
             >
               Today
             </button>

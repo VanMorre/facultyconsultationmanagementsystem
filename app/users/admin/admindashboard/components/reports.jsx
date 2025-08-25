@@ -179,7 +179,7 @@ const ReportManagement = () => {
         {/* Chart */}
         <div className="bg-white p-5 rounded-lg shadow">
           <h2 className="text-md font-bold text-green-800 mb-4">
-            Consultation on Department
+            Consultation on per subjects
           </h2>
           <div className="h-[400px] w-full">
             <Bar data={barData} options={barOptions} />

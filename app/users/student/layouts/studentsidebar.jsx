@@ -12,23 +12,31 @@ const StudentSidebar = ({ collapsed, setCurrentView, currentView }) => {
   return (
     <aside
       className={`${
-        collapsed ? "w-16" : "w-60"
+        collapsed ? "w-16" : "w-62"
       } bg-white shadow-2xl transition-all duration-300 overflow-hidden`}
     >
-      <div className="p-4 mt-2 flex items-center justify-center gap-x-1 pl-2">
+    <div className="p-4 flex items-center justify-center pl-1 bg-green-900 shadow-xl">
         <img
           src="/images/coclogo-removebg.png"
           alt="PatientCare Logo"
           className={`transition-all duration-300 ${
-            collapsed ? "w-24 opacity-100" : "w-24"
+            collapsed ? "w-20 opacity-100" : "w-20"
           } h-auto`}
         />
         {!collapsed && (
-          <p className="text-m font-semibold text-black  pb-1">FCHMS PORTAL</p>
+          <div className="flex flex-col items-start pb-1">
+            <p className="text-m font-semibold text-white pb-0 leading-tight">
+              Faculty Consultation 
+            </p>
+            <p className="text-m font-semibold text-white pb-1 text-center">
+               Hours Portal.
+            </p>
+            <div className="w-full border-b-2 border-white"></div>
+          </div>
         )}
       </div>
 
-      <nav className="space-y-5 mt-3 ">
+      <nav className="space-y-6 mt-10 ">
         <Button
           variant="ghost"
           className={`w-full justify-start text-black ${

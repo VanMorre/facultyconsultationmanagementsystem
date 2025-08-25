@@ -1,4 +1,4 @@
-import { TbZoom, TbClipboardList, TbPlus, TbEye , TbCalendar, TbFilter } from "react-icons/tb";
+import { TbZoom, TbClipboardList, TbPlus, TbEye, TbCalendar, TbFilter } from "react-icons/tb";
 import {
   Pagination,
   PaginationContent,
@@ -13,7 +13,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
 import CryptoJS from "crypto-js";
-const ConsultationManagement = () => {
+const SubjectlistManagement = () => {
   const [filteredLogs, setFilteredLogs] = useState([]);
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
@@ -83,10 +83,10 @@ const ConsultationManagement = () => {
         <div className="bg-white p-6  shadow-md">
           <h1 className="text-l font-bold mb-4 text-green-800 pb-5 mt-3 flex items-center gap-2">
             <TbClipboardList className="text-xl w-6 h-6 !w-6 !h-6" />
-            Consultations
+            Subjects List
           </h1>
 
-          {/* Search Input with Magnifier Icon and Buttons */}
+          {/* Search Input with Magnifier Icon and Button */}
           <div className="flex items-center gap-4 pt-6 mb-4">
             {/* Search Input */}
             <div className="relative w-full max-w-md">
@@ -103,23 +103,15 @@ const ConsultationManagement = () => {
               <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
             </div>
 
-            {/* New Consultations Button */}
+            {/* Availability Button */}
             <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
               <TbPlus className="h-5 w-5 transition-colors duration-300" />
-              New Consultations
+              Add Subjects
             </button>
 
-            {/* Filter Date Button */}
-            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
-              <TbCalendar className="h-5 w-5 transition-colors duration-300" />
-              Filter Consultation Date
-            </button>
-
-            
-            {/* Filter Date Button */}
             <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
               <TbFilter className="h-5 w-5 transition-colors duration-300" />
-              Filter Status
+              Filter Subject Status
             </button>
           </div>
 
@@ -127,24 +119,17 @@ const ConsultationManagement = () => {
             <thead className="bg-gray-50 text-gray-500">
               <tr>
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Student
+                  #
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Date
-                </th>
-
-                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Start time
-                </th>
-
-                  <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Ended time
+                  Subject
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Status
                 </th>
+
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Action
                 </th>
@@ -176,8 +161,8 @@ const ConsultationManagement = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="22" className="text-center py-4 text-gray-500">
-                    No consultation found.
+                  <td colSpan="5" className="text-center py-4 text-gray-500">
+                    No Subject found.
                   </td>
                 </tr>
               )}
@@ -232,4 +217,4 @@ const ConsultationManagement = () => {
   );
 };
 
-export default ConsultationManagement;
+export default SubjectlistManagement;
