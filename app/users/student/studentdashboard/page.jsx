@@ -25,7 +25,8 @@ ChartJS.register(
   Filler
 );
 import { Line } from "react-chartjs-2";
-
+import BookConsultationManagement from "./components/studentbookconsultation";
+import StudentConsultationManagement from "./components/studentbookconsultationview";
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -201,6 +202,10 @@ const StudentDashboard = () => {
             />
           </>
         )}
+
+          {currentView === "bookconsultation" && <BookConsultationManagement/>}
+         {currentView === "consultation" && <StudentConsultationManagement />}
+
       </motion.div>
     </StudentLayout>
   );

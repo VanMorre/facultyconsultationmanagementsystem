@@ -618,7 +618,7 @@ const FacultyManagement = () => {
           </div>
 
           <table className="w-full border-collapse bg-white shadow-lg  overflow-hidden">
-            <thead className="bg-green-900 text-white">
+            <thead className="bg-gray-50 text-gray-500">
               <tr>
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   #
@@ -665,8 +665,8 @@ const FacultyManagement = () => {
                         alt="userImage"
                         onError={(e) => (e.target.src = "/default.jpg")}
                         style={{
-                          width: "80px",
-                          height: "80px",
+                          width: "60px",
+                          height: "60px",
                           objectFit: "cover",
                           borderRadius: "5px",
                           display: "block",
@@ -686,11 +686,11 @@ const FacultyManagement = () => {
                     </td>
                     <td className="border px-6 py-3 text-center text-sm font-semibold">
                       <span
-                        className={`inline-block px-5 py-2 text-sm font-semibold rounded-md ${
+                        className={`inline-block px-3 py-1 text-sm font-semibold rounded-md ${
                           usersaccountdetails.status === "Active"
-                            ? "bg-gray-200 text-black"
+                            ? "bg-green-900 text-white"
                             : usersaccountdetails.status === "Inactive"
-                            ? "bg-red-400 text-white"
+                            ? "bg-gray-200 text-white"
                             : "bg-gray-200 text-white"
                         }`}
                       >
@@ -707,7 +707,7 @@ const FacultyManagement = () => {
                     <td className="border px-6 py-3 text-center text-sm font-semibold">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="px-5 py-3 bg-gray-200 text-black font-semibold text-sm rounded-md flex items-center space-x-2 focus:outline-none text-center mx-auto">
+                          <button className="px-3 py-1 bg-green-800 text-white font-semibold text-sm rounded-md flex items-center space-x-2 focus:outline-none text-center mx-auto">
                             <span>Options</span>
                             <TbChevronDown className="w-4 h-4" />
                           </button>

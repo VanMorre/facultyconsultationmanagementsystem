@@ -1,4 +1,7 @@
 "use client";
+import dynamic from "next/dynamic";
+
+const ClientOnlyApp = dynamic(() => Promise.resolve(App), { ssr: false });
 import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./users/routes/ProtectedRoute";
 import AdminDashboard from "./users/admin/admindashboard/page";
@@ -43,5 +46,8 @@ function App() {
   );
 }
 
-export default App;
+// ✅ Export only the client-safe version
+export default function Root() {
+  return <ClientOnlyApp />;
+}
  

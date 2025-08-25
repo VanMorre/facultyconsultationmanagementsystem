@@ -24,8 +24,26 @@ ChartJS.register(
   PointElement,
   Filler
 );
+
+ChartJS.register(
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  PointElement
+);
+
 import { Line } from "react-chartjs-2";
+import DepartmentManagement from "./components/department";
+import ConsultationManagement from "./components/consultation";
+import AuditManagement from "./components/auditlogs";
 import FacultyManagement from "./components/faculty";
+import AvailabilityManagement from "./components/availability";
+import ReportManagement from "./components/reports";
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -40,19 +58,8 @@ import {
 import AdminLayout from "../layouts/adminlayout";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { TbUser, TbFilter, TbArrowDown } from "react-icons/tb";
 
-ChartJS.register(
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  PointElement
-);
-import { TbUser, TbFilter, TbArrowRight, TbArrowDown } from "react-icons/tb";
 const AdminDashboard = () => {
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [currentView, setCurrentView] = useState("dashboard");
@@ -122,7 +129,7 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <motion.div
                 variants={itemVariants}
-                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
@@ -137,7 +144,7 @@ const AdminDashboard = () => {
 
               <motion.div
                 variants={itemVariants}
-                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
@@ -152,7 +159,7 @@ const AdminDashboard = () => {
 
               <motion.div
                 variants={itemVariants}
-                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
@@ -167,7 +174,7 @@ const AdminDashboard = () => {
 
               <motion.div
                 variants={itemVariants}
-                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
@@ -190,7 +197,7 @@ const AdminDashboard = () => {
                   className="bg-white p-6 rounded-lg shadow-md"
                 >
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-bold text-black">
+                    <h2 className="text-lg text-green-800 font-bold text-black">
                       Teacher consultation render hours
                     </h2>
                     <motion.select
@@ -261,7 +268,7 @@ const AdminDashboard = () => {
                   variants={chartVariants}
                   className="bg-white p-6 rounded-lg shadow-md flex-grow"
                 >
-                  <h2 className="text-lg font-bold text-black mb-4">
+                  <h2 className="text-lg text-green-800 font-bold text-black mb-4">
                     My Consultation Availability
                   </h2>
                   <div className="border rounded-md overflow-hidden">
@@ -301,7 +308,7 @@ const AdminDashboard = () => {
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <TbUser className="text-green-800 w-8 h-8 !w-8 !h-8" />
-                    <h2 className="text-lg font-bold text-black">
+                    <h2 className="text-lg text-green-800 font-bold ">
                       Student Requests
                     </h2>
                   </div>
@@ -387,8 +394,12 @@ const AdminDashboard = () => {
           </>
         )}
 
-
         {currentView === "faculty" && <FacultyManagement />}
+        {currentView === "auditlogs" && <AuditManagement />}
+        {currentView === "availability" && <AvailabilityManagement />}
+        {currentView === "consultation" && <ConsultationManagement />}
+        {currentView === "departments" && <DepartmentManagement />}
+        {currentView === "reports" && <ReportManagement />}
       </motion.div>
     </AdminLayout>
   );

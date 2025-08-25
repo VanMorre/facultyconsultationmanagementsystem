@@ -12,8 +12,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import CryptoJS from "crypto-js";
 import Link from "next/link";
-import { AiOutlineLogin } from "react-icons/ai"; // Make sure this is imported
-
+import { LuLogIn } from "react-icons/lu";
+import { FiRefreshCcw } from "react-icons/fi";
 const SECRET_KEY = "my_secret_key_123456";
 
 export default function AdminLogin() {
@@ -77,9 +77,12 @@ export default function AdminLogin() {
   const generateCaptcha = () => {
     const canvas = captchaCanvasRef.current;
     if (!canvas) return;
+
     const ctx = canvas.getContext("2d");
     const characters =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+    // Generate captcha text
     let captcha = "";
     for (let i = 0; i < 6; i++) {
       captcha += characters.charAt(
@@ -87,15 +90,32 @@ export default function AdminLogin() {
       );
     }
     setCaptchaText(captcha);
+
+    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Style text
     ctx.font = "30px Arial";
     ctx.fillStyle = "#000";
-    ctx.fillText(captcha, 10, 35);
-    for (let i = 0; i < 5; i++) {
+
+    // Calculate spacing and centering
+    const letterSpacing = 40; // distance between letters
+    const textWidth = captcha.length * letterSpacing;
+    const startX = (canvas.width - textWidth) / 2;
+    const startY = canvas.height / 2 + 10; // vertical center offset
+
+    // Draw each letter with spacing
+    for (let i = 0; i < captcha.length; i++) {
+      ctx.fillText(captcha[i], startX + i * letterSpacing, startY);
+    }
+
+    // Add many random strokes for interference
+    for (let i = 0; i < 12; i++) {
       ctx.beginPath();
-      ctx.moveTo(Math.random() * 200, Math.random() * 50);
-      ctx.lineTo(Math.random() * 200, Math.random() * 50);
-      ctx.strokeStyle = "#999";
+      ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      ctx.strokeStyle = "#000"; // fixed solid black
+      ctx.lineWidth = Math.random() * 2; // varied thickness
       ctx.stroke();
     }
   };
@@ -399,20 +419,35 @@ export default function AdminLogin() {
                 </div>
               </motion.div>
 
-              <motion.div variants={itemVariants}>
+               <motion.div variants={itemVariants} className="mt-8 ">
+              <div className="flex items-center gap-3 mb-6">
                 <canvas
                   ref={captchaCanvasRef}
-                  width="200"
-                  height="50"
-                  className="border mb-4 border-green-800 text-green-800"
+                  width="280"
+                  height="70"
+                  className="border border-black bg-white shadow-xl"
                 />
-                <Input
-                  type="text"
-                  value={captchaInput}
-                  onChange={(e) => setCaptchaInput(e.target.value)}
-                  className="w-full h-12 text-base p-3 border border-green-800 rounded-md text-black"
-                />
-              </motion.div>
+                <button
+                  type="button"
+                  onClick={generateCaptcha}
+                  className="p-2 bg-green-800 hover:bg-green-900 text-white rounded-md shadow-md"
+                  title="Refresh Captcha"
+                >
+                  <FiRefreshCcw size={20} />
+                </button>
+              </div>
+              <motion.input
+                whileFocus={{ scale: 1.02 }}
+                type="text"
+                value={captchaInput}
+                onChange={(e) => setCaptchaInput(e.target.value)}
+                className="w-full p-2 border border-black shadow-xl rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-red-400 text-black h-12"
+              />
+            </motion.div>
+
+
+
+
 
               <motion.div variants={itemVariants}>
                 <Button
@@ -423,7 +458,7 @@ export default function AdminLogin() {
                   }`}
                 >
                   {isLocked ? `Try again in ${lockoutTime}s` : "Sign In"}
-                  <AiOutlineLogin className=" w-6 h-6 !w-6 !h-6" />
+                  <LuLogIn className=" w-6 h-6 !w-6 !h-6 " />
                 </Button>
               </motion.div>
 

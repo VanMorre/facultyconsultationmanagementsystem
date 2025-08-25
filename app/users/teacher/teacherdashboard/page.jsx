@@ -24,8 +24,18 @@ ChartJS.register(
   PointElement,
   Filler
 );
-import { Line } from "react-chartjs-2";
+import {
+  FaClipboardList,
+  FaCalendarCheck,
+  FaCheckCircle,
+  FaTimesCircle,
+} from "react-icons/fa";
 
+import { TbUser, TbFilter, TbArrowRight, TbArrowDown } from "react-icons/tb";
+import { Line } from "react-chartjs-2";
+import StudentrequestManagement from "./components/studentrequest";
+import AvailabilityManagement from "./components/availability";
+import ConsultationManagement from "./components/consultation";
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -113,75 +123,271 @@ const TeacherDashboard = () => {
       >
         {currentView === "dashboard" && (
           <>
-            <div className="grid grid-cols-2 gap-4 mb-10">
+            {/* Top Stat Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <motion.div
-                variants={chartVariants}
-                className="bg-white p-6 rounded-lg shadow-md"
+                variants={itemVariants}
+                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-bold text-black">
-                    Number of Book Consultation
-                  </h2>
-                  <motion.select
-                    whileHover={{ scale: 1.05 }}
-                    className="border rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-[#00856F]"
-                  >
-                    <option value="0">All</option>
-                    {[
-                      "January",
-                      "February",
-                      "March",
-                      "April",
-                      "May",
-                      "June",
-                      "July",
-                      "August",
-                      "September",
-                      "October",
-                      "November",
-                      "December",
-                    ].map((m, idx) => (
-                      <option key={idx} value={idx + 1}>
-                        {m}
-                      </option>
-                    ))}
-                  </motion.select>
+                <div>
+                  <p className="text-sm text-green-800 font-semibold">
+                    Total Consultations
+                  </p>
+                  <h2 className="text-2xl font-bold text-green-800">25</h2>
                 </div>
-                <div className="h-[300px]">
-                  <Line
-                    data={{
-                      labels: [
-                        "Jan",
-                        "Feb",
-                        "Mar",
-                        "Apr",
+                <div className="bg-green-800 text-white p-3 rounded-full">
+                  <FaClipboardList className="text-xl" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                variants={itemVariants}
+                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+              >
+                <div>
+                  <p className="text-sm text-green-800 font-semibold">
+                    Scheduled
+                  </p>
+                  <h2 className="text-2xl font-bold text-green-800">8</h2>
+                </div>
+                <div className="bg-green-800 text-white p-3 rounded-full">
+                  <FaCalendarCheck className="text-xl" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                variants={itemVariants}
+                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+              >
+                <div>
+                  <p className="text-sm text-green-800 font-semibold">
+                    Complete
+                  </p>
+                  <h2 className="text-2xl font-bold text-green-800">12</h2>
+                </div>
+                <div className="bg-green-800 text-white p-3 rounded-full">
+                  <FaCheckCircle className="text-xl" />
+                </div>
+              </motion.div>
+
+                <motion.div
+                variants={itemVariants}
+                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+              >
+                <div>
+                  <p className="text-sm text-green-800 font-semibold">
+                    Reschedule
+                  </p>
+                  <h2 className="text-2xl font-bold text-green-800">12</h2>
+                </div>
+                <div className="bg-green-800 text-white p-3 rounded-full">
+                  <FaCheckCircle className="text-xl" />
+                </div>
+              </motion.div>
+
+
+              <motion.div
+                variants={itemVariants}
+                className="border border-green-800 bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+              >
+                <div>
+                  <p className="text-sm text-green-800 font-semibold">
+                    Cancelled
+                  </p>
+                  <h2 className="text-2xl font-bold text-green-800">5</h2>
+                </div>
+                <div className="bg-green-800 text-white p-3 rounded-full">
+                  <FaTimesCircle className="text-xl" />
+                </div>
+              </motion.div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              {/* Left Column - Teacher Consultation and My Weekly Availability stacked */}
+              <div className="col-span-2 flex flex-col gap-3">
+                {/* Teacher Consultation Render Hours */}
+                <motion.div
+                  variants={chartVariants}
+                  className="bg-white p-6 rounded-lg shadow-md"
+                >
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-lg font-bold text-black">
+                      Total Consultations
+                    </h2>
+                    <motion.select
+                      whileHover={{ scale: 1.05 }}
+                      className="border rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-[#00856F]"
+                    >
+                      <option value="0">All</option>
+                      {[
+                        "January",
+                        "February",
+                        "March",
+                        "April",
                         "May",
-                        "Jun",
-                        "Jul",
-                        "Aug",
-                        "Sep",
-                        "Oct",
-                        "Nov",
-                        "Dec",
-                      ],
-                      datasets: [
-                        {
-                          label: "Book Consultation",
-                          data: [5, 8, 6, 10, 7, 12, 9, 11, 6, 8, 10, 7], // sample values
-                          borderColor: "#246919ff", // green-800
-                          backgroundColor: "rgba(31, 118, 110, 0.2)", // light fill of green-800
-                          tension: 0.4,
-                          fill: true,
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: { legend: { position: "top" } },
-                      scales: { y: { beginAtZero: true } },
-                    }}
-                  />
+                        "June",
+                        "July",
+                        "August",
+                        "September",
+                        "October",
+                        "November",
+                        "December",
+                      ].map((m, idx) => (
+                        <option key={idx} value={idx + 1}>
+                          {m}
+                        </option>
+                      ))}
+                    </motion.select>
+                  </div>
+                  <div className="h-[300px]">
+                    <Line
+                      data={{
+                        labels: [
+                          "Jan",
+                          "Feb",
+                          "Mar",
+                          "Apr",
+                          "May",
+                          "Jun",
+                          "Jul",
+                          "Aug",
+                          "Sep",
+                          "Oct",
+                          "Nov",
+                          "Dec",
+                        ],
+                        datasets: [
+                          {
+                            label: "RenderHours",
+                            data: [5, 8, 6, 10, 7, 12, 9, 11, 6, 8, 10, 7],
+                            borderColor: "#246919ff",
+                            backgroundColor: "rgba(31, 118, 110, 0.2)",
+                            tension: 0.4,
+                            fill: true,
+                          },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: "top" } },
+                        scales: { y: { beginAtZero: true } },
+                      }}
+                    />
+                  </div>
+                </motion.div>
+
+                {/* My Weekly Consultation Availability */}
+                <motion.div
+                  variants={chartVariants}
+                  className="bg-white p-6 rounded-lg shadow-md flex-grow"
+                >
+                  <h2 className="text-lg font-bold text-black mb-4">
+                    My Consultation Availability
+                  </h2>
+                  <div className="border rounded-md overflow-hidden">
+                    <div className="grid grid-cols-7 text-center text-sm font-medium bg-green-900 text-white font-semibold">
+                      <div className="py-2">Monday</div>
+                      <div className="py-2">Tuesday</div>
+                      <div className="py-2">Wednesday</div>
+                      <div className="py-2">Thursday</div>
+                      <div className="py-2">Friday</div>
+                      <div className="py-2">Saturday</div>
+                      <div className="py-2">Sunday</div>
+                    </div>
+                    <div className="grid grid-cols-7 text-center">
+                      <div className="border p-4 h-[80px]"></div>
+                      <div className="border p-4 h-[80px]"></div>
+                      <div className="border p-1 h-[80px] flex items-center justify-center">
+                        <div className="bg-green-900 text-white text-xs px-3 py-1 rounded-md">
+                          2:00pm – 4:00pm
+                        </div>
+                      </div>
+                      <div className="border p-4 h-[80px]"></div>
+                      <div className="border p-4 h-[80px]"></div>
+                      <div className="border p-4 h-[80px]"></div>
+                      <div className="border p-4 h-[80px]"></div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="bg-white p-4 rounded-lg shadow-md h-full"
+              >
+                {/* Header with icon & filter */}
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-2">
+                    <TbUser className="text-green-800 w-8 h-8 !w-8 !h-8" />
+                    <h2 className="text-lg font-bold text-black">
+                      Student Requests
+                    </h2>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <TbFilter className="text-green-800 w-8 h-8 !w-8 !h-8" />
+                    <select className="border border-green-800 rounded px-2 py-1 text-sm text-black focus:outline-none">
+                      <option>All</option>
+                      <option>Today</option>
+                      <option>This Week</option>
+                      <option>This Month</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Requests list */}
+                <div className="space-y-2">
+                  <div className="p-3 border border-green-800 rounded-md">
+                    <div className="flex justify-between">
+                      <p className="font-semibold text-black">Juan Dela Cruz</p>
+                      <p className="text-sm text-black">
+                        Discussion on research
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm text-black">
+                        Aug 10, 2025 - 1:00 am
+                      </p>
+                      <p className="text-sm text-black">Project guidance</p>
+                    </div>
+                  </div>
+
+                  <div className="p-3 border border-green-800 rounded-md">
+                    <div className="flex justify-between">
+                      <p className="font-semibold text-black">Daniel Smith</p>
+                      <p className="text-sm text-black">Project guidance</p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm text-black">
+                        Aug 12, 2025 - 9:30 am
+                      </p>
+                      <p className="text-sm text-black">Assistance help</p>
+                    </div>
+                  </div>
+
+                  <div className="p-3 border border-green-800 rounded-md">
+                    <div className="flex justify-between">
+                      <p className="font-semibold text-black">Anne Reyes</p>
+                      <p className="text-sm text-black">Consultation altoe</p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm text-black">
+                        Aug 15, 2025 - 11:00 am
+                      </p>
+                      <p className="text-sm text-black">
+                        Discussion on research
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* See more link */}
+                <div className="mt-56 flex justify-center">
+                  <button className="w-8 h-8 flex items-center justify-center rounded-full bg-green-800 hover:bg-green-900 transition-colors">
+                    <TbArrowDown className="text-white text-lg" />
+                  </button>
                 </div>
               </motion.div>
             </div>
@@ -201,6 +407,10 @@ const TeacherDashboard = () => {
             />
           </>
         )}
+
+        {currentView === "availability" && <AvailabilityManagement />}
+        {currentView === "consultation" && <ConsultationManagement />}
+        {currentView === "studentrequest" && <StudentrequestManagement />}
       </motion.div>
     </TeacherLayout>
   );

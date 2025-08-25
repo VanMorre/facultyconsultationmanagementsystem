@@ -9,6 +9,8 @@ import {
   TbBuildingCommunity,
   TbReport,
   TbClipboardList,
+  TbChartLine,
+  TbWaveSawTool,
 } from "react-icons/tb";
 
 const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
@@ -89,7 +91,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
             className="mr-1"
             style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
           />
-          {!collapsed && <span className="pr-8 font-semibold">Add Faculty</span>}
+          {!collapsed && <span className="pr-8 font-semibold">Faculty</span>}
         </Button>
 
         <Button
@@ -115,7 +117,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           }`}
           onClick={() => setCurrentView("reports")}
         >
-          <TbReport
+          <TbChartLine
             className="mr-1"
             style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
           />
@@ -129,7 +131,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           }`}
           onClick={() => setCurrentView("auditlogs")}
         >
-          <TbClipboardList
+          <TbWaveSawTool
             className="mr-1"
             style={{ height: "28px", width: "35px", color: "#6e7a36" }}
           />
