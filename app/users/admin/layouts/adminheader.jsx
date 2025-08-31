@@ -18,10 +18,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-
-
-
-import { Menu, LogOut, ChevronDown, Plus } from "lucide-react";
+import { PiBellRingingFill } from "react-icons/pi";
+import { Menu, LogOut, ChevronDown } from "lucide-react";
 import useLogout from "@/app/users/hooks/logout";
 import CryptoJS from "crypto-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,7 +33,6 @@ const AdminHeader = ({ toggleSidebar, setCurrentView }) => {
   const [username, setUsername] = useState("");
   const [userImage, setUserImage] = useState("");
   const [loggedInUserId, setLoggedInUserId] = useState(null);
-
 
   const decryptData = (data) => {
     if (!data) return null;
@@ -78,10 +75,7 @@ const AdminHeader = ({ toggleSidebar, setCurrentView }) => {
     decryptUserId();
 
     //bag o ni
- 
   }, [loggedInUserId]);
-
-
 
   return (
     <>
@@ -97,8 +91,10 @@ const AdminHeader = ({ toggleSidebar, setCurrentView }) => {
             <Menu className="h-6 w-6 text-black" />
           </Button>
 
-          <div className="flex items-center gap-2">
-      
+          <div className="flex items-center ">
+            {/* Bell Icon */}
+            <PiBellRingingFill className="h-8 w-8 text-green-800 cursor-pointer " />
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -129,7 +125,7 @@ const AdminHeader = ({ toggleSidebar, setCurrentView }) => {
                   className="flex items-center gap-2 mb-2 cursor-pointer"
                   onClick={() => setCurrentView("profile")}
                 >
-                  <TbUserFilled className="h-6 w-6 !h-6 !w-6  text-black" />
+                  <TbUserFilled className="h-6 w-6 !h-6 !w-6 text-black" />
                   <span>Profile</span>
                 </DropdownMenuItem>
 

@@ -36,6 +36,12 @@ import StudentLayout from "../layouts/studentlayout";
 
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import {
+  FaClipboardList,
+  FaCalendarCheck,
+  FaCheckCircle,
+  FaTimesCircle,
+} from "react-icons/fa";
 
 ChartJS.register(
   ArcElement,
@@ -114,7 +120,24 @@ const StudentDashboard = () => {
       >
         {currentView === "dashboard" && (
           <>
-            <div className="grid grid-cols-2 gap-4 mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <motion.div
+                variants={itemVariants}
+                className="border bg-white p-5 min-h-[100px] rounded-lg shadow flex justify-between items-center w-full"
+              >
+                <div>
+                  <p className="text-sm text-green-800 font-semibold">
+                    Total Consultations
+                  </p>
+                  <h2 className="text-2xl font-bold text-green-800">46</h2>
+                </div>
+                <div className="bg-green-800 text-white p-3 rounded-full">
+                  <FaClipboardList className="text-xl" />
+                </div>
+              </motion.div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-10">
               <motion.div
                 variants={chartVariants}
                 className="bg-white p-6 rounded-lg shadow-md"
@@ -203,9 +226,8 @@ const StudentDashboard = () => {
           </>
         )}
 
-          {currentView === "bookconsultation" && <BookConsultationManagement/>}
-         {currentView === "consultation" && <StudentConsultationManagement />}
-
+        {currentView === "bookconsultation" && <BookConsultationManagement />}
+        {currentView === "consultation" && <StudentConsultationManagement />}
       </motion.div>
     </StudentLayout>
   );

@@ -20,7 +20,7 @@ import {
 
 
 import axios from "axios";
-
+import { PiBellRingingFill } from "react-icons/pi";
 import { Menu, LogOut, ChevronDown, Plus } from "lucide-react";
 import useLogout from "@/app/users/hooks/logout";
 import CryptoJS from "crypto-js";
@@ -97,71 +97,73 @@ const TeacherHeader = ({ toggleSidebar, setCurrentView }) => {
             <Menu className="h-6 w-6 text-black" />
           </Button>
 
-          <div className="flex items-center gap-2">
+       <div className="flex items-center ">
+                  {/* Bell Icon */}
+                  <PiBellRingingFill className="h-8 w-8 text-green-800 cursor-pointer " />
       
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative flex items-center space-x-2"
-                >
-                  <Avatar>
-                    <AvatarImage
-                      src={userImage || "https://github.com/shadcn.png"}
-                      alt="User Avatar"
-                    />
-                    <AvatarFallback>
-                      {username?.charAt(0)?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  {username && (
-                    <span className="text-black text-sm font-medium flex items-center space-x-1">
-                      <span>Hello, {username}</span>
-                      <ChevronDown className=" ml-2 mt-1 w-4 h-4 text-black" />
-                    </span>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent className="w-56 mb-2" align="end" forceMount>
-                <DropdownMenuItem
-                  className="flex items-center gap-2 mb-2 cursor-pointer"
-                  onClick={() => setCurrentView("profile")}
-                >
-                  <TbUserFilled className="h-6 w-6 !h-6 !w-6  text-black" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <button className="flex items-center gap-2 text-black hover:text-gray-500 ml-2 w-full text-left">
-                      <LogOut className="h-6 w-6" />
-                      <span>Logout</span>
-                    </button>
-                  </AlertDialogTrigger>
-
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Are you sure you want to logout?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. Once logged out, you will
-                        be redirected to the login page.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>No</AlertDialogCancel>
-                      <AlertDialogAction onClick={logout}>
-                        Yes
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="relative flex items-center space-x-2"
+                      >
+                        <Avatar>
+                          <AvatarImage
+                            src={userImage || "https://github.com/shadcn.png"}
+                            alt="User Avatar"
+                          />
+                          <AvatarFallback>
+                            {username?.charAt(0)?.toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+      
+                        {username && (
+                          <span className="text-black text-sm font-medium flex items-center space-x-1">
+                            <span>Hello, {username}</span>
+                            <ChevronDown className=" ml-2 mt-1 w-4 h-4 text-black" />
+                          </span>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+      
+                    <DropdownMenuContent className="w-56 mb-2" align="end" forceMount>
+                      <DropdownMenuItem
+                        className="flex items-center gap-2 mb-2 cursor-pointer"
+                        onClick={() => setCurrentView("profile")}
+                      >
+                        <TbUserFilled className="h-6 w-6  !h-6 !w-6 text-black" />
+                        <span>Profile</span>
+                      </DropdownMenuItem>
+      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button className="flex items-center gap-2 text-black hover:text-gray-500 ml-2 w-full text-left">
+                            <LogOut className="h-6 w-6" />
+                            <span>Logout</span>
+                          </button>
+                        </AlertDialogTrigger>
+      
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Are you sure you want to logout?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. Once logged out, you will
+                              be redirected to the login page.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>No</AlertDialogCancel>
+                            <AlertDialogAction onClick={logout}>
+                              Yes
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
         </div>
       </header>
 

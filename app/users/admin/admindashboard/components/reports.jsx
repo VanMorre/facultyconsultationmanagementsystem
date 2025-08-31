@@ -1,4 +1,4 @@
-import { TbCalendar, TbWaveSawTool } from "react-icons/tb";
+import { TbCalendar, TbPrinter, TbWaveSawTool } from "react-icons/tb";
 import { FaClipboardList, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -114,6 +114,7 @@ const ReportManagement = () => {
         {/* Action buttons */}
         <div className="flex items-center gap-4 pt-6 mb-6">
           <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+            <TbPrinter className="h-5 w-5 transition-colors duration-300" />
             Generate Report
           </button>
 

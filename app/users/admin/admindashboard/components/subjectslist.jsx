@@ -1,4 +1,11 @@
-import { TbZoom, TbClipboardList, TbPlus, TbEye, TbCalendar, TbFilter } from "react-icons/tb";
+import {
+  TbZoom,
+  TbClipboardList,
+  TbPlus,
+  TbEye,
+  TbCalendar,
+  TbFilter,
+} from "react-icons/tb";
 import {
   Pagination,
   PaginationContent,
@@ -8,7 +15,24 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "react-toastify";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
@@ -17,7 +41,10 @@ const SubjectlistManagement = () => {
   const [filteredLogs, setFilteredLogs] = useState([]);
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
-
+  const [subject, setSubject] = useState("");
+  const [filteredyear, setFilteredyear] = useState([]);
+  const [selectedYear, setSelectedYear] = useState("");
+  const DEFAULT_SUBJECTSTATUS_STATUS_ID = 1;
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
 
@@ -33,6 +60,7 @@ const SubjectlistManagement = () => {
   };
   useEffect(() => {
     decryptUserId();
+    fetchacademicyear();
   }, [loggedInUserId]);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -73,6 +101,67 @@ const SubjectlistManagement = () => {
     setCurrentPage(pageNumber);
   };
 
+  const fetchacademicyear = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/academicyear/fetch-academicyear.php`
+      );
+
+      if (response.data.success) {
+        setFilteredyear(response.data.data);
+      } else {
+        console.log(response.data.message || "No academic year found");
+        setFilteredyear([]);
+      }
+    } catch (error) {
+      console.error("Error fetching academic year:", error);
+    }
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+
+    // ✅ Validation
+    if (!subject.trim()) {
+      toast.error("Please enter a subject name.");
+      return;
+    }
+    if (!selectedYear) {
+      toast.error("Please select an academic year.");
+      return;
+    }
+
+    try {
+      // ✅ API call
+      const response = await axios.post(
+        "http://localhost/fchms/app/api_fchms/subject/add-subject.php",
+        {
+          subject_name: subject,
+          academicyear_id: selectedYear,
+          subjectstatus_id: DEFAULT_SUBJECTSTATUS_STATUS_ID, 
+          user_id: loggedInUserId
+        }
+      );
+
+      // ✅ Success response
+      if (response.data.success) {
+        toast.success("Subject added successfully!");
+
+        // clear form after save
+        setSubject("");
+        setSelectedYear("");
+
+        // optional: refresh subject list if you have one
+        // fetchSubjects();
+      } else {
+        toast.error(response.data.message || "Failed to add subject.");
+      }
+    } catch (error) {
+      console.error("Error saving subject:", error);
+      toast.error("An error occurred while saving the subject.");
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -104,14 +193,77 @@ const SubjectlistManagement = () => {
             </div>
 
             {/* Availability Button */}
-            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
-              <TbPlus className="h-5 w-5 transition-colors duration-300" />
-              Add Subjects
-            </button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+                  <TbPlus className="h-5 w-5 transition-colors duration-300" />
+                  Add Subjects
+                </button>
+              </DialogTrigger>
+
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add Subject</DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  {/* Subject Input */}
+                  <div>
+                    <Label htmlFor="subject" className="mb-2 mt-4">
+                      Subject Name:
+                    </Label>
+                    <Input
+                      id="subject"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="Enter subject name"
+                    />
+                  </div>
+
+                  <Select
+                    value={selectedYear}
+                    onValueChange={(val) => setSelectedYear(val)}
+                  >
+                    <SelectTrigger id="academicyear" className="w-full">
+                      <SelectValue placeholder="Select Academic Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredyear.length > 0 ? (
+                        filteredyear.map((year) => (
+                          <SelectItem
+                            key={year.academicyear_id}
+                            value={year.academicyear_id}
+                          >
+                            {year.academicyear}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem disabled>No Academic Year Found</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSave}
+                      variant="ghost"
+                      className="border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white mt-4"
+                    >
+                      Save this Subject
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
               <TbFilter className="h-5 w-5 transition-colors duration-300" />
               Filter Subject Status
+            </button>
+
+            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+              <TbFilter className="h-5 w-5 transition-colors duration-300" />
+              Filter Subject Academic Year
             </button>
           </div>
 
@@ -119,7 +271,7 @@ const SubjectlistManagement = () => {
             <thead className="bg-gray-50 text-gray-500">
               <tr>
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  #
+                  Subject code
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
@@ -128,6 +280,10 @@ const SubjectlistManagement = () => {
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Status
+                </th>
+
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Academic year
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
