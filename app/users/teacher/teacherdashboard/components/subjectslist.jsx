@@ -5,6 +5,7 @@ import {
   TbEye,
   TbCalendar,
   TbFilter,
+  TbEdit
 } from "react-icons/tb";
 import {
   Pagination,
@@ -15,15 +16,26 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
 import CryptoJS from "crypto-js";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 const SubjectlistManagement = () => {
-  const [filteredLogs, setFilteredLogs] = useState([]);
+  
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
+  const [SubjectFetch, setFetchSubjects] = useState([]);
+  const [openDialog, setOpenDialog] = useState(false);
 
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
@@ -40,29 +52,37 @@ const SubjectlistManagement = () => {
   };
   useEffect(() => {
     decryptUserId();
+    fetchsubjects();
   }, [loggedInUserId]);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [searchText, setSearchText] = useState("");
-  const filteredlogs = (filteredLogs || [])
+  const filteredsubjects = (SubjectFetch || [])
     .filter(
       (finv) =>
-        String(finv.log_id).toLowerCase().includes(searchText.toLowerCase()) ||
-        String(finv.username)
+        String(finv.subject_id)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-        String(finv.activity_type)
+        String(finv.subject_name)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-        String(finv.action).toLowerCase().includes(searchText.toLowerCase())
+        String(finv.academicyear)
+          .toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        String(finv.status_name)
+          .toLowerCase()
+          .includes(searchText.toLowerCase())
     )
-    .sort((a, b) => a.log_id - b.log_id);
+    .sort((a, b) => a.subject_id - b.subject_id);
 
-  const totalPages = Math.ceil(filteredlogs.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredsubjects.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredlogs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredsubjects.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
 
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -80,7 +100,28 @@ const SubjectlistManagement = () => {
     setCurrentPage(pageNumber);
   };
 
-  return (
+
+
+
+    const fetchsubjects = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/subjects/fetch-subjects.php`
+      );
+
+      if (response.data.success) {
+        setFetchSubjects(response.data.data);
+      } else {
+        console.log(response.data.message || "No subjects found");
+        setFetchSubjects([]);
+      }
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
+    }
+  };
+
+
+return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
@@ -110,7 +151,7 @@ const SubjectlistManagement = () => {
               <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
             </div>
 
-            {/* Availability Button */}
+         
 
             <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
               <TbFilter className="h-5 w-5 transition-colors duration-300" />
@@ -141,32 +182,38 @@ const SubjectlistManagement = () => {
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Academic year
                 </th>
+
                 
-           
               </tr>
             </thead>
             <tbody>
               {currentItems.length > 0 ? (
-                currentItems.map((log, index) => (
+                currentItems.map((subs, index) => (
                   <tr key={index}>
-                    <td className="border px-6 py-2 text-center">
-                      {log.log_id}
+                    <td className="border px-6 py-2 text-center ">
+                      {subs.subject_id}
                     </td>
-                    <td className="border px-6 py-2 text-center">
-                      {log.username}
+                    <td className="border px-6 py-2 text-center ">
+                      {subs.subject_name}
                     </td>
-                    <td className="border px-6 py-2 text-center">
-                      {log.activity_type}
+                    <td className="border px-6 py-3 text-center text-sm font-semibold">
+                      <span
+                        className={`inline-block px-3 py-1 text-sm font-semibold rounded-md ${
+                          subs.status_name === "Active"
+                            ? "bg-green-900 text-white"
+                            : subs.status_name === "Inactive"
+                            ? "bg-gray-200 text-white"
+                            : "bg-gray-200 text-white"
+                        }`}
+                      >
+                        {subs.status_name}
+                      </span>
                     </td>
-                    <td className="border px-6 py-2 text-center">
-                      {log.action}
+
+                    <td className="border px-6 py-2 text-center ">
+                      {subs.academicyear}
                     </td>
-                    <td className="border px-6 py-2 text-center">
-                      {new Date(log.activity_time).toLocaleString("en-PH", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
-                    </td>
+                  
                   </tr>
                 ))
               ) : (
@@ -183,8 +230,8 @@ const SubjectlistManagement = () => {
             {/* Entries Text */}
             <span className="text-sm text-green-800 font-semibold pl-4">
               Showing {indexOfFirstItem + 1} to{" "}
-              {Math.min(indexOfLastItem, filteredLogs.length)} of{" "}
-              {filteredLogs.length} entries
+              {Math.min(indexOfLastItem, SubjectFetch.length)} of{" "}
+              {SubjectFetch.length} entries
             </span>
 
             {/* Pagination */}
@@ -203,7 +250,7 @@ const SubjectlistManagement = () => {
                         onClick={() => goToPage(index + 1)}
                         className={
                           currentPage === index + 1
-                            ? "bg-red-900 text-white"
+                            ? "bg-green-900 text-white"
                             : ""
                         }
                       >
@@ -225,6 +272,10 @@ const SubjectlistManagement = () => {
       </>
     </motion.div>
   );
+
+
+
+
 };
 
 export default SubjectlistManagement;

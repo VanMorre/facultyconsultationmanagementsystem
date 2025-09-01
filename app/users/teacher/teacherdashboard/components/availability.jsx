@@ -83,7 +83,7 @@ const AvailabilityManagement = () => {
         <div className="bg-white p-6  shadow-md">
           <h1 className="text-l font-bold mb-4 text-green-800 pb-5 mt-3 flex items-center gap-2">
             <TbClipboardList className="text-xl w-6 h-6 !w-6 !h-6" />
-            Availability
+            Availability Slots
           </h1>
 
           {/* Search Input with Magnifier Icon and Button */}
@@ -124,19 +124,19 @@ const AvailabilityManagement = () => {
           <table className="w-full border-collapse bg-white shadow-lg  overflow-hidden mx-auto">
             <thead className="bg-gray-50 text-gray-500">
               <tr>
-                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Date
+                  <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Day
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Time
+                  Time range
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Recurrence
                 </th>
 
-                  <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Subject
                 </th>
 

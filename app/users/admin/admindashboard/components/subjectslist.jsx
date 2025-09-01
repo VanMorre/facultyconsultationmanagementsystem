@@ -1,3 +1,4 @@
+"use client";
 import {
   TbZoom,
   TbClipboardList,
@@ -5,6 +6,8 @@ import {
   TbEye,
   TbCalendar,
   TbFilter,
+  TbChevronDown,
+  TbEdit,
 } from "react-icons/tb";
 import {
   Pagination,
@@ -29,21 +32,27 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
+
+
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { toast } from "react-toastify";
+import { ToastContainer, toast, Bounce } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
 import CryptoJS from "crypto-js";
 const SubjectlistManagement = () => {
-  const [filteredLogs, setFilteredLogs] = useState([]);
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [subject, setSubject] = useState("");
   const [filteredyear, setFilteredyear] = useState([]);
+
+  const [SubjectFetch, setFetchSubjects] = useState([]);
   const [selectedYear, setSelectedYear] = useState("");
+  const [openDialog, setOpenDialog] = useState(false);
   const DEFAULT_SUBJECTSTATUS_STATUS_ID = 1;
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
@@ -61,29 +70,37 @@ const SubjectlistManagement = () => {
   useEffect(() => {
     decryptUserId();
     fetchacademicyear();
+    fetchsubjects();
   }, [loggedInUserId]);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 10;
   const [searchText, setSearchText] = useState("");
-  const filteredlogs = (filteredLogs || [])
+  const filteredsubjects = (SubjectFetch || [])
     .filter(
       (finv) =>
-        String(finv.log_id).toLowerCase().includes(searchText.toLowerCase()) ||
-        String(finv.username)
+        String(finv.subject_id)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-        String(finv.activity_type)
+        String(finv.subject_name)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-        String(finv.action).toLowerCase().includes(searchText.toLowerCase())
+        String(finv.academicyear)
+          .toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        String(finv.status_name)
+          .toLowerCase()
+          .includes(searchText.toLowerCase())
     )
-    .sort((a, b) => a.log_id - b.log_id);
+    .sort((a, b) => a.subject_id - b.subject_id);
 
-  const totalPages = Math.ceil(filteredlogs.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredsubjects.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredlogs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredsubjects.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
 
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -132,27 +149,27 @@ const SubjectlistManagement = () => {
     }
 
     try {
-      // ✅ API call
       const response = await axios.post(
-        "http://localhost/fchms/app/api_fchms/subject/add-subject.php",
+        `http://localhost/fchms/app/api_fchms/subjects/add-subjects.php`,
         {
           subject_name: subject,
           academicyear_id: selectedYear,
-          subjectstatus_id: DEFAULT_SUBJECTSTATUS_STATUS_ID, 
-          user_id: loggedInUserId
+          subjectstatus_id: DEFAULT_SUBJECTSTATUS_STATUS_ID,
+          user_id: loggedInUserId,
         }
       );
 
-      // ✅ Success response
       if (response.data.success) {
         toast.success("Subject added successfully!");
 
-        // clear form after save
+        // ✅ clear form
         setSubject("");
         setSelectedYear("");
 
-        // optional: refresh subject list if you have one
-        // fetchSubjects();
+        // ✅ close dialog
+        setOpenDialog(false);
+
+        await fetchsubjects();
       } else {
         toast.error(response.data.message || "Failed to add subject.");
       }
@@ -162,13 +179,40 @@ const SubjectlistManagement = () => {
     }
   };
 
+  const fetchsubjects = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/subjects/fetch-subjects.php`
+      );
+
+      if (response.data.success) {
+        setFetchSubjects(response.data.data);
+      } else {
+        console.log(response.data.message || "No subjects found");
+        setFetchSubjects([]);
+      }
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <>
+      <> 
+
+           <ToastContainer
+          position="top-right"
+          autoClose={1000}
+          theme="light"
+          transition={Bounce}
+        />
+
+
+
         <div className="bg-white p-6  shadow-md">
           <h1 className="text-l font-bold mb-4 text-green-800 pb-5 mt-3 flex items-center gap-2">
             <TbClipboardList className="text-xl w-6 h-6 !w-6 !h-6" />
@@ -193,9 +237,12 @@ const SubjectlistManagement = () => {
             </div>
 
             {/* Availability Button */}
-            <Dialog>
+            <Dialog open={openDialog} onOpenChange={setOpenDialog}>
               <DialogTrigger asChild>
-                <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+                <button
+                  onClick={() => setOpenDialog(true)}
+                  className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white"
+                >
                   <TbPlus className="h-5 w-5 transition-colors duration-300" />
                   Add Subjects
                 </button>
@@ -210,7 +257,7 @@ const SubjectlistManagement = () => {
                   {/* Subject Input */}
                   <div>
                     <Label htmlFor="subject" className="mb-2 mt-4">
-                      Subject Name:
+                      Subject name:
                     </Label>
                     <Input
                       id="subject"
@@ -219,6 +266,10 @@ const SubjectlistManagement = () => {
                       placeholder="Enter subject name"
                     />
                   </div>
+
+                  <Label htmlFor="subject" className="mb-2 mt-4">
+                    Academic year:
+                  </Label>
 
                   <Select
                     value={selectedYear}
@@ -243,6 +294,7 @@ const SubjectlistManagement = () => {
                     </SelectContent>
                   </Select>
 
+                  {/* Save Button */}
                   <div className="flex justify-end">
                     <Button
                       onClick={handleSave}
@@ -293,25 +345,38 @@ const SubjectlistManagement = () => {
             </thead>
             <tbody>
               {currentItems.length > 0 ? (
-                currentItems.map((log, index) => (
+                currentItems.map((subs, index) => (
                   <tr key={index}>
-                    <td className="border px-6 py-2 text-center">
-                      {log.log_id}
+                    <td className="border px-6 py-2 text-center ">
+                      {subs.subject_id}
                     </td>
-                    <td className="border px-6 py-2 text-center">
-                      {log.username}
+                    <td className="border px-6 py-2 text-center ">
+                      {subs.subject_name}
                     </td>
-                    <td className="border px-6 py-2 text-center">
-                      {log.activity_type}
+                    <td className="border px-6 py-3 text-center text-sm font-semibold">
+                      <span
+                        className={`inline-block px-3 py-1 text-sm font-semibold rounded-md ${
+                          subs.status_name === "Active"
+                            ? "bg-green-900 text-white"
+                            : subs.status_name === "Inactive"
+                            ? "bg-gray-200 text-white"
+                            : "bg-gray-200 text-white"
+                        }`}
+                      >
+                        {subs.status_name}
+                      </span>
                     </td>
-                    <td className="border px-6 py-2 text-center">
-                      {log.action}
+
+                    <td className="border px-6 py-2 text-center ">
+                      {subs.academicyear}
                     </td>
-                    <td className="border px-6 py-2 text-center">
-                      {new Date(log.activity_time).toLocaleString("en-PH", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
+                    <td className="border px-6 py-3 text-center text-sm font-semibold">
+                      <button
+                        onClick={() => handleEdit(usersaccountdetails.user_id)}
+                        className="px-2 py-1 border-2 border-blue-500 text-blue-500 rounded-md flex items-center justify-center mx-auto focus:outline-none hover:bg-blue-600 hover:text-white transition"
+                      >
+                        <TbEdit className="w-6 h-6" />
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -329,8 +394,8 @@ const SubjectlistManagement = () => {
             {/* Entries Text */}
             <span className="text-sm text-green-800 font-semibold pl-4">
               Showing {indexOfFirstItem + 1} to{" "}
-              {Math.min(indexOfLastItem, filteredLogs.length)} of{" "}
-              {filteredLogs.length} entries
+              {Math.min(indexOfLastItem, SubjectFetch.length)} of{" "}
+              {SubjectFetch.length} entries
             </span>
 
             {/* Pagination */}
@@ -349,7 +414,7 @@ const SubjectlistManagement = () => {
                         onClick={() => goToPage(index + 1)}
                         className={
                           currentPage === index + 1
-                            ? "bg-red-900 text-white"
+                            ? "bg-green-900 text-white"
                             : ""
                         }
                       >

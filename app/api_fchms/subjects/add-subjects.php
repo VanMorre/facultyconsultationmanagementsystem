@@ -4,7 +4,7 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Content-Type: application/json; charset=UTF-8");
 
-include '../../dbconnection.php'; 
+include '../dbconnection.php'; // ✅ uses PDO
 
 // Read raw POST data
 $data = json_decode(file_get_contents("php://input"), true);
@@ -24,7 +24,6 @@ if (
 }
 
 try {
-    // Prepare insert query
     $query = "INSERT INTO tbl_subjects (subject_name, status_id, academicyear_id, user_id) 
               VALUES (:subject_name, :status_id, :academicyear_id, :user_id)";
     $stmt = $conn->prepare($query);
@@ -35,7 +34,6 @@ try {
     $stmt->bindParam(':academicyear_id', $data['academicyear_id'], PDO::PARAM_INT);
     $stmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
 
-    // Execute
     if ($stmt->execute()) {
         echo json_encode([
             "success" => true,
