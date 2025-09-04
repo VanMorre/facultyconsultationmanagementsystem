@@ -11,10 +11,24 @@ import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import CryptoJS from "crypto-js";
-import Link from "next/link";
+import { FiUpload } from "react-icons/fi";
 import { LuLogIn } from "react-icons/lu";
 import { FiRefreshCcw } from "react-icons/fi";
-
+import { FaUserTie, FaUserGraduate } from "react-icons/fa";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 const SECRET_KEY = "my_secret_key_123456";
 
 export default function AdminLogin() {
@@ -26,7 +40,19 @@ export default function AdminLogin() {
   const navigate = useNavigate();
   const [isLocked, setIsLocked] = useState(false);
   const [lockoutTime, setLockoutTime] = useState(0);
-
+  const [activeRole, setActiveRole] = useState("faculty"); // faculty | student
+  const [YearlevelFetch, setYearlevelFetch] = useState([]);
+  const [selectedyearlevel, setselectedyearlevel] = useState("");
+  const [CourseFetch, setCourseFetch] = useState([]);
+  const [selectedcourse, setselectedcourse] = useState("");
+  const [studentname, setStudentname] = useState("");
+  const [age, setAge] = useState("");
+  const [contact, setContact] = useState("");
+  const [studentemail, setstudentEmail] = useState("");
+  const [studentpassword, setstudentPassword] = useState("");
+  const [preview, setPreview] = useState(null);
+  const [photo, setPhoto] = useState(null);
+  const DEFAULT_ROLE_STATUS_ID = 3;
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -107,7 +133,10 @@ export default function AdminLogin() {
   };
 
   useEffect(() => {
+    fetchcourse();
+    fetchyearlevel();
     generateCaptcha();
+
     const isAuthenticated = decryptData(
       sessionStorage.getItem("isAuthenticated")
     );
@@ -145,7 +174,7 @@ export default function AdminLogin() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmitFaculty = async (e) => {
     e.preventDefault();
     if (captchaInput !== captchaText) {
       toast.error("Invalid CAPTCHA. Please try again.");
@@ -192,9 +221,6 @@ export default function AdminLogin() {
             case "teacher":
               navigate("/teacher-dashboard");
               break;
-            case "student":
-              navigate("/student-dashboard");
-              break;
             default:
               toast.error("Unauthorized role!");
               sessionStorage.clear();
@@ -226,6 +252,143 @@ export default function AdminLogin() {
       toast.error("An error occurred during login.");
       generateCaptcha();
       setCaptchaInput("");
+    }
+  };
+
+  const handleSubmitStudent = async (e) => {
+    e.preventDefault();
+    if (captchaInput !== captchaText) {
+      toast.error("Invalid CAPTCHA. Please try again.");
+      generateCaptcha();
+      setCaptchaInput("");
+      return;
+    }
+    try {
+      const response = await axios.post(
+        "http://localhost/fchms/app/api_fchms/loginphp/loginform_student.php",
+        { email, password }
+      );
+
+      if (response.data.success) {
+        const { user_id, username, role_name } = response.data;
+        sessionStorage.setItem("isAuthenticated", encryptData("true"));
+        sessionStorage.setItem("role", encryptData(role_name.toLowerCase()));
+
+        toast.success("Student Login Successful!");
+        setTimeout(() => navigate("/student-dashboard"), 2000);
+      } else {
+        response.data.message.includes("Maximum attempts")
+          ? handleLockout("Too many failed attempts. Try again later.")
+          : toast.error(response.data.message || "Invalid login.");
+      }
+    } catch {
+      toast.error("Error during login.");
+    }
+  };
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setPhoto(file);
+    setPreview(objectUrl);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, []);
+
+  const handleStudentSubmit = async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData();
+    formData.append("studentname", studentname);
+    formData.append("studentpassword", studentpassword);
+    formData.append("studentemail", studentemail);
+    formData.append("studentage", age);
+    formData.append("studentcontact", contact);
+    formData.append("studentcourse", selectedcourse);
+    formData.append("studentyearlevel", selectedyearlevel);
+    formData.append("studentrole", DEFAULT_ROLE_STATUS_ID); // e.g. 3 = student role
+
+    if (photo) {
+      formData.append("studentphoto", photo);
+    }
+
+    try {
+      const response = await axios.post(
+        "http://localhost/fchms/app/api_fchms/student/add-student.php",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success(
+          response.data.message || "Student account created successfully!"
+        );
+
+        // reset fields
+        setPhoto(null);
+        setPreview(null);
+        setStudentname("");
+        setstudentPassword("");
+        setstudentEmail("");
+        setAge("");
+        setContact("");
+        setselectedcourse("");
+        setselectedyearlevel("");
+      } else {
+        toast.error(
+          response.data.message || "Failed to create student account."
+        );
+      }
+    } catch (error) {
+      toast.error("An error occurred while creating the student account.");
+    }
+  };
+
+  const fetchyearlevel = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/yearlevel/fetch-yearlevel.php`
+      );
+
+      if (response.data.success) {
+        setYearlevelFetch(response.data.data);
+      } else {
+        console.log(response.data.message || "No yearlevel found");
+        setYearlevelFetch([]);
+      }
+    } catch (error) {
+      console.error("Error yearlevel found:", error);
+    }
+  };
+
+  const fetchcourse = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/course/fetch-course.php`
+      );
+
+      if (response.data.success) {
+        setCourseFetch(response.data.data);
+      } else {
+        console.log(response.data.message || "No course found");
+        setCourseFetch([]);
+      }
+    } catch (error) {
+      console.error("Error no course found:", error);
     }
   };
 
@@ -304,29 +467,51 @@ export default function AdminLogin() {
         <div className="absolute w-32 h-32 bg-green-800 rounded-full -top-6 -left-10 z-0 shadow-[0_20px_40px_rgba(0,100,0,0.6)]"></div>
         <div className="absolute w-40 h-40 bg-green-800 rounded-full -bottom-16 -right-12 z-0 shadow-[0_20px_40px_rgba(0,100,0,0.6)]"></div>
         <div className="absolute w-24 h-24 bg-green-800 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 shadow-[0_20px_40px_rgba(0,100,0,0.6)]"></div>
-
+        <div className="absolute w-36 h-20 bg-gray-200 transform rotate-12 skew-x-12 bottom-[10%] left-[40%] z-0 shadow-[0_25px_50px_rgba(100,100,100,0.4)]"></div>
+        <div className="absolute w-36 h-20 bg-gray-200 transform rotate-12 skew-x-12 top-[6%] left-[40%] z-0 shadow-[0_25px_50px_rgba(100,100,100,0.4)]"></div>
         <ToastContainer
           position="top-right"
           autoClose={1000}
           theme="light"
           transition={Bounce}
         />
-
         <div className="flex-1 flex flex-col justify-center items-center w-full relative z-10 px-4 sm:px-8">
-          <motion.div
-            className="w-full max-w-md sm:max-w-xl p-6 sm:p-10 bg-white rounded-lg shadow-2xl flex flex-col justify-center"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
+          <motion.div className="w-full max-w-md sm:max-w-xl p-6 sm:p-10 bg-white rounded-lg shadow-2xl flex flex-col justify-center">
+            {/* Tabs */}
+            <div className="flex justify-center mb-8">
+              <div className="inline-flex rounded-md shadow-sm border overflow-hidden">
+                <button
+                  onClick={() => setActiveRole("faculty")}
+                  className={`px-6 py-2 flex items-center gap-2 font-semibold ${
+                    activeRole === "faculty"
+                      ? "bg-green-800 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  <FaUserTie /> Faculty
+                </button>
+                <button
+                  onClick={() => setActiveRole("student")}
+                  className={`px-6 py-2 flex items-center gap-2 font-semibold ${
+                    activeRole === "student"
+                      ? "bg-green-800 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  <FaUserGraduate /> Student
+                </button>
+              </div>
+            </div>
+
             {/* Header */}
-            <motion.div
-              variants={itemVariants}
-              className="flex items-center justify-between w-full max-w-[700px] mb-6"
-            >
+            <motion.div className="flex items-center justify-between w-full max-w-[700px] mb-6">
               <div>
                 <motion.h2 className="text-2xl font-semibold text-black">
                   Hello Welcome!
+                </motion.h2>
+                <motion.h2 className="text-2xl font-semibold text-black">
+                  Logged in as{" "}
+                  {activeRole === "faculty" ? "Faculty" : "Student"}
                 </motion.h2>
                 <motion.p className="text-sm text-black mt-2">
                   Enter your email and password to login.
@@ -342,14 +527,17 @@ export default function AdminLogin() {
               />
             </motion.div>
 
-            {/* Login Form */}
+            {/* Form */}
             <motion.form
               className="space-y-4"
-              onSubmit={handleSubmit}
-              variants={containerVariants}
+              onSubmit={
+                activeRole === "faculty"
+                  ? handleSubmitFaculty
+                  : handleSubmitStudent
+              }
             >
               {/* Email */}
-              <motion.div variants={itemVariants}>
+              <motion.div>
                 <Label htmlFor="email" className="text-black mb-2">
                   Email
                 </Label>
@@ -358,17 +546,16 @@ export default function AdminLogin() {
                   <Input
                     id="email"
                     type="text"
-                    className="pl-12 w-full h-12 text-base border border-green-800 bg-transparent text-black rounded-md shadow-xl"
+                    className="pl-12 w-full h-12 border border-green-800 bg-transparent text-black rounded-md shadow-xl"
                     value={email}
-                    placeholder="Enter your phinmaed email"
+                    placeholder={`Enter your ${activeRole} email`}
                     onChange={(e) => setEmail(e.target.value)}
-                    autoFocus
                   />
                 </div>
               </motion.div>
 
               {/* Password */}
-              <motion.div variants={itemVariants}>
+              <motion.div>
                 <Label htmlFor="password" className="text-black mb-2">
                   Password
                 </Label>
@@ -378,7 +565,7 @@ export default function AdminLogin() {
                     id="password"
                     type="password"
                     placeholder="Enter your password"
-                    className="pl-12 w-full h-12 text-base border border-green-800 bg-transparent text-black rounded-md shadow-xl"
+                    className="pl-12 w-full h-12 border border-green-800 bg-transparent text-black rounded-md shadow-xl"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
@@ -386,7 +573,7 @@ export default function AdminLogin() {
               </motion.div>
 
               {/* CAPTCHA */}
-              <motion.div variants={itemVariants} className="mt-8">
+              <motion.div className="mt-8">
                 <div className="flex items-center gap-3 mb-6">
                   <canvas
                     ref={captchaCanvasRef}
@@ -398,22 +585,20 @@ export default function AdminLogin() {
                     type="button"
                     onClick={generateCaptcha}
                     className="p-3 bg-green-800 hover:bg-green-900 text-white rounded-md shadow-xl"
-                    title="Refresh Captcha"
                   >
                     <FiRefreshCcw size={20} />
                   </button>
                 </div>
                 <motion.input
-                  whileFocus={{ scale: 1.02 }}
                   type="text"
                   value={captchaInput}
                   onChange={(e) => setCaptchaInput(e.target.value)}
-                  className="w-full p-2 border border-black shadow-xl rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-red-400 text-black h-12"
+                  className="w-full p-2 border border-black shadow-xl rounded-md bg-white h-12 text-black"
                 />
               </motion.div>
 
               {/* SIGN IN BUTTON */}
-              <motion.div variants={itemVariants}>
+              <motion.div>
                 <Button
                   type="submit"
                   disabled={isLocked}
@@ -427,18 +612,214 @@ export default function AdminLogin() {
               </motion.div>
 
               {/* Forgot Password */}
-              <motion.div variants={itemVariants} className="text-center">
+              <motion.div className="text-center">
                 <Button variant="link" className="text-sm text-black-600">
-                  <Link href="/recoveraccountform">
+                  <span onClick={() => navigate("/recoveraccountform")}>
                     Forgotten Your Password?
-                  </Link>
+                  </span>
                 </Button>
               </motion.div>
+
+              {/* Student Create Account */}
+              {activeRole === "student" && (
+                <motion.div className="text-center mt-2">
+                  {/* Create Account Dialog */}
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        className="w-full border-2 border-green-800 text-green-800 font-semibold rounded-md 
+          bg-transparent hover:bg-green-800 hover:text-white transition-colors duration-300"
+                      >
+                        Create Student Account
+                      </Button>
+                    </DialogTrigger>
+
+                    <DialogContent className="sm:max-w-lg bg-white p-6 rounded-lg shadow-xl">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold text-green-800">
+                          Create Student Account
+                        </DialogTitle>
+                      </DialogHeader>
+
+                      {/* Form */}
+                      <form
+                        className="space-y-4 mt-2"
+                        onSubmit={handleStudentSubmit}
+                      >
+                        {/* Photo Upload */}
+                        <div className="flex items-center gap-4">
+                          <div className="w-28 h-26 border border-dashed border-gray-400 rounded-md flex items-center justify-center overflow-hidden bg-gray-50">
+                            {preview ? (
+                              <img
+                                src={preview}
+                                alt="Preview"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-gray-400 text-sm">
+                                No Photo
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <input
+                              type="file"
+                              id="photoUpload"
+                              accept="image/*"
+                              onChange={handlePhotoUpload}
+                              className="hidden"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="flex items-center gap-2 border-green-800 text-green-800 hover:bg-green-800 hover:text-white"
+                              onClick={() =>
+                                document.getElementById("photoUpload").click()
+                              }
+                            >
+                              <FiUpload className="w-4 h-4" />
+                              Upload Photo
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Student Name */}
+                        <div>
+                          <Label htmlFor="studentName">Full name</Label>
+                          <Input
+                            id="studentName"
+                            placeholder="Enter full name"
+                            className="mt-2"
+                            value={studentname}
+                            onChange={(e) => setStudentname(e.target.value)}
+                          />
+                        </div>
+
+                        {/* Age */}
+                        <div>
+                          <Label htmlFor="age">Age</Label>
+                          <Input
+                            id="age"
+                            type="number"
+                            placeholder="Enter age"
+                            className="mt-2"
+                            value={age}
+                            onChange={(e) => setAge(e.target.value)}
+                          />
+                        </div>
+
+                        {/* Contact */}
+                        <div>
+                          <Label htmlFor="contact">Contact number</Label>
+                          <Input
+                            id="contact"
+                            type="text"
+                            placeholder="Enter contact number"
+                            className="mt-2"
+                            value={contact}
+                            onChange={(e) => setContact(e.target.value)}
+                          />
+                        </div>
+
+                        {/* Email */}
+                        <div>
+                          <Label htmlFor="studentEmail">Email</Label>
+                          <Input
+                            id="studentEmail"
+                            type="email"
+                            placeholder="Enter student email"
+                            className="mt-2"
+                            value={studentemail}
+                            onChange={(e) => setstudentEmail(e.target.value)}
+                          />
+                        </div>
+
+                        {/* Password */}
+                        <div>
+                          <Label htmlFor="studentPassword">Password</Label>
+                          <Input
+                            id="studentPassword"
+                            type="password"
+                            placeholder="Enter password"
+                            className="mt-2"
+                            value={studentpassword}
+                            onChange={(e) => setstudentPassword(e.target.value)}
+                          />
+                        </div>
+
+                        <div>
+                          <Label>Course</Label>
+                          <Select
+                            value={selectedcourse}
+                            onValueChange={(cr) => setselectedcourse(cr)} // cr = course_id
+                          >
+                            <SelectTrigger className="w-full border-green-800 mt-2">
+                              <SelectValue placeholder="Select course" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CourseFetch.length > 0 ? (
+                                CourseFetch.map((crs) => (
+                                  <SelectItem
+                                    key={crs.course_id}
+                                    value={String(crs.course_id)} // ensure string type
+                                  >
+                                    {crs.course_name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem disabled>
+                                  No course found
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label>Year Level</Label>
+                          <Select
+                            value={selectedyearlevel}
+                            onValueChange={(yl) => setselectedyearlevel(yl)} // yl = year_id
+                          >
+                            <SelectTrigger className="w-full border-green-800 mt-2">
+                              <SelectValue placeholder="Select year level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {YearlevelFetch.length > 0 ? (
+                                YearlevelFetch.map((yrs) => (
+                                  <SelectItem
+                                    key={yrs.year_id}
+                                    value={String(yrs.year_id)} // make sure it's a string
+                                  >
+                                    {yrs.year_name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem disabled>
+                                  No year level found
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Button
+                            type="submit"
+                            className="w-full bg-green-800 hover:bg-green-900 text-white"
+                          >
+                            Create Account
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </motion.div>
+              )}
             </motion.form>
           </motion.div>
         </div>
 
-        {/* Footer */}
         <div className="pt-4 pb-8">
           <motion.footer
             variants={itemVariants}
@@ -448,8 +829,6 @@ export default function AdminLogin() {
           </motion.footer>
         </div>
       </div>
-
-      
     </div>
   );
 }
