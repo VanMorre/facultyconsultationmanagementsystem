@@ -33,7 +33,7 @@ import {
 
 import { TbUser, TbFilter, TbArrowRight, TbArrowDown } from "react-icons/tb";
 import { Line } from "react-chartjs-2";
-import SubjectlistManagement from "./components/subjectslist";
+// import SubjectlistManagement from "../backups/subjectslist";
 import StudentrequestManagement from "./components/studentrequest";
 import AvailabilityManagement from "./components/availability";
 import ConsultationManagement from "./components/consultation";
@@ -412,7 +412,7 @@ const TeacherDashboard = () => {
             />
           </>
         )}
-          {currentView === "subjects" && <SubjectlistManagement />}
+          {/* {currentView === "subjects" && <SubjectlistManagement />} */}
         {currentView === "availability" && <AvailabilityManagement />}
         {currentView === "consultation" && <ConsultationManagement />}
         {currentView === "studentrequest" && <StudentrequestManagement />}

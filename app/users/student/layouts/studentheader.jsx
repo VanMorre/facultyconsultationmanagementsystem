@@ -62,8 +62,8 @@ const StudentHeader = ({ toggleSidebar, setCurrentView }) => {
   };
 
   useEffect(() => {
-    const storedUsername = sessionStorage.getItem("username");
-    const storedImage = sessionStorage.getItem("userImage");
+    const storedUsername = sessionStorage.getItem("student_email");
+    const storedImage = sessionStorage.getItem("photo_url");
 
     if (storedUsername) {
       const decryptedUsername = decryptData(storedUsername);

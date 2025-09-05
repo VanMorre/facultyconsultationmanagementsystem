@@ -67,7 +67,7 @@ const TeacherSidebar = ({ collapsed, setCurrentView, currentView }) => {
           )}
         </Button>
 
-        <Button
+        {/* <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
             currentView === "subjects" ? "bg-gray-200" : ""
@@ -79,7 +79,7 @@ const TeacherSidebar = ({ collapsed, setCurrentView, currentView }) => {
             style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
           />
           {!collapsed && <span className="pr-8 font-semibold">Subjects List</span>}
-        </Button>
+        </Button> */}
 
         <Button
           variant="ghost"

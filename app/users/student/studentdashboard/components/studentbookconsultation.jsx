@@ -29,6 +29,7 @@ const BookConsultationManagement = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [subject, setSubject] = useState("");
 
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
@@ -281,21 +282,13 @@ const BookConsultationManagement = () => {
               {/* Subject */}
               <div>
                 <Label className="pb-2 sm:pb-4">Subject</Label>
-                <Select>
-                  <SelectTrigger className="w-full border border-black text-black">
-                    <SelectValue placeholder="Select subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="programming">Programming</SelectItem>
-                    <SelectItem value="networking">Networking</SelectItem>
-                    <SelectItem value="database">
-                      Database Management
-                    </SelectItem>
-                    <SelectItem value="webdev">Web Development</SelectItem>
-                    <SelectItem value="cybersecurity">Cybersecurity</SelectItem>
-                    <SelectItem value="ai">Artificial Intelligence</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  type="text"
+                  placeholder="Enter subject"
+                  className="w-full border border-black text-black"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                />
               </div>
 
               {/* Notes */}

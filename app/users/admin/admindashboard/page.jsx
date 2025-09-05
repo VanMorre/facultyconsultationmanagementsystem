@@ -38,9 +38,9 @@ ChartJS.register(
 );
 
 import { Line } from "react-chartjs-2";
-import SubjectlistManagement from "./components/subjectslist";
+// import SubjectlistManagement from "../backups/subjectslist";
 import StudentrequestManagement from "./components/studentrequest";
-import DepartmentManagement from "./components/department";
+// import DepartmentManagement from "../backups/department";
 import ConsultationManagement from "./components/consultation";
 import AuditManagement from "./components/auditlogs";
 import FacultyManagement from "./components/faculty";
@@ -427,12 +427,12 @@ const AdminDashboard = () => {
         )}
 
         {currentView === "faculty" && <FacultyManagement />}
-        {currentView === "subjects" && <SubjectlistManagement />}
+        {/* {currentView === "subjects" && <SubjectlistManagement />} */}
          {currentView === "studentrequest" && <StudentrequestManagement />}
         {currentView === "auditlogs" && <AuditManagement />}
         {currentView === "availability" && <AvailabilityManagement />}
         {currentView === "consultation" && <ConsultationManagement />}
-        {currentView === "departments" && <DepartmentManagement />}
+        {/* {currentView === "departments" && <DepartmentManagement />} */}
         {currentView === "reports" && <ReportManagement />}
       </motion.div>
     </AdminLayout>

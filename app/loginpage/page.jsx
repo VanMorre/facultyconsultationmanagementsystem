@@ -48,11 +48,17 @@ export default function AdminLogin() {
   const [studentname, setStudentname] = useState("");
   const [age, setAge] = useState("");
   const [contact, setContact] = useState("");
-  const [studentemail, setstudentEmail] = useState("");
-  const [studentpassword, setstudentPassword] = useState("");
+  // use snake_case consistently
+  const [student_email, setStudent_Email] = useState("");
+  const [student_password, setStudent_Password] = useState("");
+
   const [preview, setPreview] = useState(null);
   const [photo, setPhoto] = useState(null);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState("");
   const DEFAULT_ROLE_STATUS_ID = 3;
+  const [studentDialogOpen, setStudentDialogOpen] = useState(false);
+
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -257,25 +263,59 @@ export default function AdminLogin() {
 
   const handleSubmitStudent = async (e) => {
     e.preventDefault();
+
     if (captchaInput !== captchaText) {
       toast.error("Invalid CAPTCHA. Please try again.");
       generateCaptcha();
       setCaptchaInput("");
       return;
     }
+
     try {
       const response = await axios.post(
-        "http://localhost/fchms/app/api_fchms/loginphp/loginform_student.php",
-        { email, password }
+        "http://localhost/fchms/app/api_fchms/studentside/fetch-studentaccount.php",
+        {
+          student_email, // ✅ match PHP
+          student_password, // ✅ match PHP
+        }
       );
 
       if (response.data.success) {
-        const { user_id, username, role_name } = response.data;
+        const {
+          student_id,
+          student_name,
+          age,
+          contact,
+          photo_url,
+          student_email,
+          role_name,
+          year_name,
+          course_name,
+        } = response.data;
+
         sessionStorage.setItem("isAuthenticated", encryptData("true"));
-        sessionStorage.setItem("role", encryptData(role_name.toLowerCase()));
+        sessionStorage.setItem("role", encryptData(role_name.toString()));
+        sessionStorage.setItem("student_id",encryptData(student_id.toString()));
+        sessionStorage.setItem("student_name", encryptData(student_name));
+        sessionStorage.setItem("age", encryptData(age));
+        sessionStorage.setItem("contact", encryptData(contact));
+        sessionStorage.setItem("photo_url", encryptData(photo_url || ""));
+        sessionStorage.setItem("student_email", encryptData(student_email));
+        sessionStorage.setItem("year_name", encryptData(year_name));
+        sessionStorage.setItem("course_name", encryptData(course_name));
 
         toast.success("Student Login Successful!");
-        setTimeout(() => navigate("/student-dashboard"), 2000);
+           setTimeout(() => {
+          switch (role_name.toLowerCase()) {
+            case "student":
+              navigate("/student-dashboard");
+              break;
+            default:
+              toast.error("Unauthorized role!");
+              sessionStorage.clear();
+              navigate("/");
+          }
+        }, 2000);
       } else {
         response.data.message.includes("Maximum attempts")
           ? handleLockout("Too many failed attempts. Try again later.")
@@ -305,18 +345,56 @@ export default function AdminLogin() {
     };
   }, []);
 
+  // Password validation (used on submit)
+  const validatePassword = (password) => {
+    if (!password) return "Password is required.";
+
+    // At least 6 characters, allow letters, numbers, and special characters (_ . @)
+    const regex = /^[A-Za-z0-9_.@]{6,}$/;
+
+    if (!regex.test(password)) {
+      return "Password must be at least 6 characters. Allowed: letters, numbers, _ . @";
+    }
+    return "";
+  };
+
+  // Strength checker (for live feedback)
+  const checkPasswordStrength = (password) => {
+    if (password.length < 6) return "weak";
+
+    const hasLetters = /[A-Za-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecial = /[_\.@]/.test(password);
+
+    if (hasLetters && hasNumbers && hasSpecial && password.length >= 8) {
+      return "strong";
+    } else if ((hasLetters && hasNumbers) || (hasLetters && hasSpecial)) {
+      return "medium";
+    }
+    return "weak";
+  };
+
   const handleStudentSubmit = async (e) => {
     e.preventDefault();
 
+    // ✅ Validate password before submit
+    const error = validatePassword(student_password);
+    if (error) {
+      setPasswordError(error);
+      return;
+    } else {
+      setPasswordError("");
+    }
+
     const formData = new FormData();
     formData.append("studentname", studentname);
-    formData.append("studentpassword", studentpassword);
-    formData.append("studentemail", studentemail);
+    formData.append("studentpassword", student_password);
+    formData.append("studentemail", student_email);
     formData.append("studentage", age);
     formData.append("studentcontact", contact);
     formData.append("studentcourse", selectedcourse);
     formData.append("studentyearlevel", selectedyearlevel);
-    formData.append("studentrole", DEFAULT_ROLE_STATUS_ID); // e.g. 3 = student role
+    formData.append("studentrole", DEFAULT_ROLE_STATUS_ID);
 
     if (photo) {
       formData.append("studentphoto", photo);
@@ -324,13 +402,9 @@ export default function AdminLogin() {
 
     try {
       const response = await axios.post(
-        "http://localhost/fchms/app/api_fchms/student/add-student.php",
+        "http://localhost/fchms/app/api_fchms/studentside/add-studentaccount.php",
         formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
 
       if (response.data.success) {
@@ -342,12 +416,15 @@ export default function AdminLogin() {
         setPhoto(null);
         setPreview(null);
         setStudentname("");
-        setstudentPassword("");
-        setstudentEmail("");
+        setStudent_Password("");
+        setStudent_Email("");
         setAge("");
         setContact("");
         setselectedcourse("");
         setselectedyearlevel("");
+
+        // ✅ Close dialog
+        setStudentDialogOpen(false);
       } else {
         toast.error(
           response.data.message || "Failed to create student account."
@@ -536,7 +613,6 @@ export default function AdminLogin() {
                   : handleSubmitStudent
               }
             >
-              {/* Email */}
               <motion.div>
                 <Label htmlFor="email" className="text-black mb-2">
                   Email
@@ -547,9 +623,13 @@ export default function AdminLogin() {
                     id="email"
                     type="text"
                     className="pl-12 w-full h-12 border border-green-800 bg-transparent text-black rounded-md shadow-xl"
-                    value={email}
+                    value={activeRole === "faculty" ? email : student_email} // ✅ use correct state
                     placeholder={`Enter your ${activeRole} email`}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) =>
+                      activeRole === "faculty"
+                        ? setEmail(e.target.value)
+                        : setStudent_Email(e.target.value)
+                    }
                   />
                 </div>
               </motion.div>
@@ -566,8 +646,14 @@ export default function AdminLogin() {
                     type="password"
                     placeholder="Enter your password"
                     className="pl-12 w-full h-12 border border-green-800 bg-transparent text-black rounded-md shadow-xl"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={
+                      activeRole === "faculty" ? password : student_password
+                    } // ✅ use correct state
+                    onChange={(e) =>
+                      activeRole === "faculty"
+                        ? setPassword(e.target.value)
+                        : setStudent_Password(e.target.value)
+                    }
                   />
                 </div>
               </motion.div>
@@ -619,204 +705,237 @@ export default function AdminLogin() {
                   </span>
                 </Button>
               </motion.div>
+            </motion.form>
 
-              {/* Student Create Account */}
-              {activeRole === "student" && (
-                <motion.div className="text-center mt-2">
-                  {/* Create Account Dialog */}
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        className="w-full border-2 border-green-800 text-green-800 font-semibold rounded-md 
-          bg-transparent hover:bg-green-800 hover:text-white transition-colors duration-300"
-                      >
+            {activeRole === "student" && (
+              <motion.div className="text-center mt-2">
+                {/* Create Account Dialog */}
+                <Dialog
+                  open={studentDialogOpen}
+                  onOpenChange={setStudentDialogOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button" // ✅ add this
+                      className="w-full border-2 border-green-800 text-green-800 font-semibold rounded-md 
+                 bg-transparent hover:bg-green-800 hover:text-white transition-colors duration-300"
+                      onClick={(e) => {
+                        // ✅ prevent submitting the outer form
+                        e.preventDefault();
+                        setStudentDialogOpen(true);
+                      }}
+                    >
+                      Create Student Account
+                    </Button>
+                  </DialogTrigger>
+
+                  <DialogContent className="sm:max-w-lg bg-white p-6 rounded-lg shadow-xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-semibold text-green-800">
                         Create Student Account
-                      </Button>
-                    </DialogTrigger>
+                      </DialogTitle>
+                    </DialogHeader>
 
-                    <DialogContent className="sm:max-w-lg bg-white p-6 rounded-lg shadow-xl">
-                      <DialogHeader>
-                        <DialogTitle className="text-xl font-semibold text-green-800">
-                          Create Student Account
-                        </DialogTitle>
-                      </DialogHeader>
-
-                      {/* Form */}
-                      <form
-                        className="space-y-4 mt-2"
-                        onSubmit={handleStudentSubmit}
-                      >
-                        {/* Photo Upload */}
-                        <div className="flex items-center gap-4">
-                          <div className="w-28 h-26 border border-dashed border-gray-400 rounded-md flex items-center justify-center overflow-hidden bg-gray-50">
-                            {preview ? (
-                              <img
-                                src={preview}
-                                alt="Preview"
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-gray-400 text-sm">
-                                No Photo
-                              </span>
-                            )}
-                          </div>
-                          <div>
-                            <input
-                              type="file"
-                              id="photoUpload"
-                              accept="image/*"
-                              onChange={handlePhotoUpload}
-                              className="hidden"
+                    {/* Form */}
+                    <form
+                      className="space-y-4 mt-2"
+                      onSubmit={handleStudentSubmit}
+                    >
+                      {/* Photo Upload */}
+                      <div className="flex items-center gap-4">
+                        <div className="w-28 h-26 border border-dashed border-gray-400 rounded-md flex items-center justify-center overflow-hidden bg-gray-50">
+                          {preview ? (
+                            <img
+                              src={preview}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
                             />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="flex items-center gap-2 border-green-800 text-green-800 hover:bg-green-800 hover:text-white"
-                              onClick={() =>
-                                document.getElementById("photoUpload").click()
-                              }
-                            >
-                              <FiUpload className="w-4 h-4" />
-                              Upload Photo
-                            </Button>
-                          </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">
+                              No Photo
+                            </span>
+                          )}
                         </div>
-
-                        {/* Student Name */}
                         <div>
-                          <Label htmlFor="studentName">Full name</Label>
-                          <Input
-                            id="studentName"
-                            placeholder="Enter full name"
-                            className="mt-2"
-                            value={studentname}
-                            onChange={(e) => setStudentname(e.target.value)}
+                          <input
+                            type="file"
+                            id="photoUpload"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="hidden"
                           />
-                        </div>
-
-                        {/* Age */}
-                        <div>
-                          <Label htmlFor="age">Age</Label>
-                          <Input
-                            id="age"
-                            type="number"
-                            placeholder="Enter age"
-                            className="mt-2"
-                            value={age}
-                            onChange={(e) => setAge(e.target.value)}
-                          />
-                        </div>
-
-                        {/* Contact */}
-                        <div>
-                          <Label htmlFor="contact">Contact number</Label>
-                          <Input
-                            id="contact"
-                            type="text"
-                            placeholder="Enter contact number"
-                            className="mt-2"
-                            value={contact}
-                            onChange={(e) => setContact(e.target.value)}
-                          />
-                        </div>
-
-                        {/* Email */}
-                        <div>
-                          <Label htmlFor="studentEmail">Email</Label>
-                          <Input
-                            id="studentEmail"
-                            type="email"
-                            placeholder="Enter student email"
-                            className="mt-2"
-                            value={studentemail}
-                            onChange={(e) => setstudentEmail(e.target.value)}
-                          />
-                        </div>
-
-                        {/* Password */}
-                        <div>
-                          <Label htmlFor="studentPassword">Password</Label>
-                          <Input
-                            id="studentPassword"
-                            type="password"
-                            placeholder="Enter password"
-                            className="mt-2"
-                            value={studentpassword}
-                            onChange={(e) => setstudentPassword(e.target.value)}
-                          />
-                        </div>
-
-                        <div>
-                          <Label>Course</Label>
-                          <Select
-                            value={selectedcourse}
-                            onValueChange={(cr) => setselectedcourse(cr)} // cr = course_id
-                          >
-                            <SelectTrigger className="w-full border-green-800 mt-2">
-                              <SelectValue placeholder="Select course" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CourseFetch.length > 0 ? (
-                                CourseFetch.map((crs) => (
-                                  <SelectItem
-                                    key={crs.course_id}
-                                    value={String(crs.course_id)} // ensure string type
-                                  >
-                                    {crs.course_name}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem disabled>
-                                  No course found
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <Label>Year Level</Label>
-                          <Select
-                            value={selectedyearlevel}
-                            onValueChange={(yl) => setselectedyearlevel(yl)} // yl = year_id
-                          >
-                            <SelectTrigger className="w-full border-green-800 mt-2">
-                              <SelectValue placeholder="Select year level" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {YearlevelFetch.length > 0 ? (
-                                YearlevelFetch.map((yrs) => (
-                                  <SelectItem
-                                    key={yrs.year_id}
-                                    value={String(yrs.year_id)} // make sure it's a string
-                                  >
-                                    {yrs.year_name}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem disabled>
-                                  No year level found
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
                           <Button
-                            type="submit"
-                            className="w-full bg-green-800 hover:bg-green-900 text-white"
+                            type="button"
+                            variant="outline"
+                            className="flex items-center gap-2 border-green-800 text-green-800 hover:bg-green-800 hover:text-white"
+                            onClick={() =>
+                              document.getElementById("photoUpload").click()
+                            }
                           >
-                            Create Account
+                            <FiUpload className="w-4 h-4" />
+                            Upload Photo
                           </Button>
                         </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </motion.div>
-              )}
-            </motion.form>
+                      </div>
+
+                      {/* Student Name */}
+                      <div>
+                        <Label htmlFor="studentName">Full name</Label>
+                        <Input
+                          id="studentName"
+                          placeholder="Enter full name"
+                          className="mt-2"
+                          value={studentname}
+                          onChange={(e) => setStudentname(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Age */}
+                      <div>
+                        <Label htmlFor="age">Age</Label>
+                        <Input
+                          id="age"
+                          type="number"
+                          placeholder="Enter age"
+                          className="mt-2"
+                          value={age}
+                          onChange={(e) => setAge(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Contact */}
+                      <div>
+                        <Label htmlFor="contact">Contact number</Label>
+                        <Input
+                          id="contact"
+                          type="text"
+                          placeholder="Enter contact number"
+                          className="mt-2"
+                          value={contact}
+                          onChange={(e) => setContact(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Email */}
+                      <div>
+                        <Label htmlFor="studentEmail">Email</Label>
+                        <Input
+                          id="studentEmail"
+                          type="email"
+                          placeholder="Enter student email"
+                          className="mt-2"
+                          value={student_email}
+                          onChange={(e) => setStudent_Email(e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="studentPassword">Password</Label>
+                        <Input
+                          id="studentPassword"
+                          type="password"
+                          placeholder="Enter password"
+                          className="mt-2"
+                          value={student_password}
+                          onChange={(e) => {
+                            const pwd = e.target.value;
+                            setStudent_Password(pwd);
+                            setPasswordStrength(checkPasswordStrength(pwd));
+                          }}
+                        />
+
+                        {/* Real-time strength feedback */}
+                        {passwordStrength && (
+                          <p
+                            className={`mt-1 text-sm ${
+                              passwordStrength === "weak"
+                                ? "text-red-600"
+                                : passwordStrength === "medium"
+                                ? "text-yellow-600"
+                                : "text-green-600"
+                            }`}
+                          >
+                            {passwordStrength === "weak" && "Weak password"}
+                            {passwordStrength === "medium" && "Medium password"}
+                            {passwordStrength === "strong" && "Strong password"}
+                          </p>
+                        )}
+
+                        {/* Final error message on submit */}
+                        {passwordError && (
+                          <p className="text-red-600 text-sm mt-1">
+                            {passwordError}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label>Course</Label>
+                        <Select
+                          value={selectedcourse}
+                          onValueChange={(cr) => setselectedcourse(cr)} // cr = course_id
+                        >
+                          <SelectTrigger className="w-full border-green-800 mt-2">
+                            <SelectValue placeholder="Select course" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CourseFetch.length > 0 ? (
+                              CourseFetch.map((crs) => (
+                                <SelectItem
+                                  key={crs.course_id}
+                                  value={String(crs.course_id)} // ensure string type
+                                >
+                                  {crs.course_name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem disabled>No course found</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>Year Level</Label>
+                        <Select
+                          value={selectedyearlevel}
+                          onValueChange={(yl) => setselectedyearlevel(yl)} // yl = year_id
+                        >
+                          <SelectTrigger className="w-full border-green-800 mt-2">
+                            <SelectValue placeholder="Select year level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {YearlevelFetch.length > 0 ? (
+                              YearlevelFetch.map((yrs) => (
+                                <SelectItem
+                                  key={yrs.year_id}
+                                  value={String(yrs.year_id)} // make sure it's a string
+                                >
+                                  {yrs.year_name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem disabled>
+                                No year level found
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Button
+                          type="submit"
+                          className="w-full bg-green-800 hover:bg-green-900 text-white"
+                        >
+                          Create Account
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </motion.div>
+            )}
           </motion.div>
         </div>
 

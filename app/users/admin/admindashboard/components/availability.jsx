@@ -39,8 +39,7 @@ import "react-toastify/dist/ReactToastify.css";
 const AvailabilityManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
-  const [SubjectFetch, setFetchSubjects] = useState([]);
-  const [selectedSubject, setSelectedSubjects] = useState("");
+
   const [Availabilitydayfetch, setAvailabilitydayfetch] = useState([]);
   const [selectedAvailabilityday, setSelectedAvailabilityday] = useState("");
   const [TimerangeFetch, setTimerangeFetch] = useState([]);
@@ -65,7 +64,7 @@ const AvailabilityManagement = () => {
   };
   useEffect(() => {
     decryptUserId();
-    fetchsubjects();
+
     fetchrecurrence();
     fetchavailabilityday();
     fetchtimerange();
@@ -81,9 +80,7 @@ const AvailabilityManagement = () => {
         String(finv.availabilityfaculty_id)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-        String(finv.subject_name)
-          .toLowerCase()
-          .includes(searchText.toLowerCase()) ||
+    
         String(finv.recurrence_name)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
@@ -121,22 +118,7 @@ const AvailabilityManagement = () => {
     setCurrentPage(pageNumber);
   };
 
-  const fetchsubjects = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/subjects/fetch-subjects.php`
-      );
-
-      if (response.data.success) {
-        setFetchSubjects(response.data.data);
-      } else {
-        console.log(response.data.message || "No subjects found");
-        setFetchSubjects([]);
-      }
-    } catch (error) {
-      console.error("Error fetching subjects:", error);
-    }
-  };
+ 
 
   const fetchrecurrence = async () => {
     try {
@@ -193,10 +175,7 @@ const AvailabilityManagement = () => {
     e.preventDefault();
 
     // ✅ Validation
-    if (!selectedSubject) {
-      toast.error("Please select a subject.");
-      return;
-    }
+
     if (!selectedRecurrence) {
       toast.error("Please select a recurrence.");
       return;
@@ -214,7 +193,6 @@ const AvailabilityManagement = () => {
       const response = await axios.post(
         `http://localhost/fchms/app/api_fchms/adminside/admin-availability/add-availability.php`,
         {
-          subject_id: selectedSubject,
           recurrence_id: selectedRecurrence,
           availability_id: selectedAvailabilityday,
           timerange_id: selectedTimerange,
@@ -227,7 +205,7 @@ const AvailabilityManagement = () => {
         toast.success("Availability set successfully!");
 
         // ✅ clear form
-        setSelectedSubjects("");
+   
         setSelectedRecurrence("");
         setSelectedAvailabilityday("");
         setSelectedTimerange("");
@@ -327,37 +305,9 @@ const AvailabilityManagement = () => {
                 </DialogHeader>
 
                 <div className="space-y-4 mt-2">
-                  {/* Subject Dropdown */}
-                  <div>
-                    <Label htmlFor="subject" className="mb-2 mt-4">
-                      Subject:
-                    </Label>
-
-                    <Select
-                      value={selectedSubject}
-                      onValueChange={(val) => setSelectedSubjects(val)}
-                    >
-                      <SelectTrigger id="subjects" className="w-full">
-                        <SelectValue placeholder="Select subjects" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SubjectFetch.length > 0 ? (
-                          SubjectFetch.map((subjects) => (
-                            <SelectItem
-                              key={subjects.subject_id}
-                              value={subjects.subject_id}
-                            >
-                              {subjects.subject_name}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem disabled>No Subjects Found</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Recurrence Dropdown */}
+          
+            
+            
                   <div>
                     <Label htmlFor="subject" className="mb-2 mt-4">
                       Recurrence
@@ -497,10 +447,7 @@ const AvailabilityManagement = () => {
                   Recurrence
                 </th>
 
-                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Subject
-                </th>
-
+               
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Status
                 </th>
@@ -526,9 +473,7 @@ const AvailabilityManagement = () => {
                       {availday.recurrence_name}
                     </td>
 
-                    <td className="border px-6 py-2 text-center">
-                      {availday.subject_name}
-                    </td>
+                  
                     <td className="border px-6 py-3 text-center text-sm font-semibold">
                       <span
                         className={`inline-block px-3 py-1 text-sm font-semibold rounded-md ${

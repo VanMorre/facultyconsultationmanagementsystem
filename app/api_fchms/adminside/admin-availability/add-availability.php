@@ -9,9 +9,8 @@ include '../../dbconnection.php';
 // Read raw POST data
 $data = json_decode(file_get_contents("php://input"), true);
 
-// ✅ Validate input
+// ✅ Validate input (removed subject_id)
 if (
-    !isset($data['subject_id']) || empty($data['subject_id']) ||
     !isset($data['recurrence_id']) || empty($data['recurrence_id']) ||
     !isset($data['availability_id']) || empty($data['availability_id']) ||
     !isset($data['timerange_id']) || empty($data['timerange_id']) ||
@@ -27,13 +26,12 @@ if (
 
 try {
     $query = "INSERT INTO tbl_setavailabilityfaculty 
-                (subject_id, recurrence_id, availability_id, timerange_id, user_id, availableslotstatus_id) 
+                (recurrence_id, availability_id, timerange_id, user_id, availableslotstatus_id) 
               VALUES 
-                (:subject_id, :recurrence_id, :availability_id, :timerange_id, :user_id, :availableslotstatus_id)";
+                (:recurrence_id, :availability_id, :timerange_id, :user_id, :availableslotstatus_id)";
     $stmt = $conn->prepare($query);
 
-    // Bind values
-    $stmt->bindParam(':subject_id', $data['subject_id'], PDO::PARAM_INT);
+    // Bind values (removed subject_id)
     $stmt->bindParam(':recurrence_id', $data['recurrence_id'], PDO::PARAM_INT);
     $stmt->bindParam(':availability_id', $data['availability_id'], PDO::PARAM_INT);
     $stmt->bindParam(':timerange_id', $data['timerange_id'], PDO::PARAM_INT);

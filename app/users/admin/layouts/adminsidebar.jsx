@@ -104,7 +104,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           )}
         </Button>
 
-        <Button
+        {/* <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
             currentView === "subjects" ? "bg-gray-200" : ""
@@ -118,9 +118,9 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           {!collapsed && (
             <span className="pr-8 font-semibold">Subjects List</span>
           )}
-        </Button>
+        </Button> */}
 
-        <Button
+        {/* <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
             currentView === "departments" ? "bg-gray-200" : ""
@@ -134,7 +134,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           {!collapsed && (
             <span className="pr-8 font-semibold">Departments</span>
           )}
-        </Button>
+        </Button> */}
 
         <Button
           variant="ghost"
