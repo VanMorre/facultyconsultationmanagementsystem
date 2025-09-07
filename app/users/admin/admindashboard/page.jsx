@@ -66,7 +66,7 @@ const AdminDashboard = () => {
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [currentView, setCurrentView] = useState("dashboard");
   const [fadeTransition, setFadeTransition] = useState(false);
-
+  const [AvailabilityFetch, setFetchAvailability] = useState([]);
   const SECRET_KEY = "my_secret_key_123456";
 
   // 1) decrypt on mount
@@ -86,6 +86,9 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     decryptUserId();
+     if (loggedInUserId) {
+    fetchAvailability(loggedInUserId); 
+    }
   }, [loggedInUserId]);
 
   const containerVariants = {
@@ -104,6 +107,36 @@ const AdminDashboard = () => {
     visible: { scale: 1, opacity: 1, transition: { duration: 0.5 } },
   };
 
+  const fetchAvailability = async (userId) => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/adminside/admin-availability/fetch-availability.php`,
+        { params: { user_id: userId } } // send user_id as query param
+      );
+
+      if (response.data.success) {
+        setFetchAvailability(response.data.data);
+      } else {
+        setFetchAvailability([]);
+      }
+    } catch (error) {
+      console.error("Error fetching faculty availability:", error);
+    }
+  };
+
+
+    const days = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+
+
+  
   return (
     <AdminLayout
       currentView={currentView}
@@ -285,35 +318,48 @@ const AdminDashboard = () => {
                   variants={chartVariants}
                   className="bg-white p-6 rounded-lg shadow-md flex-grow"
                 >
-                  <h2 className="text-l  font-bold text-black mb-4">
+                  <h2 className="text-l font-bold text-black mb-4">
                     My Consultation Availability
                   </h2>
                   <div className="border rounded-md overflow-hidden">
+                    {/* Header */}
                     <div className="grid grid-cols-7 text-center text-sm font-medium bg-green-900 text-white font-semibold">
-                      <div className="py-2">Monday</div>
-                      <div className="py-2">Tuesday</div>
-                      <div className="py-2">Wednesday</div>
-                      <div className="py-2">Thursday</div>
-                      <div className="py-2">Friday</div>
-                      <div className="py-2">Saturday</div>
-                      <div className="py-2">Sunday</div>
+                      {days.map((day) => (
+                        <div key={day} className="py-2">
+                          {day}
+                        </div>
+                      ))}
                     </div>
+
+                    {/* Availability Slots */}
                     <div className="grid grid-cols-7 text-center">
-                      <div className="border p-4 h-[80px]"></div>
-                      <div className="border p-4 h-[80px]"></div>
-                      <div className="border p-1 h-[80px] flex items-center justify-center">
-                        <div className="bg-green-900 text-white text-xs px-3 py-1 rounded-md">
-                          2:00pm – 4:00pm
-                        </div>
-                      </div>
-                      <div className="border p-4 h-[80px]"></div>
-                      <div className="border p-4 h-[80px]"></div>
-                      <div className="border p-1 h-[80px] flex items-center justify-center">
-                        <div className="bg-green-900 text-white text-xs px-3 py-1 rounded-md">
-                          7:00pm – 4:00pm
-                        </div>
-                      </div>
-                      <div className="border p-4 h-[80px]"></div>
+                      {days.map((day) => {
+                        // get all slots for this day (user_id already filtered in API)
+                        const slots = AvailabilityFetch.filter(
+                          (slot) => slot.availability_name === day
+                        );
+
+                        return (
+                          <div
+                            key={day}
+                            className="border p-1 h-[100px] flex flex-col items-center gap-1 overflow-y-auto"
+
+                          >
+                            {slots.length > 0 ? (
+                              slots.map((slot) => (
+                                <div
+                                  key={slot.availabilityfaculty_id}
+                                  className="bg-green-900 text-white text-xs px-3 py-1 rounded-md"
+                                >
+                                  {slot.time_range}
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-400 mt-8">No assign availability</span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </motion.div>
@@ -428,7 +474,7 @@ const AdminDashboard = () => {
 
         {currentView === "faculty" && <FacultyManagement />}
         {/* {currentView === "subjects" && <SubjectlistManagement />} */}
-         {currentView === "studentrequest" && <StudentrequestManagement />}
+        {currentView === "studentrequest" && <StudentrequestManagement />}
         {currentView === "auditlogs" && <AuditManagement />}
         {currentView === "availability" && <AvailabilityManagement />}
         {currentView === "consultation" && <ConsultationManagement />}

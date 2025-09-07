@@ -7,26 +7,24 @@ header("Content-Type: application/json; charset=UTF-8");
 include '../dbconnection.php';
 
 try {
-    $query = "SELECT 
-                  s.subject_id, 
-                  s.subject_name, 
-                  ay.academicyear, 
-                  st.status_name
-              FROM tbl_subjects s
-              INNER JOIN tbl_academicyear ay 
-                  ON s.academicyear_id = ay.academicyear_id
-              INNER JOIN tbl_status st 
-                  ON s.status_id = st.status_id
-              ORDER BY s.subject_id DESC";
+   $query = "SELECT 
+              MIN(saf.availabilityfaculty_id) AS availabilityfaculty_id,
+              u.user_id,
+              u.username
+          FROM tbl_setavailabilityfaculty saf
+          INNER JOIN tbl_users u ON saf.user_id = u.user_id
+          GROUP BY u.user_id, u.username
+          ORDER BY u.username ASC";
+
 
     $stmt = $conn->prepare($query);
     $stmt->execute();
 
-    $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $availability = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
         "success" => true,
-        "data" => $subjects
+        "data" => $availability
     ]);
 } catch (PDOException $e) {
     echo json_encode([

@@ -16,12 +16,38 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
 import CryptoJS from "crypto-js";
 const ConsultationManagement = () => {
   const [filteredLogs, setFilteredLogs] = useState([]);
+  const [date, setDate] = useState(null); // ✅ fixed for .jsx
+
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
 
@@ -110,11 +136,106 @@ const ConsultationManagement = () => {
               <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
             </div>
 
-            {/* New Consultations Button */}
-            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
-              <TbPlus className="h-5 w-5 transition-colors duration-300" />
-              New Consultations
-            </button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+                  <TbPlus className="h-5 w-5 transition-colors duration-300" />
+                  New Consultations
+                </button>
+              </DialogTrigger>
+
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-green-800">
+                    New Consultation
+                  </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  {/* Student Dropdown */}
+                  <div>
+                    <Label className="mb-2 block">Student</Label>
+                    <Select>
+                      <SelectTrigger className="w-full border-green-800">
+                        <SelectValue placeholder="Select student" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="student1">John Doe</SelectItem>
+                        <SelectItem value="student2">Jane Smith</SelectItem>
+                        <SelectItem value="student3">Mark Johnson</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="mb-2 block">Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={`w-full justify-between text-left font-normal border-green-800 ${
+                            !date && "text-muted-foreground"
+                          }`}
+                        >
+                          {date ? (
+                            format(date, "PPP")
+                          ) : (
+                            <span>Select date</span>
+                          )}
+                          <CalendarIcon className="ml-2 h-4 w-4" />{" "}
+                          {/* ✅ Icon moved to right */}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          onSelect={setDate}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+              
+                  <div>
+                    <Label className="mb-2  block">Start Time</Label>
+                    <Select>
+                      <SelectTrigger className="w-full border-green-800">
+                        <SelectValue placeholder="Select start time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="09:00">09:00 AM</SelectItem>
+                        <SelectItem value="10:00">10:00 AM</SelectItem>
+                        <SelectItem value="11:00">11:00 AM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* End Time Dropdown */}
+                  <div>
+                    <Label className="mb-2  block">End Time</Label>
+                    <Select>
+                      <SelectTrigger className="w-full border-green-800">
+                        <SelectValue placeholder="Select end time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10:00">10:00 AM</SelectItem>
+                        <SelectItem value="11:00">11:00 AM</SelectItem>
+                        <SelectItem value="12:00">12:00 PM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-2">
+                    <Button className="w-full bg-green-800 hover:bg-green-700 text-white">
+                      Save Consultation
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Filter Date Button */}
             <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">

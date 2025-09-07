@@ -62,14 +62,18 @@ const AvailabilityManagement = () => {
       }
     }
   };
-  useEffect(() => {
-    decryptUserId();
+ useEffect(() => {
+  decryptUserId();
 
-    fetchrecurrence();
-    fetchavailabilityday();
-    fetchtimerange();
-    fetchAvailability();
-  }, [loggedInUserId]);
+  fetchrecurrence();
+  fetchavailabilityday();
+  fetchtimerange();
+
+  if (loggedInUserId) {
+    fetchAvailability(loggedInUserId); 
+  }
+}, [loggedInUserId]);
+
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -224,22 +228,22 @@ const AvailabilityManagement = () => {
     }
   };
 
-  const fetchAvailability = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/faculty/teacher-availability/add-availability.php`
-      );
+   const fetchAvailability = async (userId) => {
+  try {
+    const response = await axios.get(
+      `http://localhost/fchms/app/api_fchms/facultyside/teacher-availability/fetch-availability.php`,
+      { params: { user_id: userId } } // send user_id as query param
+    );
 
-      if (response.data.success) {
-        setFetchAvailability(response.data.data);
-      } else {
-        console.log(response.data.message || "No faculty availability found");
-        setFetchAvailability([]);
-      }
-    } catch (error) {
-      console.error("Error faculty availability found:", error);
+    if (response.data.success) {
+      setFetchAvailability(response.data.data);
+    } else {
+      setFetchAvailability([]);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching faculty availability:", error);
+  }
+};
 
   return (
     <motion.div

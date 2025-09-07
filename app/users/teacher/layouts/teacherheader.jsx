@@ -99,7 +99,7 @@ const TeacherHeader = ({ toggleSidebar, setCurrentView }) => {
 
        <div className="flex items-center ">
                   {/* Bell Icon */}
-                  <PiBellRingingFill className="h-8 w-8 text-green-800 cursor-pointer " />
+                  {/* <PiBellRingingFill className="h-8 w-8 text-green-800 cursor-pointer " /> */}
       
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

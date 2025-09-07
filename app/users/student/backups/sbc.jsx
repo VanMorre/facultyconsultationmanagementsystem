@@ -23,20 +23,27 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
+
 const BookConsultationManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
   const today = new Date();
+
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
+
   const [subject, setSubject] = useState("");
+  const [notes, setNotes] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [selectedFaculty, setSelectedFaculty] = useState("");
+
   const [AvailabilityFetch, setFetchAvailability] = useState([]);
+  const [AvailabilityFaculty, setFetchAvailabilityFaculty] = useState([]);
   const [facultyDialog, setFacultyDialog] = useState(null);
 
-  const [selectedFaculty, setSelectedFaculty] = useState("");
-  const [AvailabilityFaculty, setFetchAvailabilityFaculty] = useState([]);
+  // ✅ Decrypt logged-in user
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
     if (encryptedUserId) {
@@ -91,17 +98,15 @@ const BookConsultationManagement = () => {
     return days;
   };
 
-  // ✅ Inside component state
   const [calendarDays, setCalendarDays] = useState(
     buildCalendarDays(currentMonth, currentYear)
   );
 
-  // Rebuild calendar whenever month/year changes
   useEffect(() => {
     setCalendarDays(buildCalendarDays(currentMonth, currentYear));
   }, [currentMonth, currentYear]);
 
-  // ✅ Navigation handlers
+  // ✅ Navigation
   const handlePrevMonth = () => {
     setCurrentMonth((prev) => {
       if (prev === 0) {
@@ -171,7 +176,7 @@ const BookConsultationManagement = () => {
     }
   };
 
-    const fetchAvailabilityFacultyData = async () => {
+  const fetchAvailabilityFacultyData = async () => {
     try {
       const response = await axios.get(
         `http://localhost/fchms/app/api_fchms/allavailabilityfaculty/fetch-facultyname.php`
@@ -180,15 +185,48 @@ const BookConsultationManagement = () => {
       if (response.data.success) {
         setFetchAvailabilityFaculty(response.data.data);
       } else {
-       setFetchAvailabilityFaculty([]);
+        setFetchAvailabilityFaculty([]);
       }
     } catch (error) {
       console.error("Error fetching faculty availability:", error);
     }
   };
 
+  // ✅ Save consultation
+  const handleSaveConsultation = async () => {
+    if (!selectedFaculty || !selectedTime || !subject) {
+      alert("Please fill all required fields (faculty, time, subject).");
+      return;
+    }
 
+    try {
+      const response = await axios.post(
+        `http://localhost/fchms/app/api_fchms/consultations/save-consultation.php`,
+        {
+          student_id: loggedInUserId,
+          faculty_id: selectedFaculty,
+          date: selectedDate,
+          time: selectedTime,
+          subject,
+          notes,
+        }
+      );
 
+      if (response.data.success) {
+        alert("Consultation booked successfully!");
+        setOpenDialog(false);
+        setSubject("");
+        setNotes("");
+        setSelectedTime("");
+        setSelectedFaculty("");
+      } else {
+        alert("Failed to book consultation.");
+      }
+    } catch (error) {
+      console.error("Error saving consultation:", error);
+      alert("An error occurred while saving.");
+    }
+  };
 
   return (
     <motion.div
@@ -276,10 +314,7 @@ const BookConsultationManagement = () => {
                     onClick={(e) => {
                       e.stopPropagation();
 
-                      // Get the day name of this cell (e.g., "Monday", "Wednesday")
                       const clickedDay = availabilities[0].availability_name;
-
-                      // Filter only availabilities of this faculty for that day
                       const facultyDayAvailabilities = AvailabilityFetch.filter(
                         (f) =>
                           f.username === faculty.username &&
@@ -302,6 +337,7 @@ const BookConsultationManagement = () => {
           })}
         </div>
 
+        {/* Faculty Availability Modal */}
         <Dialog
           open={!!facultyDialog}
           onOpenChange={() => setFacultyDialog(null)}
@@ -315,8 +351,6 @@ const BookConsultationManagement = () => {
                     {facultyDialog.username}
                   </span>{" "}
                   on <span className="font-semibold">{facultyDialog.day}</span>.
-                  You can use this information to plan and book your
-                  consultation.
                 </p>
 
                 <DialogHeader>
@@ -325,7 +359,6 @@ const BookConsultationManagement = () => {
                   </DialogTitle>
                 </DialogHeader>
 
-                {/* Show all time ranges for this day */}
                 <div className="mt-3 text-sm text-gray-700 space-y-2">
                   {facultyDialog.availabilities.map((a, i) => (
                     <div key={i} className="border p-2 rounded-md bg-gray-50">
@@ -349,26 +382,10 @@ const BookConsultationManagement = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Booking Modal */}
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
           <DialogContent
-            className={`
-    w-full 
-    sm:max-w-md 
-    sm:rounded-lg 
-    sm:h-auto 
-    h-[60vh]   // ✅ take only 80% height on mobile
-    fixed 
-    bottom-0 
-    sm:bottom-auto 
-    sm:top-1/2 sm:left-1/2 
-    sm:-translate-x-1/2 sm:-translate-y-1/2
-    sm:p-6 p-4 
-    overflow-y-auto
-    transition-transform
-    animate-in 
-    sm:fade-in-90 
-    slide-in-from-bottom-10
-  `}
+            className="w-full sm:max-w-md sm:rounded-lg sm:h-auto h-[60vh] fixed bottom-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:p-6 p-4 overflow-y-auto"
           >
             <DialogHeader>
               <DialogTitle className="text-sm sm:text-base">
@@ -406,14 +423,17 @@ const BookConsultationManagement = () => {
               {/* Time */}
               <div>
                 <Label className="pb-2 sm:pb-4">Time</Label>
-                <Select>
+                <Select
+                  value={selectedTime}
+                  onValueChange={(val) => setSelectedTime(val)}
+                >
                   <SelectTrigger className="w-full border border-black text-black">
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="9am">9:00 AM</SelectItem>
-                    <SelectItem value="10am">10:00 AM</SelectItem>
-                    <SelectItem value="11am">11:00 AM</SelectItem>
+                    <SelectItem value="9:00 AM">9:00 AM</SelectItem>
+                    <SelectItem value="10:00 AM">10:00 AM</SelectItem>
+                    <SelectItem value="11:00 AM">11:00 AM</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -437,6 +457,8 @@ const BookConsultationManagement = () => {
                   className="w-full border border-black rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-green-700"
                   rows="3"
                   placeholder="Enter notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
 
@@ -449,7 +471,10 @@ const BookConsultationManagement = () => {
                 >
                   Cancel
                 </Button>
-                <Button className="bg-green-700 hover:bg-green-800 w-full sm:w-auto">
+                <Button
+                  className="bg-green-700 hover:bg-green-800 w-full sm:w-auto"
+                  onClick={handleSaveConsultation}
+                >
                   Save
                 </Button>
               </div>
