@@ -2,12 +2,10 @@ import {
   TbZoom,
   TbClipboardList,
   TbPlus,
+  TbEye,
   TbCalendar,
   TbFilter,
-  TbHistory,
 } from "react-icons/tb";
-import { HiCheckCircle, HiXCircle } from "react-icons/hi";
-
 import {
   Pagination,
   PaginationContent,
@@ -32,13 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarIcon } from "lucide-react";
@@ -57,6 +48,7 @@ import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const ConsultationManagement = () => {
+  const [filteredLogs, setFilteredLogs] = useState([]);
   const [date, setDate] = useState(null); // ✅ fixed for .jsx
   const [fetchbooking, setfetchbooking] = useState([]);
   const [TimerangeFetch, setTimerangeFetch] = useState([]);
@@ -65,8 +57,6 @@ const ConsultationManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const DEFAULT_APPROVAL_STATUS_ID = 5;
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [ConsultationFetch, setFetchConsultation] = useState([]);
 
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
@@ -98,41 +88,30 @@ const ConsultationManagement = () => {
     fetchtimerange();
     if (loggedInUserId) {
       fetchbookingstudent(loggedInUserId);
-      fetchConsultation(loggedInUserId);
     }
   }, [loggedInUserId]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [searchText, setSearchText] = useState("");
-  const filteredConsultations = (ConsultationFetch || [])
+  const filteredlogs = (filteredLogs || [])
     .filter(
       (finv) =>
-        String(finv.schedulebookings_id)
+        String(finv.log_id).toLowerCase().includes(searchText.toLowerCase()) ||
+        String(finv.username)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-        String(finv.student_name)
+        String(finv.activity_type)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-        String(finv.schedulebookdate)
-          .toLowerCase()
-          .includes(searchText.toLowerCase()) ||
-        String(finv.timeranges)
-          .toLowerCase()
-          .includes(searchText.toLowerCase()) ||
-        String(finv.approval_name)
-          .toLowerCase()
-          .includes(searchText.toLowerCase())
+        String(finv.action).toLowerCase().includes(searchText.toLowerCase())
     )
-    .sort((a, b) => a.schedulebookings_id - b.schedulebookings_id);
+    .sort((a, b) => a.log_id - b.log_id);
 
-  const totalPages = Math.ceil(filteredConsultations.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredlogs.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredConsultations.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
+  const currentItems = filteredlogs.slice(indexOfFirstItem, indexOfLastItem);
 
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -151,7 +130,7 @@ const ConsultationManagement = () => {
   };
 
   const uniqueStudents = [
-    ...new Map(fetchbooking.map((s) => [s.student_name, s])).values(),
+    ...new Map(fetchbooking.map((s) => [s.booking_id, s])).values(),
   ];
 
   const fetchbookingstudent = async (UserID) => {
@@ -216,7 +195,6 @@ const ConsultationManagement = () => {
         setSelectedStudents([]);
         setDate(null);
         setSelectedTimerange("");
-        setIsDialogOpen(false);
       } else {
         toast.error(
           response.data.message || "Failed to schedule consultation."
@@ -225,121 +203,6 @@ const ConsultationManagement = () => {
     } catch (error) {
       console.error("Error scheduling consultation:", error);
       toast.error("An error occurred while scheduling consultation.");
-    }
-  };
-
-  const fetchConsultation = async (UserID) => {
-    try {
-      const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/fetch-consultation.php`,
-        {
-          params: { user_id: UserID }, // ✅ send user_id
-        }
-      );
-
-      if (response.data.success) {
-        setFetchConsultation(response.data.data);
-      } else {
-        setFetchConsultation([]);
-      }
-    } catch (error) {
-      console.error("Error fetching consultation:", error);
-    }
-  };
-
-  // ✅ Mark as Completed
-  const handleCompleted = async (booking_id, currentStatus) => {
-    if (currentStatus === "Completed") {
-      toast.warning("This consultation is already marked as Completed!");
-      return;
-    }
-    if (currentStatus === "Cancelled") {
-      toast.warning("This consultation has been Cancelled!");
-      return;
-    }
-
-    try {
-      const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/approval-consultation.php`,
-        {
-          booking_id,
-          action: "Completed",
-        }
-      );
-
-      if (response.data.success) {
-        toast.success("Consultation marked as Completed");
-        fetchConsultation();
-      } else {
-        toast.error(response.data.message || "Failed to mark as Completed.");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Server error while updating to Completed.");
-    }
-  };
-
-  // ✅ Mark as Scheduled
-  const handleSchedule = async (booking_id, currentStatus) => {
-    if (currentStatus === "Scheduled") {
-      toast.warning("This consultation is already Scheduled!");
-      return;
-    }
-    if (currentStatus === "Completed") {
-      toast.warning("This consultation is already Completed!");
-      return;
-    }
-
-    try {
-      const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/approval-consultation.php`,
-        {
-          booking_id,
-          action: "Scheduled",
-        }
-      );
-
-      if (response.data.success) {
-        toast.success("Consultation marked as Scheduled");
-        fetchConsultation();
-      } else {
-        toast.error(response.data.message || "Failed to mark as Scheduled.");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Server error while updating to Scheduled.");
-    }
-  };
-
-  // ✅ Mark as Cancelled
-  const handleCancelled = async (booking_id, currentStatus) => {
-    if (currentStatus === "Cancelled") {
-      toast.warning("This consultation is already Cancelled!");
-      return;
-    }
-    if (currentStatus === "Completed") {
-      toast.warning("This consultation is already Completed!");
-      return;
-    }
-
-    try {
-      const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/approval-consultation.php`,
-        {
-          booking_id,
-          action: "Cancelled",
-        }
-      );
-
-      if (response.data.success) {
-        toast.success("Consultation marked as Cancelled");
-        fetchConsultation();
-      } else {
-        toast.error(response.data.message || "Failed to mark as Cancelled.");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Server error while updating to Cancelled.");
     }
   };
 
@@ -380,16 +243,14 @@ const ConsultationManagement = () => {
               <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
             </div>
 
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog>
               <DialogTrigger asChild>
-                <button
-                  onClick={() => setIsDialogOpen(true)}
-                  className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white"
-                >
+                <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
                   <TbPlus className="h-5 w-5 transition-colors duration-300" />
                   New Consultation
                 </button>
               </DialogTrigger>
+
               <DialogContent
                 className="w-full h-auto max-h-[85vh] flex flex-col"
                 style={{ maxWidth: "1200px", height: "700px" }}
@@ -415,12 +276,12 @@ const ConsultationManagement = () => {
                       {uniqueStudents.length > 0 ? (
                         uniqueStudents.map((student) => (
                           <label
-                            key={student.booking_id} // ✅ keep booking_id as unique key
+                            key={student.booking_id}
                             className="flex items-center gap-3 px-3 py-2 border border-gray-200 rounded-sm hover:bg-green-100 cursor-pointer w-full"
                           >
                             <input
                               type="checkbox"
-                              value={student.booking_id} // ✅ use booking_id here
+                              value={student.booking_id} // ✅ booking_id
                               checked={selectedStudents.includes(
                                 student.booking_id
                               )}
@@ -558,35 +419,21 @@ const ConsultationManagement = () => {
             </Dialog>
 
             {/* Filter Date Button */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
-                  <TbFilter className="h-5 w-5 transition-colors duration-300" />
-                  Filter Consultation Status
-                </button>
-              </DropdownMenuTrigger>
+            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+              <TbCalendar className="h-5 w-5 transition-colors duration-300" />
+              Filter Consultation Date
+            </button>
 
-              <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem onClick={() => onFilter("Complete")}>
-                  Complete
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onFilter("Schedule")}>
-                  Schedule
-                </DropdownMenuItem>
-
-                <DropdownMenuItem onClick={() => onFilter("Cancel")}>
-                  Cancel
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Filter Date Button */}
+            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+              <TbFilter className="h-5 w-5 transition-colors duration-300" />
+              Filter Status
+            </button>
           </div>
 
           <table className="w-full border-collapse bg-white shadow-lg  overflow-hidden mx-auto">
             <thead className="bg-gray-50 text-gray-500">
               <tr>
-                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Consult no.
-                </th>
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Student
                 </th>
@@ -596,7 +443,11 @@ const ConsultationManagement = () => {
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Time
+                  Start time
+                </th>
+
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Ended time
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
@@ -609,75 +460,25 @@ const ConsultationManagement = () => {
             </thead>
             <tbody>
               {currentItems.length > 0 ? (
-                currentItems.map((consult, index) => (
+                currentItems.map((log, index) => (
                   <tr key={index}>
                     <td className="border px-6 py-2 text-center">
-                      {consult.schedulebookings_id}
+                      {log.log_id}
                     </td>
                     <td className="border px-6 py-2 text-center">
-                      {consult.student_name}
+                      {log.username}
                     </td>
                     <td className="border px-6 py-2 text-center">
-                      {consult.schedulebookdate}
+                      {log.activity_type}
                     </td>
                     <td className="border px-6 py-2 text-center">
-                      {consult.timeranges}
+                      {log.action}
                     </td>
-
-                    <td className="border px-6 py-3 text-center text-sm font-semibold">
-                      <span
-                        className={`inline-block px-3 py-1 text-sm font-semibold rounded-md ${
-                          consult.approval_name === "Completed"
-                            ? "bg-green-900 text-white"
-                            : consult.approval_name === "Pending"
-                            ? "bg-gray-200 text-black"
-                            : consult.approval_name === "Scheduled"
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-200 text-black"
-                        }`}
-                      >
-                        {consult.approval_name}
-                      </span>
-                    </td>
-
-                    <td className="border px-6 py-3 text-center text-sm font-semibold">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() =>
-                            handleCompleted(
-                              consult.schedulebookings_id,
-                              consult.approval_name
-                            )
-                          }
-                          className="px-2 py-1 border-2 border-green-500 text-green-500 rounded-md focus:outline-none hover:bg-green-600 hover:text-white transition"
-                        >
-                          <HiCheckCircle className="w-6 h-6" />
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            handleSchedule(
-                              consult.schedulebookings_id,
-                              consult.approval_name
-                            )
-                          }
-                          className="px-2 py-1 border-2 border-blue-500 text-blue-500 rounded-md focus:outline-none hover:bg-blue-600 hover:text-white transition"
-                        >
-                          <TbHistory className="w-6 h-6" />
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            handleCancelled(
-                              consult.schedulebookings_id,
-                              consult.approval_name
-                            )
-                          }
-                          className="px-2 py-1 border-2 border-red-500 text-red-500 rounded-md focus:outline-none hover:bg-red-600 hover:text-white transition"
-                        >
-                          <HiXCircle className="w-6 h-6" />
-                        </button>
-                      </div>
+                    <td className="border px-6 py-2 text-center">
+                      {new Date(log.activity_time).toLocaleString("en-PH", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
                     </td>
                   </tr>
                 ))
@@ -695,8 +496,8 @@ const ConsultationManagement = () => {
             {/* Entries Text */}
             <span className="text-sm text-green-800 font-semibold pl-4">
               Showing {indexOfFirstItem + 1} to{" "}
-              {Math.min(indexOfLastItem, ConsultationFetch.length)} of{" "}
-              {ConsultationFetch.length} entries
+              {Math.min(indexOfLastItem, filteredLogs.length)} of{" "}
+              {filteredLogs.length} entries
             </span>
 
             {/* Pagination */}
@@ -715,7 +516,7 @@ const ConsultationManagement = () => {
                         onClick={() => goToPage(index + 1)}
                         className={
                           currentPage === index + 1
-                            ? "bg-green-800 text-white"
+                            ? "bg-red-900 text-white"
                             : ""
                         }
                       >

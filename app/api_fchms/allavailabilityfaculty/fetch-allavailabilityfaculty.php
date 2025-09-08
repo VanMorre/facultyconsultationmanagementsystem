@@ -12,6 +12,7 @@ try {
                   saf.user_id,
                   r.recurrence_name,
                   a.availability_name,
+                  t.timerange_id,
                   CONCAT(t.start_time, ' - ', t.end_time) AS time_range,
                   u.username,
                   st.status_name AS availableslot_status

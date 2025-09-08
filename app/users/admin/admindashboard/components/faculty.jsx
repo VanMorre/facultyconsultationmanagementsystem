@@ -705,37 +705,25 @@ const FacultyManagement = () => {
                     </td>
 
                     <td className="border px-6 py-3 text-center text-sm font-semibold">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="px-3 py-1 bg-green-800 text-white font-semibold text-sm rounded-md flex items-center space-x-2 focus:outline-none text-center mx-auto">
-                            <span>Options</span>
-                            <TbChevronDown className="w-4 h-4" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-54">
-                          <DropdownMenuSeparator />
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() =>
+                            handleEdit(usersaccountdetails.user_id)
+                          }
+                          className="px-2 py-1 border-2 border-blue-500 text-blue-500 rounded-md focus:outline-none hover:bg-blue-600 hover:text-white transition"
+                        >
+                          <TbEdit className="w-6 h-6" />
+                        </button>
 
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleView(usersaccountdetails.user_id)
-                            }
-                            className="flex items-center space-x-2 cursor-pointer"
-                          >
-                            <TbEye className="w-6 h-6 !w-6 !h-6 text-black" />{" "}
-                            <span>View users details</span>
-                          </DropdownMenuItem>
-
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleEdit(usersaccountdetails.user_id)
-                            }
-                            className="flex items-center space-x-2 cursor-pointer"
-                          >
-                            <TbEdit className="w-6 h-6 !w-6 !h-6 text-black" />{" "}
-                            <span>Edit user details</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        <button
+                          onClick={() =>
+                            handleView(usersaccountdetails.user_id)
+                          }
+                          className="px-2 py-1 border-2 border-yellow-500 text-yellow-500 rounded-md focus:outline-none hover:bg-yellow-600 hover:text-white transition"
+                        >
+                          <TbEye className="w-6 h-6" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

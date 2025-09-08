@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { MdMenuBook } from "react-icons/md";
+
 import { LayoutDashboard } from "lucide-react";
 import {
   TbCalendarCheck,
   TbClipboardText,
-  TbMailFilled
+  TbMailFilled,
+  TbChartLine
 } from "react-icons/tb";
 
 const TeacherSidebar = ({ collapsed, setCurrentView, currentView }) => {
@@ -112,6 +113,24 @@ const TeacherSidebar = ({ collapsed, setCurrentView, currentView }) => {
             <span className="pr-8 font-semibold">Student Request</span>
           )}
         </Button>
+
+
+              <Button
+                  variant="ghost"
+                  className={`w-full justify-start text-black ${
+                    currentView === "reports" ? "bg-gray-200" : ""
+                  }`}
+                  onClick={() => setCurrentView("reports")}
+                >
+                  <TbChartLine
+                    className="mr-1"
+                    style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
+                  />
+                  {!collapsed && <span className="pr-8 font-semibold">Reports</span>}
+                </Button>
+
+
+
       </nav>
     </aside>
   );

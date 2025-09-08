@@ -503,14 +503,7 @@ const AvailabilityManagement = () => {
                           <TbEdit className="w-6 h-6" />
                         </button>
 
-                        <button
-                          onClick={() =>
-                            handleView(usersaccountdetails.user_id)
-                          }
-                          className="px-2 py-1 border-2 border-yellow-500 text-yellow-500 rounded-md focus:outline-none hover:bg-yellow-600 hover:text-white transition"
-                        >
-                          <TbEye className="w-6 h-6" />
-                        </button>
+                    
                       </div>
                     </td>
                   </tr>

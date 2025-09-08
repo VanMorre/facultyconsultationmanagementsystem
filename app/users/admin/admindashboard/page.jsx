@@ -42,7 +42,7 @@ import { Line } from "react-chartjs-2";
 import StudentrequestManagement from "./components/studentrequest";
 // import DepartmentManagement from "../backups/department";
 import ConsultationManagement from "./components/consultation";
-import AuditManagement from "./components/auditlogs";
+// import AuditManagement from "./components/auditlogs";
 import FacultyManagement from "./components/faculty";
 import AvailabilityManagement from "./components/availability";
 import ReportManagement from "./components/reports";
@@ -67,17 +67,30 @@ const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState("dashboard");
   const [fadeTransition, setFadeTransition] = useState(false);
   const [AvailabilityFetch, setFetchAvailability] = useState([]);
+  const [fetchbooking, setfetchbooking] = useState([]);
+  const [ConsultationFetch, setFetchConsultation] = useState([]);
+
   const SECRET_KEY = "my_secret_key_123456";
 
-  // 1) decrypt on mount
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
 
     if (encryptedUserId) {
       try {
         const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
-        setLoggedInUserId(decryptedUserId);
+        let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+
+        // 🔹 Remove wrapping quotes if any
+        decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
+
+        // 🔹 Cast to integer
+        const numericId = parseInt(decryptedUserId, 10);
+
+        if (!isNaN(numericId)) {
+          setLoggedInUserId(numericId);
+        } else {
+          console.error("Invalid decrypted student ID:", decryptedUserId);
+        }
       } catch (error) {
         console.error("Error decrypting user ID:", error);
       }
@@ -86,8 +99,10 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     decryptUserId();
-     if (loggedInUserId) {
-    fetchAvailability(loggedInUserId); 
+    if (loggedInUserId) {
+      fetchAvailability(loggedInUserId);
+      fetchbookingstudent(loggedInUserId);
+      fetchConsultation(loggedInUserId);
     }
   }, [loggedInUserId]);
 
@@ -124,8 +139,7 @@ const AdminDashboard = () => {
     }
   };
 
-
-    const days = [
+  const days = [
     "Monday",
     "Tuesday",
     "Wednesday",
@@ -135,8 +149,56 @@ const AdminDashboard = () => {
     "Sunday",
   ];
 
+  const fetchbookingstudent = async (UserID) => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
+        {
+          params: { user_id: UserID }, // ✅ send user_id
+        }
+      );
 
-  
+      if (response.data.success) {
+        setfetchbooking(response.data.data);
+      } else {
+        setfetchbooking([]);
+      }
+    } catch (error) {
+      console.error("Error fetching student booking:", error);
+      setfetchbooking([]);
+    }
+  };
+
+  const fetchConsultation = async (UserID) => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/fetch-consultation.php`,
+        {
+          params: { user_id: UserID }, // ✅ send user_id
+        }
+      );
+
+      if (response.data.success) {
+        setFetchConsultation(response.data.data);
+      } else {
+        setFetchConsultation([]);
+      }
+    } catch (error) {
+      console.error("Error fetching consultation:", error);
+    }
+  };
+
+  const totalConsultations = ConsultationFetch.length;
+  const scheduledCount = ConsultationFetch.filter(
+    (c) => c.approval_name === "Scheduled"
+  ).length;
+  const completedCount = ConsultationFetch.filter(
+    (c) => c.approval_name === "Completed"
+  ).length;
+  const cancelledCount = ConsultationFetch.filter(
+    (c) => c.approval_name === "Cancelled"
+  ).length;
+
   return (
     <AdminLayout
       currentView={currentView}
@@ -162,75 +224,72 @@ const AdminDashboard = () => {
           <>
             {/* Top Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {/* Total Consultations */}
               <motion.div
                 variants={itemVariants}
-                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
                     Total Consultations
                   </p>
-                  <h2 className="text-2xl font-bold text-green-800">1,225</h2>
+                  <h2 className="text-2xl font-bold text-green-800">
+                    {totalConsultations}
+                  </h2>
                 </div>
                 <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaClipboardList className="text-xl" />
                 </div>
               </motion.div>
 
+              {/* Scheduled */}
               <motion.div
                 variants={itemVariants}
-                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
                     Scheduled
                   </p>
-                  <h2 className="text-2xl font-bold text-green-800">78</h2>
+                  <h2 className="text-2xl font-bold text-green-800">
+                    {scheduledCount}
+                  </h2>
                 </div>
                 <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaCalendarCheck className="text-xl" />
                 </div>
               </motion.div>
 
+              {/* Completed */}
               <motion.div
                 variants={itemVariants}
-                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
-                    Complete
+                    Completed
                   </p>
-                  <h2 className="text-2xl font-bold text-green-800">162</h2>
+                  <h2 className="text-2xl font-bold text-green-800">
+                    {completedCount}
+                  </h2>
                 </div>
                 <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaCheckCircle className="text-xl" />
                 </div>
               </motion.div>
 
+              {/* Cancelled */}
               <motion.div
                 variants={itemVariants}
-                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
-              >
-                <div>
-                  <p className="text-sm text-green-800 font-semibold">
-                    Scheduled
-                  </p>
-                  <h2 className="text-2xl font-bold text-green-800">428</h2>
-                </div>
-                <div className="bg-green-800 text-white p-3 rounded-full">
-                  <FaCalendarCheck className="text-xl" />
-                </div>
-              </motion.div>
-
-              <motion.div
-                variants={itemVariants}
-                className="border  bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
+                className="border bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
               >
                 <div>
                   <p className="text-sm text-green-800 font-semibold">
                     Cancelled
                   </p>
-                  <h2 className="text-2xl font-bold text-green-800">629</h2>
+                  <h2 className="text-2xl font-bold text-green-800">
+                    {cancelledCount}
+                  </h2>
                 </div>
                 <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaTimesCircle className="text-xl" />
@@ -239,10 +298,9 @@ const AdminDashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              {/* Left Column - Teacher Consultation and My Weekly Availability stacked */}
+             
               <div className="col-span-2 flex flex-col gap-3">
-                {/* Teacher Consultation Render Hours */}
-                <motion.div
+                {/* <motion.div
                   variants={chartVariants}
                   className="bg-white p-6 rounded-lg shadow-md"
                 >
@@ -311,7 +369,7 @@ const AdminDashboard = () => {
                       }}
                     />
                   </div>
-                </motion.div>
+                </motion.div> */}
 
                 {/* My Weekly Consultation Availability */}
                 <motion.div
@@ -342,20 +400,21 @@ const AdminDashboard = () => {
                         return (
                           <div
                             key={day}
-                            className="border p-1 h-[100px] flex flex-col items-center gap-1 overflow-y-auto"
-
+                            className="border p-1 h-[450px] flex flex-col items-center gap-1 overflow-y-auto"
                           >
                             {slots.length > 0 ? (
                               slots.map((slot) => (
                                 <div
                                   key={slot.availabilityfaculty_id}
-                                  className="bg-green-900 text-white text-xs px-3 py-1 rounded-md"
+                                  className="bg-green-900 text-white text-xs px-3 py-1 rounded-md mt-7"
                                 >
                                   {slot.time_range}
                                 </div>
                               ))
                             ) : (
-                              <span className="text-xs text-gray-400 mt-8">No assign availability</span>
+                              <span className="text-xs text-gray-400 mt-8">
+                                No assign availability
+                              </span>
                             )}
                           </div>
                         );
@@ -392,59 +451,52 @@ const AdminDashboard = () => {
 
                 {/* Requests list */}
                 <div className="space-y-3">
-                  <div className="p-4 bg-gray-50 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold text-black">
-                          Juan Dela Cruz
-                        </p>
-                        <p className="text-sm text-gray-700">
-                          Discussion on research
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Aug 10, 2025 - 1:00 am
-                        </p>
-                        <p className="text-sm text-gray-700">
-                          Project guidance
-                        </p>
-                      </div>
-                      <TbArrowRight className="text-green-800 w-5 h-5 flex-shrink-0" />
-                    </div>
-                  </div>
+                  {fetchbooking.length > 0 ? (
+                    fetchbooking.map((req, idx) => (
+                      <div
+                        key={idx}
+                        className="p-4 bg-gray-50 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            {/* ✅ Student Name */}
+                            <p className="font-semibold text-black">
+                              {req.student_name}
+                            </p>
 
-                  <div className="p-4 bg-gray-50 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold text-black">Daniel Smith</p>
-                        <p className="text-sm text-gray-700">
-                          Project guidance
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Aug 12, 2025 - 9:30 am
-                        </p>
-                        <p className="text-sm text-gray-700">Assistance help</p>
-                      </div>
-                      <TbArrowRight className="text-green-800 w-5 h-5 flex-shrink-0" />
-                    </div>
-                  </div>
+                            {/* ✅ Purpose */}
+                            <p className="text-sm text-gray-700">
+                              {req.purpose}
+                            </p>
 
-                  <div className="p-4 bg-gray-50 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold text-black">Anne Reyes</p>
-                        <p className="text-sm text-gray-700">
-                          Consultation altoe
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Aug 15, 2025 - 11:00 am
-                        </p>
-                        <p className="text-sm text-gray-700">
-                          Discussion on research
-                        </p>
+                            {/* ✅ Booking Date */}
+                            <p className="text-sm text-gray-600">
+                              {new Date(req.booking_date).toLocaleString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                }
+                              )}
+                            </p>
+
+                            {/* ✅ Subject */}
+                            <p className="text-sm text-gray-700">
+                              {req.subject_name}
+                            </p>
+                          </div>
+                          <TbArrowRight className="text-green-800 w-5 h-5 flex-shrink-0" />
+                        </div>
                       </div>
-                      <TbArrowRight className="text-green-800 w-5 h-5 flex-shrink-0" />
-                    </div>
-                  </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-center">
+                      No requests found
+                    </p>
+                  )}
                 </div>
 
                 {/* See more link */}
@@ -475,7 +527,7 @@ const AdminDashboard = () => {
         {currentView === "faculty" && <FacultyManagement />}
         {/* {currentView === "subjects" && <SubjectlistManagement />} */}
         {currentView === "studentrequest" && <StudentrequestManagement />}
-        {currentView === "auditlogs" && <AuditManagement />}
+        {/* {currentView === "auditlogs" && <AuditManagement />} */}
         {currentView === "availability" && <AvailabilityManagement />}
         {currentView === "consultation" && <ConsultationManagement />}
         {/* {currentView === "departments" && <DepartmentManagement />} */}

@@ -30,57 +30,97 @@ import StudentConsultationManagement from "./components/studentbookconsultationv
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import { motion } from "framer-motion";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 
 import StudentLayout from "../layouts/studentlayout";
 
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import {
-  FaClipboardList,
-  FaCalendarCheck,
-  FaCheckCircle,
-  FaTimesCircle,
-} from "react-icons/fa";
-
-ChartJS.register(
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  PointElement
-);
+import { FaClipboardList } from "react-icons/fa";
 
 const StudentDashboard = () => {
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [currentView, setCurrentView] = useState("dashboard");
   const [fadeTransition, setFadeTransition] = useState(false);
-
+  const [fetchbooking, setfetchbooking] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(0); // 0 = All
   const SECRET_KEY = "my_secret_key_123456";
 
-  // 1) decrypt on mount
+  // 🔑 Decrypt user ID
   const decryptUserId = () => {
-    const encryptedUserId = sessionStorage.getItem("user_id");
+    const encryptedUserId = sessionStorage.getItem("student_id");
 
     if (encryptedUserId) {
       try {
         const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
-        setLoggedInUserId(decryptedUserId);
+        let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+
+        // 🔹 Remove wrapping quotes if any
+        decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
+
+        // 🔹 Cast to integer
+        const numericId = parseInt(decryptedUserId, 10);
+
+        if (!isNaN(numericId)) {
+          setLoggedInUserId(numericId);
+        } else {
+          console.error("Invalid decrypted student ID:", decryptedUserId);
+        }
       } catch (error) {
         console.error("Error decrypting user ID:", error);
       }
     }
   };
 
+
   useEffect(() => {
     decryptUserId();
+    if (loggedInUserId) {
+      fetchbookingstudent(loggedInUserId);
+    }
   }, [loggedInUserId]);
 
+  const fetchbookingstudent = async (StudentID) => {
+    try {
+    
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
+        {
+          params: { student_id: StudentID }, // ✅ send user_id
+        }
+      );
+
+      if (response.data.success) {
+        setfetchbooking(response.data.data);
+      } else {
+        setfetchbooking([]);
+      }
+    } catch (error) {
+      console.error("Error fetching student booking:", error);
+      setfetchbooking([]);
+    }
+  };
+
+  // 📊 Count bookings by month
+  const getMonthlyBookings = () => {
+    const counts = Array(12).fill(0);
+    fetchbooking.forEach((booking) => {
+      if (booking.booking_date) {
+        const month = new Date(booking.booking_date).getMonth(); // 0–11
+        counts[month] += 1;
+      }
+    });
+    return counts;
+  };
+
+  const monthlyData = getMonthlyBookings();
+
+  // 🗓️ Filtered bookings (for card)
+  const filteredBookings = fetchbooking.filter((booking) => {
+    if (selectedMonth === 0) return true;
+    const month = new Date(booking.booking_date).getMonth() + 1;
+    return month === selectedMonth;
+  });
+
+  // Animations
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -120,6 +160,7 @@ const StudentDashboard = () => {
       >
         {currentView === "dashboard" && (
           <>
+            {/* ✅ Card Section */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <motion.div
                 variants={itemVariants}
@@ -129,7 +170,9 @@ const StudentDashboard = () => {
                   <p className="text-sm text-green-800 font-semibold">
                     Total Consultations
                   </p>
-                  <h2 className="text-2xl font-bold text-green-800">46</h2>
+                  <h2 className="text-2xl font-bold text-green-800">
+                    {filteredBookings.length}
+                  </h2>
                 </div>
                 <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaClipboardList className="text-xl" />
@@ -137,6 +180,7 @@ const StudentDashboard = () => {
               </motion.div>
             </div>
 
+            {/* ✅ Chart Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-10">
               <motion.div
                 variants={chartVariants}
@@ -149,8 +193,10 @@ const StudentDashboard = () => {
                   <motion.select
                     whileHover={{ scale: 1.05 }}
                     className="border rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-[#00856F]"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
                   >
-                    <option value="0">All</option>
+                    <option value={0}>All</option>
                     {[
                       "January",
                       "February",
@@ -191,9 +237,9 @@ const StudentDashboard = () => {
                       datasets: [
                         {
                           label: "Book Consultation",
-                          data: [5, 8, 6, 10, 7, 12, 9, 11, 6, 8, 10, 7], // sample values
-                          borderColor: "#246919ff", // green-800
-                          backgroundColor: "rgba(31, 118, 110, 0.2)", // light fill of green-800
+                          data: monthlyData, // ✅ dynamic data
+                          borderColor: "#246919ff",
+                          backgroundColor: "rgba(31, 118, 110, 0.2)",
                           tension: 0.4,
                           fill: true,
                         },
@@ -209,20 +255,6 @@ const StudentDashboard = () => {
                 </div>
               </motion.div>
             </div>
-
-            <ToastContainer
-              position="top-right"
-              autoClose={1000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="light"
-              transition={Bounce}
-            />
           </>
         )}
 
@@ -232,4 +264,5 @@ const StudentDashboard = () => {
     </StudentLayout>
   );
 };
+
 export default StudentDashboard;

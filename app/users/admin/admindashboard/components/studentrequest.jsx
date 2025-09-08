@@ -1,4 +1,4 @@
-import { TbZoom, TbPrinter } from "react-icons/tb";
+import { TbZoom, TbFilter } from "react-icons/tb";
 import {
   Pagination,
   PaginationContent,
@@ -8,60 +8,90 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { HiThumbUp, HiThumbDown } from "react-icons/hi";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
-
 import CryptoJS from "crypto-js";
+import { ToastContainer, toast, Bounce } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 const StudentrequestManagement = () => {
+  const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
-  const [getsalesdata, setfetchgetsalesdata] = useState([]);
+  const [fetchbooking, setfetchbooking] = useState([]);
+
+  const decryptUserId = () => {
+    const encryptedUserId = sessionStorage.getItem("user_id");
+
+    if (encryptedUserId) {
+      try {
+        const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
+        let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+
+        // 🔹 Remove wrapping quotes if any
+        decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
+
+        // 🔹 Cast to integer
+        const numericId = parseInt(decryptedUserId, 10);
+
+        if (!isNaN(numericId)) {
+          setLoggedInUserId(numericId);
+        } else {
+          console.error("Invalid decrypted student ID:", decryptedUserId);
+        }
+      } catch (error) {
+        console.error("Error decrypting user ID:", error);
+      }
+    }
+  };
+
   useEffect(() => {
     decryptUserId();
+    if (loggedInUserId) {
+      fetchbookingstudent(loggedInUserId);
+    }
   }, [loggedInUserId]);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchText, setSearchText] = useState("");
-  const filteredSales = getsalesdata.filter(
-    (paysales) =>
-      paysales.customers_name
-        ?.toString()
-        .toLowerCase()
-        .includes(searchText.toLowerCase()) ||
-      paysales.productcategory_name
-        ?.toString()
-        .toLowerCase()
-        .includes(searchText.toLowerCase()) ||
-      paysales.order_quantity
-        ?.toString()
-        .toLowerCase()
-        .includes(searchText.toLowerCase()) ||
-      paysales.order_amount
-        ?.toString()
-        .toLowerCase()
-        .includes(searchText.toLowerCase()) ||
-      paysales.amount_paid
-        ?.toString()
-        .toLowerCase()
-        .includes(searchText.toLowerCase()) ||
-      paysales.payment_status
-        ?.toString()
-        .toLowerCase()
-        .includes(searchText.toLowerCase()) ||
-      paysales.payment_date
-        ?.toString()
-        .toLowerCase()
-        .includes(searchText.toLowerCase())
-  );
-
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
+  const [searchText, setSearchText] = useState("");
+  const filteredbookings = (fetchbooking || [])
+    .filter(
+      (finv) =>
+        String(finv.booking_id)
+          .toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        String(finv.faculty_name)
+          .toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        String(finv.booking_date)
+          .toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        String(finv.time_range)
+          .toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        String(finv.purpose).toLowerCase().includes(searchText.toLowerCase()) ||
+        String(finv.approval_name)
+          .toLowerCase()
+          .includes(searchText.toLowerCase())
+    )
+    .sort((a, b) => a.booking_id - b.booking_id);
+
+  const totalPages = Math.ceil(filteredbookings.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentSales = filteredSales.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredbookings.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
 
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -78,19 +108,86 @@ const StudentrequestManagement = () => {
   const goToPage = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
+  const fetchbookingstudent = async (UserID) => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
+        {
+          params: { user_id: UserID }, // ✅ send user_id
+        }
+      );
 
-  const SECRET_KEY = "my_secret_key_123456";
-  const decryptUserId = () => {
-    const encryptedUserId = sessionStorage.getItem("user_id");
-
-    if (encryptedUserId) {
-      try {
-        const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
-        setLoggedInUserId(decryptedUserId);
-      } catch (error) {
-        console.error("Error decrypting user ID:", error);
+      if (response.data.success) {
+        setfetchbooking(response.data.data);
+      } else {
+        setfetchbooking([]);
       }
+    } catch (error) {
+      console.error("Error fetching student booking:", error);
+      setfetchbooking([]);
+    }
+  };
+
+  const handleApprove = async (booking_id, currentStatus) => {
+    if (currentStatus === "Approve") {
+      toast.warning("This booking is already approved!");
+      return;
+    }
+    if (currentStatus === "Disapprove") {
+      toast.warning("This booking has already been disapproved!");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `http://localhost/fchms/app/api_fchms/adminside/admin-studentrequest/approve-studentrequest.php`,
+        {
+          booking_id,
+          action: "Approve",
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Booking approved successfully!");
+        fetchbookingstudent(); // 🔄 refresh list
+      } else {
+        toast.error(response.data.message || "Approval failed.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Server error while approving.");
+    }
+  };
+
+
+  const handleReject = async (booking_id, currentStatus) => {
+    if (currentStatus === "Disapprove") {
+      toast.warning("This booking is already disapproved!");
+      return;
+    }
+    if (currentStatus === "Approve") {
+      toast.warning("This booking has already been approved!");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `http://localhost/fchms/app/api_fchms/adminside/admin-studentrequest/approve-studentrequest.php`,
+        {
+          booking_id,
+          action: "Disapprove",
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Booking rejected successfully!");
+        fetchbookingstudent(); // 🔄 refresh list
+      } else {
+        toast.error(response.data.message || "Rejection failed.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Server error while rejecting.");
     }
   };
 
@@ -101,74 +198,182 @@ const StudentrequestManagement = () => {
       transition={{ duration: 0.5 }}
     >
       <>
+        <ToastContainer
+          position="top-right"
+          autoClose={1000}
+          theme="light"
+          transition={Bounce}
+        />
+
         <div className="bg-white p-6  shadow-md">
-          <h1 className="text-l font-bold text-green-900 pb-2 mt-3">
+          <h1 className="text-l font-bold  text-green-800 pb-5 mt-3 flex items-center gap-2">
             Student Request
           </h1>
+
           <p className="text-sm text-gray-500">
             Below is the list of student consultation requests with their
             details, including purpose, schedule, and additional notes.
           </p>
-          <div className="border-b border-gray-300 mt-2 mb-4"></div>
 
-          <div className="flex justify-between items-center mt-14 mb-4">
+          {/* Search Input with Magnifier Icon and Buttons */}
+          <div className="flex items-center gap-4 pt-6 mb-4">
+            {/* Search Input */}
             <div className="relative w-full max-w-md">
               <input
                 type="text"
                 placeholder="Search..."
-                className="w-full border border-black text-black placeholder-black rounded-lg pl-4 pr-10 py-2 shadow-sm"
+                className="w-full border border-green-800 rounded-lg pl-4 pr-10 py-2 shadow-sm text-black placeholder-black"
                 value={searchText}
                 onChange={(e) => {
                   setSearchText(e.target.value);
-                  setCurrentPage(1); // Important: Reset to page 1 when searching
+                  setCurrentPage(1); // Reset to page 1 when searching
                 }}
               />
-
               <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+                  <TbFilter className="h-5 w-5 transition-colors duration-300" />
+                  Filter student request status
+                </button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem onClick={() => onFilter("Approve")}>
+                   Approve
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onFilter("Disapprove")}>
+                   Disapprove
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          <table className="w-full border-collapse bg-white shadow-lg  overflow-hidden">
+          <table className="w-full border-collapse bg-white shadow-lg  overflow-hidden mx-auto">
             <thead className="bg-gray-50 text-gray-500">
               <tr>
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Book no.
+                </th>
+
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Faculty
                 </th>
+
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Date
                 </th>
+
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Time
                 </th>
+                  <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Subject
+                </th>
+
+
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Notes
                 </th>
+
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Status
                 </th>
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Approved date
+                </th>
+
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Action
                 </th>
               </tr>
             </thead>
-
             <tbody>
-              <tr>
-                <td colSpan={22} className="text-center py-6 text-gray-500 ">
-                  No student request found
-                </td>
-              </tr>
+              {currentItems.length > 0 ? (
+                currentItems.map((bks, index) => (
+                  <tr key={index}>
+                    <td className="border px-6 py-2 text-center">
+                      {bks.booking_id}
+                    </td>
+
+                    <td className="border px-6 py-2 text-center">
+                      {bks.faculty_name}
+                    </td>
+                    <td className="border px-6 py-2 text-center">
+                      {bks.booking_date}
+                    </td>
+                    <td className="border px-6 py-2 text-center">
+                      {bks.time_range}
+                    </td>
+                    
+                    <td className="border px-6 py-2 text-center">
+                      {bks.subject_name}
+                    </td>
+
+                    <td className="border px-6 py-2 text-center">
+                      {bks.purpose}
+                    </td>
+                    <td className="border px-6 py-3 text-center text-sm font-semibold">
+                      <span
+                        className={`inline-block px-3 py-1 text-sm font-semibold rounded-md ${
+                          bks.approval_name === "Approve"
+                            ? "bg-green-900 text-white"
+                            : bks.approval_name === "Pending"
+                            ? "bg-gray-200 text-black"
+                            : "bg-gray-200 text-black"
+                        }`}
+                      >
+                        {bks.approval_name}
+                      </span>
+                    </td>
+
+                    <td className="border px-6 py-2 text-center">
+                      {bks.approval_date}
+                    </td>
+
+                    <td className="border px-6 py-3 text-center text-sm font-semibold">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() =>
+                            handleApprove(bks.booking_id, bks.approval_name)
+                          }
+                          className="px-2 py-1 border-2 border-green-500 text-green-500 rounded-md focus:outline-none hover:bg-green-600 hover:text-white transition"
+                        >
+                          <HiThumbUp className="w-6 h-6" />
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            handleReject(bks.booking_id, bks.approval_name)
+                          }
+                          className="px-2 py-1 border-2 border-red-500 text-red-500 rounded-md focus:outline-none hover:bg-red-600 hover:text-white transition"
+                        >
+                          <HiThumbDown className="w-6 h-6" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="24" className="text-center py-4">
+                    No student request found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
 
           <div className="flex items-center justify-between mt-14">
             {/* Entries Text */}
-            <span className="text-sm text-black pl-4">
+            <span className="text-sm text-green-800 font-semibold pl-4">
               Showing {indexOfFirstItem + 1} to{" "}
-              {Math.min(indexOfLastItem, getsalesdata.length)} of{" "}
-              {getsalesdata.length} entries
+              {Math.min(indexOfLastItem, fetchbooking.length)} of{" "}
+              {fetchbooking.length} entries
             </span>
 
+            {/* Pagination */}
             <div className="flex">
               <Pagination>
                 <PaginationContent className="flex">
@@ -184,7 +389,7 @@ const StudentrequestManagement = () => {
                         onClick={() => goToPage(index + 1)}
                         className={
                           currentPage === index + 1
-                            ? "bg-red-900 text-white"
+                            ? "bg-green-800 text-white"
                             : ""
                         }
                       >
@@ -204,19 +409,6 @@ const StudentrequestManagement = () => {
           </div>
         </div>
       </>
-      <ToastContainer
-        position="top-right"
-        autoClose={1000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-        transition={Bounce}
-      />
     </motion.div>
   );
 };

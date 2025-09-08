@@ -164,7 +164,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           {!collapsed && <span className="pr-8 font-semibold">Reports</span>}
         </Button>
 
-        <Button
+        {/* <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
             currentView === "auditlogs" ? "bg-gray-200" : ""
@@ -176,7 +176,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
             style={{ height: "28px", width: "35px", color: "#6e7a36" }}
           />
           {!collapsed && <span className="pr-8 font-semibold">Audit logs</span>}
-        </Button>
+        </Button> */}
       </nav>
     </aside>
   );

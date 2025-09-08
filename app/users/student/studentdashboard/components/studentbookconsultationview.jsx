@@ -1,4 +1,4 @@
-import { TbZoom,  TbCalendar, TbHistory } from "react-icons/tb";
+import { TbZoom, TbHistory, TbEye, TbEdit, TbFilter } from "react-icons/tb";
 import {
   Pagination,
   PaginationContent,
@@ -8,54 +8,86 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
 import CryptoJS from "crypto-js";
 const StudentConsultationManagement = () => {
-  const [filteredLogs, setFilteredLogs] = useState([]);
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
+  const [fetchbooking, setfetchbooking] = useState([]);
 
   const decryptUserId = () => {
-    const encryptedUserId = sessionStorage.getItem("user_id");
+    const encryptedUserId = sessionStorage.getItem("student_id");
 
     if (encryptedUserId) {
       try {
         const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
-        setLoggedInUserId(decryptedUserId);
+        let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+
+        // 🔹 Remove wrapping quotes if any
+        decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
+
+        // 🔹 Cast to integer
+        const numericId = parseInt(decryptedUserId, 10);
+
+        if (!isNaN(numericId)) {
+          setLoggedInUserId(numericId);
+        } else {
+          console.error("Invalid decrypted student ID:", decryptedUserId);
+        }
       } catch (error) {
         console.error("Error decrypting user ID:", error);
       }
     }
   };
+
   useEffect(() => {
     decryptUserId();
+    if (loggedInUserId) {
+      fetchbookingstudent(loggedInUserId);
+    }
   }, [loggedInUserId]);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 10;
   const [searchText, setSearchText] = useState("");
-  const filteredlogs = (filteredLogs || [])
+  const filteredbookings = (fetchbooking || [])
     .filter(
       (finv) =>
-        String(finv.log_id).toLowerCase().includes(searchText.toLowerCase()) ||
-        String(finv.username)
+        String(finv.booking_id)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-        String(finv.activity_type)
+        String(finv.faculty_name)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-        String(finv.action).toLowerCase().includes(searchText.toLowerCase())
+        String(finv.booking_date)
+          .toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        String(finv.time_range)
+          .toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        String(finv.purpose).toLowerCase().includes(searchText.toLowerCase()) ||
+        String(finv.approval_name)
+          .toLowerCase()
+          .includes(searchText.toLowerCase())
     )
-    .sort((a, b) => a.log_id - b.log_id);
+    .sort((a, b) => a.booking_id - b.booking_id);
 
-  const totalPages = Math.ceil(filteredlogs.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredbookings.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredlogs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredbookings.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
 
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -71,6 +103,25 @@ const StudentConsultationManagement = () => {
 
   const goToPage = (pageNumber) => {
     setCurrentPage(pageNumber);
+  };
+  const fetchbookingstudent = async (StudentID) => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
+        {
+          params: { student_id: StudentID }, // ✅ send user_id
+        }
+      );
+
+      if (response.data.success) {
+        setfetchbooking(response.data.data);
+      } else {
+        setfetchbooking([]);
+      }
+    } catch (error) {
+      console.error("Error fetching student booking:", error);
+      setfetchbooking([]);
+    }
   };
 
   return (
@@ -103,26 +154,34 @@ const StudentConsultationManagement = () => {
               <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
             </div>
 
-      
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+                  <TbFilter className="h-5 w-5 transition-colors duration-300" />
+                  Filter student request status
+                </button>
+              </DropdownMenuTrigger>
 
-            {/* Filter Date Button */}
-            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
-              <TbCalendar className="h-5 w-5 transition-colors duration-300" />
-              Filter Consultation Date
-            </button>
-
-
-               <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
-              <TbCalendar className="h-5 w-5 transition-colors duration-300" />
-              Filter  Consultation Status
-            </button>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem onClick={() => onFilter("Approve")}>
+                  Approve
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onFilter("Disapprove")}>
+                  Disapprove
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <table className="w-full border-collapse bg-white shadow-lg  overflow-hidden mx-auto">
             <thead className="bg-gray-50 text-gray-500">
               <tr>
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                    Faculty
+                  Book no.
+                </th>
+
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Faculty
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
@@ -137,9 +196,13 @@ const StudentConsultationManagement = () => {
                   Notes
                 </th>
 
-                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Status
                 </th>
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Approved date
+                </th>
+
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Action
                 </th>
@@ -147,32 +210,69 @@ const StudentConsultationManagement = () => {
             </thead>
             <tbody>
               {currentItems.length > 0 ? (
-                currentItems.map((log, index) => (
+                currentItems.map((bks, index) => (
                   <tr key={index}>
                     <td className="border px-6 py-2 text-center">
-                      {log.log_id}
+                      {bks.booking_id}
+                    </td>
+
+                    <td className="border px-6 py-2 text-center">
+                      {bks.faculty_name}
                     </td>
                     <td className="border px-6 py-2 text-center">
-                      {log.username}
+                      {bks.booking_date}
                     </td>
                     <td className="border px-6 py-2 text-center">
-                      {log.activity_type}
+                      {bks.time_range}
                     </td>
                     <td className="border px-6 py-2 text-center">
-                      {log.action}
+                      {bks.purpose}
                     </td>
+                    <td className="border px-6 py-3 text-center text-sm font-semibold">
+                      <span
+                        className={`inline-block px-3 py-1 text-sm font-semibold rounded-md ${
+                          bks.approval_name === "Approve"
+                            ? "bg-green-900 text-white"
+                            : bks.approval_name === "Pending"
+                            ? "bg-gray-200 text-black"
+                            : "bg-gray-200 text-black"
+                        }`}
+                      >
+                        {bks.approval_name}
+                      </span>
+                    </td>
+
                     <td className="border px-6 py-2 text-center">
-                      {new Date(log.activity_time).toLocaleString("en-PH", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
+                      {bks.approval_date}
+                    </td>
+
+                    <td className="border px-6 py-3 text-center text-sm font-semibold">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() =>
+                            handleEdit(usersaccountdetails.user_id)
+                          }
+                          className="px-2 py-1 border-2 border-blue-500 text-blue-500 rounded-md focus:outline-none hover:bg-blue-600 hover:text-white transition"
+                        >
+                          <TbEdit className="w-6 h-6" />
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            handleView(usersaccountdetails.user_id)
+                          }
+                          className="px-2 py-1 border-2 border-yellow-500 text-yellow-500 rounded-md focus:outline-none hover:bg-yellow-600 hover:text-white transition"
+                        >
+                          <TbEye className="w-6 h-6" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="text-center py-4">
-                    No consultation history found.
+                  <td colSpan="24" className="text-center py-4">
+                    No booking history found.
                   </td>
                 </tr>
               )}
@@ -183,8 +283,8 @@ const StudentConsultationManagement = () => {
             {/* Entries Text */}
             <span className="text-sm text-green-800 font-semibold pl-4">
               Showing {indexOfFirstItem + 1} to{" "}
-              {Math.min(indexOfLastItem, filteredLogs.length)} of{" "}
-              {filteredLogs.length} entries
+              {Math.min(indexOfLastItem, fetchbooking.length)} of{" "}
+              {fetchbooking.length} entries
             </span>
 
             {/* Pagination */}
@@ -203,7 +303,7 @@ const StudentConsultationManagement = () => {
                         onClick={() => goToPage(index + 1)}
                         className={
                           currentPage === index + 1
-                            ? "bg-red-900 text-white"
+                            ? "bg-green-800 text-white"
                             : ""
                         }
                       >
