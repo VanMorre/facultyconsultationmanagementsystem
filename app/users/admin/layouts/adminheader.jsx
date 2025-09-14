@@ -18,14 +18,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-import { PiBellRingingFill } from "react-icons/pi";
+
 import { Menu, LogOut, ChevronDown } from "lucide-react";
 import useLogout from "@/app/users/hooks/logout";
 import CryptoJS from "crypto-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TbUserFilled } from "react-icons/tb";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 const SECRET_KEY = "my_secret_key_123456";
 
 const AdminHeader = ({ toggleSidebar, setCurrentView }) => {
@@ -44,14 +41,25 @@ const AdminHeader = ({ toggleSidebar, setCurrentView }) => {
       return null;
     }
   };
-  const decryptUserId = () => {
+ const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
 
     if (encryptedUserId) {
       try {
         const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
-        setLoggedInUserId(decryptedUserId);
+        let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+
+        // 🔹 Remove wrapping quotes if any
+        decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
+
+        // 🔹 Cast to integer
+        const numericId = parseInt(decryptedUserId, 10);
+
+        if (!isNaN(numericId)) {
+          setLoggedInUserId(numericId);
+        } else {
+          console.error("Invalid decrypted student ID:", decryptedUserId);
+        }
       } catch (error) {
         console.error("Error decrypting user ID:", error);
       }
@@ -121,13 +129,13 @@ const AdminHeader = ({ toggleSidebar, setCurrentView }) => {
               </DropdownMenuTrigger>
 
               <DropdownMenuContent className="w-56 mb-2" align="end" forceMount>
-                <DropdownMenuItem
+                {/* <DropdownMenuItem
                   className="flex items-center gap-2 mb-2 cursor-pointer"
-                  onClick={() => setCurrentView("profile")}
+                  onClick={() => setCurrentView("Settings")}
                 >
-                  <TbUserFilled className="h-6 w-6 !h-6 !w-6 text-black" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
+                  <TbSettings2 className="h-6 w-6 !h-6 !w-6 text-black" />
+                  <span>Settings</span>
+                </DropdownMenuItem> */}
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -161,19 +169,7 @@ const AdminHeader = ({ toggleSidebar, setCurrentView }) => {
         </div>
       </header>
 
-      <ToastContainer
-        position="top-right"
-        autoClose={1000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-        transition={Bounce}
-      />
+     
     </>
   );
 };

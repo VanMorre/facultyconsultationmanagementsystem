@@ -18,7 +18,7 @@ import {
 import { HiThumbUp, HiThumbDown } from "react-icons/hi";
 import axios from "axios";
 import { motion } from "framer-motion";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import CryptoJS from "crypto-js";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -27,6 +27,11 @@ const StudentrequestManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [fetchbooking, setfetchbooking] = useState([]);
+  const [statusFilter, setStatusFilter] = useState(""); // "Approve", "Disapprove", or ""
+  const [isLoading, setIsLoading] = useState(false);
+
+  const notifiedBookingIdsRef = useRef([]);
+  const toastShownBookingRef = useRef(false);
 
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
@@ -55,8 +60,26 @@ const StudentrequestManagement = () => {
 
   useEffect(() => {
     decryptUserId();
+
     if (loggedInUserId) {
-      fetchbookingstudent(loggedInUserId);
+      // Load session-stored notified booking IDs
+      const storedNotified = sessionStorage.getItem("notified_booking_ids");
+      if (storedNotified) {
+        notifiedBookingIdsRef.current = JSON.parse(storedNotified);
+      }
+
+      let isInitial = true;
+
+      // First fetch (initial load)
+      fetchbookingstudentWithNotify(loggedInUserId, isInitial);
+      isInitial = false;
+
+      // Poll every 5 seconds
+      const interval = setInterval(() => {
+        fetchbookingstudentWithNotify(loggedInUserId, false);
+      }, 5000);
+
+      return () => clearInterval(interval);
     }
   }, [loggedInUserId]);
 
@@ -64,8 +87,8 @@ const StudentrequestManagement = () => {
   const itemsPerPage = 10;
   const [searchText, setSearchText] = useState("");
   const filteredbookings = (fetchbooking || [])
-    .filter(
-      (finv) =>
+    .filter((finv) => {
+      const matchesSearch =
         String(finv.booking_id)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
@@ -81,8 +104,13 @@ const StudentrequestManagement = () => {
         String(finv.purpose).toLowerCase().includes(searchText.toLowerCase()) ||
         String(finv.approval_name)
           .toLowerCase()
-          .includes(searchText.toLowerCase())
-    )
+          .includes(searchText.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "" || finv.approval_name === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    })
     .sort((a, b) => a.booking_id - b.booking_id);
 
   const totalPages = Math.ceil(filteredbookings.length / itemsPerPage);
@@ -108,17 +136,82 @@ const StudentrequestManagement = () => {
   const goToPage = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
-  const fetchbookingstudent = async (UserID) => {
+
+  const onFilter = (status) => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setStatusFilter(status);
+      setIsLoading(false);
+      setCurrentPage(1); // reset to first page when filtering
+    }, 1000);
+  };
+
+  const fetchbookingstudentWithNotify = async (
+    UserID,
+    isInitial = false,
+    skipNotify = false
+  ) => {
     try {
       const response = await axios.get(
         `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
-        {
-          params: { user_id: UserID }, // ✅ send user_id
-        }
+        { params: { user_id: UserID } }
       );
 
       if (response.data.success) {
-        setfetchbooking(response.data.data);
+        const newBookings = response.data.data;
+
+        // Extract unique booking IDs
+        const currentIds = newBookings.map((item) => item.booking_id);
+
+        // Only run notification logic if not skipped
+        if (!skipNotify) {
+          const newIds = currentIds.filter(
+            (id) => !notifiedBookingIdsRef.current.includes(id)
+          );
+
+          if (
+            !isInitial &&
+            newIds.length > 0 &&
+            !toastShownBookingRef.current
+          ) {
+            toastShownBookingRef.current = true;
+
+            toast.success(`${newIds.length} new consultation booking(s)`, {
+              toastId: "new-booking-toast", // prevents stacking
+              position: "top-right",
+              autoClose: 2000,
+            });
+
+            // Save notified IDs
+            notifiedBookingIdsRef.current = [
+              ...notifiedBookingIdsRef.current,
+              ...newIds,
+            ];
+
+            sessionStorage.setItem(
+              "notified_booking_ids",
+              JSON.stringify(notifiedBookingIdsRef.current)
+            );
+
+            // Reset lock
+            setTimeout(() => {
+              toastShownBookingRef.current = false;
+            }, 5000);
+          }
+
+          if (isInitial) {
+            notifiedBookingIdsRef.current = [
+              ...notifiedBookingIdsRef.current,
+              ...currentIds,
+            ];
+            sessionStorage.setItem(
+              "notified_booking_ids",
+              JSON.stringify(notifiedBookingIdsRef.current)
+            );
+          }
+        }
+
+        setfetchbooking(newBookings);
       } else {
         setfetchbooking([]);
       }
@@ -141,15 +234,12 @@ const StudentrequestManagement = () => {
     try {
       const response = await axios.post(
         `http://localhost/fchms/app/api_fchms/facultyside/teacher-studentrequest/approve-studentrequest.php`,
-        {
-          booking_id,
-          action: "Approve",
-        }
+        { booking_id, action: "Approve" }
       );
 
       if (response.data.success) {
         toast.success("Booking approved successfully!");
-        fetchbookingstudent(); // 🔄 refresh list
+        fetchbookingstudentWithNotify(loggedInUserId, false, true); // ✅ skip notify
       } else {
         toast.error(response.data.message || "Approval failed.");
       }
@@ -159,7 +249,6 @@ const StudentrequestManagement = () => {
     }
   };
 
-  // Reject function
   const handleReject = async (booking_id, currentStatus) => {
     if (currentStatus === "Disapprove") {
       toast.warning("This booking is already disapproved!");
@@ -172,16 +261,13 @@ const StudentrequestManagement = () => {
 
     try {
       const response = await axios.post(
-         `http://localhost/fchms/app/api_fchms/facultyside/teacher-studentrequest/approve-studentrequest.php`,
-        {
-          booking_id,
-          action: "Disapprove",
-        }
+        `http://localhost/fchms/app/api_fchms/facultyside/teacher-studentrequest/approve-studentrequest.php`,
+        { booking_id, action: "Disapprove" }
       );
 
       if (response.data.success) {
         toast.success("Booking rejected successfully!");
-        fetchbookingstudent(); // 🔄 refresh list
+        fetchbookingstudentWithNotify(loggedInUserId, false, true); // ✅ skip notify
       } else {
         toast.error(response.data.message || "Rejection failed.");
       }
@@ -240,11 +326,14 @@ const StudentrequestManagement = () => {
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem onClick={() => onFilter("")}>
+                  All
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onFilter("Approve")}>
-                   Approve
+                  Approve
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onFilter("Disapprove")}>
-                   Disapprove
+                  Disapprove
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -262,6 +351,10 @@ const StudentrequestManagement = () => {
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                  Student
+                </th>
+
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Date
                 </th>
 
@@ -269,7 +362,7 @@ const StudentrequestManagement = () => {
                   Time
                 </th>
 
-                  <th className="border px-6 py-3 text-center text-sm font-semibold relative">
+                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Subject
                 </th>
 
@@ -290,7 +383,35 @@ const StudentrequestManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {currentItems.length > 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan="22" className="text-center py-6">
+                    <div className="flex justify-center items-center gap-2 text-green-700 font-medium">
+                      <svg
+                        className="animate-spin h-6 w-6 text-green-800"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        ></path>
+                      </svg>
+                      <span>Loading...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : currentItems.length > 0 ? (
                 currentItems.map((bks, index) => (
                   <tr key={index}>
                     <td className="border px-6 py-2 text-center">
@@ -300,13 +421,18 @@ const StudentrequestManagement = () => {
                     <td className="border px-6 py-2 text-center">
                       {bks.faculty_name}
                     </td>
+
+                    <td className="border px-6 py-2 text-center">
+                      {bks.student_name}
+                    </td>
+
                     <td className="border px-6 py-2 text-center">
                       {bks.booking_date}
                     </td>
                     <td className="border px-6 py-2 text-center">
                       {bks.time_range}
                     </td>
-                     <td className="border px-6 py-2 text-center">
+                    <td className="border px-6 py-2 text-center">
                       {bks.subject_name}
                     </td>
                     <td className="border px-6 py-2 text-center">

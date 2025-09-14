@@ -123,8 +123,19 @@ const FacultyManagement = () => {
     if (encryptedUserId) {
       try {
         const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
-        setLoggedInUserId(decryptedUserId);
+        let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+
+        // 🔹 Remove wrapping quotes if any
+        decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
+
+        // 🔹 Cast to integer
+        const numericId = parseInt(decryptedUserId, 10);
+
+        if (!isNaN(numericId)) {
+          setLoggedInUserId(numericId);
+        } else {
+          console.error("Invalid decrypted student ID:", decryptedUserId);
+        }
       } catch (error) {
         console.error("Error decrypting user ID:", error);
       }
@@ -268,6 +279,8 @@ const FacultyManagement = () => {
     }
   };
 
+  // ---------------------- React Code ----------------------
+
   const [originalUserData, setOriginalUserData] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [UserData, setUserData] = useState({
@@ -279,6 +292,8 @@ const FacultyManagement = () => {
     age: "",
     role_id: "",
     user_status: "",
+    photo_url: "",
+    photo_file: null,
   });
 
   const handleEdit = async (user_id) => {
@@ -288,7 +303,9 @@ const FacultyManagement = () => {
       );
       if (response.data.success) {
         const data = response.data.data;
-        setUserData({ ...data, user_id });
+
+        // ✅ Ensure role_id and user_status are numbers
+        setUserData({ ...data, user_id, photo_file: null });
         setOriginalUserData(data);
         setEditDialogOpen(true);
       } else {
@@ -308,32 +325,12 @@ const FacultyManagement = () => {
       address,
       contact,
       email,
-      photo_url,
       role_id,
       user_status,
+      photo_file,
     } = UserData;
 
-    if (
-      !username.trim() ||
-      !fullname.trim() ||
-      !address.trim() ||
-      !contact.trim() ||
-      !email.trim()
-    ) {
-      toast.error("All fields are required.");
-      return;
-    }
-
-    if ([username, fullname, address, contact].some(hasInvalidChars)) {
-      toast.error("Invalid characters in input fields.");
-      return;
-    }
-
-    if (!isEmailValid(email)) {
-      toast.error("Invalid email format.");
-      return;
-    }
-
+    // Prevent saving with no changes
     if (
       originalUserData &&
       username === originalUserData.username &&
@@ -342,31 +339,50 @@ const FacultyManagement = () => {
       address === originalUserData.address &&
       contact === originalUserData.contact &&
       email === originalUserData.email &&
-      photo_url === originalUserData.photo_url &&
       Number(role_id) === Number(originalUserData.role_id) &&
-      Number(user_status) === Number(originalUserData.user_status)
+      Number(user_status) === Number(originalUserData.user_status) &&
+      !photo_file
     ) {
       toast.error("No changes detected.");
       return;
     }
 
     try {
-      const payload = {
-        user_id: UserData.user_id,
-        username,
-        fullname,
-        age,
-        address,
-        contact,
-        email,
-        photo_url,
-        role_id: Number(role_id),
-        user_status: Number(user_status),
-      };
+      const formData = new FormData();
+      formData.append("user_id", UserData.user_id);
+      formData.append("username", username);
+      formData.append("fullname", fullname);
+      formData.append("age", age);
+      formData.append("address", address);
+      formData.append("contact", contact);
+      formData.append("email", email);
+
+      // ✅ Only append role_id if valid and changed
+      if (
+        role_id &&
+        !isNaN(Number(role_id)) &&
+        Number(role_id) !== Number(originalUserData.role_id)
+      ) {
+        formData.append("role_id", Number(role_id));
+      }
+
+      // ✅ Only append user_status if valid and changed
+      if (
+        user_status &&
+        !isNaN(Number(user_status)) &&
+        Number(user_status) !== Number(originalUserData.user_status)
+      ) {
+        formData.append("user_status", Number(user_status));
+      }
+
+      if (photo_file) {
+        formData.append("photo", photo_file);
+      }
 
       const { data } = await axios.post(
         "http://localhost/fchms/app/api_fchms/useraccounts/edit-account.php",
-        payload
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
 
       if (data.success) {
@@ -749,7 +765,17 @@ const FacultyManagement = () => {
               </DialogHeader>
 
               <div className="mt-4 space-y-4">
-                {/* Name */}
+                <div className="flex flex-col items-center">
+                  <img
+                    src={Users.photo_url || "/default-avatar.png"}
+                    alt="Profile"
+                    className="w-28 h-28 object-cover rounded-full border shadow-sm"
+                  />
+                  <span className="text-sm text-gray-500 mt-2">
+                    Profile Photo
+                  </span>
+                </div>
+
                 <div className="flex flex-col">
                   <Label className="text-sm font-semibold text-black mb-1">
                     Username
@@ -849,7 +875,60 @@ const FacultyManagement = () => {
               </DialogHeader>
 
               <div className="mt-4 space-y-4">
-                {/* Full Name */}
+                <div className="flex flex-col">
+                  <Label className="text-sm font-semibold text-black mb-1">
+                    Profile Photo
+                  </Label>
+
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={
+                        UserData.photo_file
+                          ? URL.createObjectURL(UserData.photo_file)
+                          : UserData.photo_url || "/default-avatar.png"
+                      }
+                      alt="Profile"
+                      className="w-24 h-24 object-cover rounded-full border"
+                    />
+
+                    {/* Custom upload button */}
+                    <div>
+                      <input
+                        id="upload-photo"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          setUserData({
+                            ...UserData,
+                            photo_file: file || null,
+                          });
+                        }}
+                      />
+                      <label
+                        htmlFor="upload-photo"
+                        className="flex items-center gap-2 border border-green-600 text-green-600 px-4 py-2 rounded cursor-pointer hover:bg-green-50"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16v4h16v-4M12 12V4m0 8l-4-4m4 4l4-4"
+                          />
+                        </svg>
+                        Upload Photo
+                      </label>
+                    </div>
+                  </div>
+                </div>
                 <div className="flex flex-col">
                   <Label className="text-sm font-semibold text-black mb-1">
                     Username
@@ -956,16 +1035,12 @@ const FacultyManagement = () => {
                   <select
                     id="status"
                     className="w-full border rounded px-2 py-1"
-                    value={UserData.status_name}
+                    value={UserData.user_status}
                     onChange={(e) =>
-                      setUserData({
-                        ...UserData,
-                        status_name: e.target.value,
-                      })
+                      setUserData({ ...UserData, user_status: e.target.value })
                     }
                   >
                     <option value="">Select Status</option>
-
                     {statusadminOptions.map((status) => (
                       <option key={status.status_id} value={status.status_id}>
                         {status.status_name}
@@ -981,12 +1056,9 @@ const FacultyManagement = () => {
                   <select
                     id="role"
                     className="w-full border rounded px-2 py-1"
-                    value={UserData.role_name}
+                    value={UserData.role_id}
                     onChange={(e) =>
-                      setUserData({
-                        ...UserData,
-                        role_name: e.target.value,
-                      })
+                      setUserData({ ...UserData, role_id: e.target.value })
                     }
                   >
                     <option value="">Select Role</option>

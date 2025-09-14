@@ -201,62 +201,67 @@ const BookConsultationManagement = () => {
   );
 
   const uniqueFaculty = Array.from(
-    new Map(filteredFaculty.map((f) => [f.availabilityfaculty_id, f])).values()
+    new Map(filteredFaculty.map((f) => [f.user_id, f])).values()
   );
 
   // Filter time ranges for selected faculty (availabilityfaculty_id)
-  const filteredTimeRanges = AvailabilityFetch.filter(
-    (f) =>
-      f.availabilityfaculty_id === Number(selectedFaculty) &&
-      f.availability_name === selectedDayName
-  );
+ const filteredTimeRanges = AvailabilityFetch.filter(
+  (f) =>
+    f.user_id === Number(selectedFaculty) &&
+    f.availability_name === selectedDayName
+);
 
-  const handleSubmit = async () => {
-    if (!selectedFaculty || !selectedTimerange || !subject) {
-      toast.error(
-        "Please fill in all required fields (Faculty, Time range, and Subject)."
-      );
-      return;
-    }
 
-    try {
-      const payload = {
-        student_id: Number(loggedInUserId),
-        availabilityfaculty_id: Number(selectedFaculty), // ✅ availabilityfaculty_id
-        timerange_id: Number(selectedTimerange), // ✅ timerange_id
-        subject,
-        notes,
-        consultation_date: formatDate(selectedDate),
-        approval_id: DEFAULT_APPROVAL_STATUS_ID,
-      };
-
-      const response = await axios.post(
-        "http://localhost/fchms/app/api_fchms/studentside/bookconsultation/add-bookconsultation.php",
-        payload
-      );
-
-      if (response.data.success) {
-        toast.success("Consultation booked successfully!");
-        setOpenDialog(false);
-
-        // reset form fields
-        setSelectedFaculty("");
-        setSelectedTimerange("");
-        setSubject("");
-        setNotes("");
-      } else {
-        toast.error(response.data.message || "Failed to book consultation.");
-      }
-    } catch (error) {
-      console.error("Error booking consultation:", error);
-      toast.error("An error occurred while booking the consultation.");
-    }
-  };
-
-  const formatDate = (date) => {
+ const formatDate = (date) => {
     if (!date) return null;
     return new Date(date).toISOString().split("T")[0]; // YYYY-MM-DD
   };
+
+
+
+  const handleSubmit = async () => {
+  if (!selectedFaculty || !selectedTimerange || !subject) {
+    toast.error("Please fill in all required fields (Faculty, Time range, and Subject).");
+    return;
+  }
+
+  try {
+    const parsedTime = JSON.parse(selectedTimerange);
+
+    const payload = {
+      student_id: Number(loggedInUserId),
+      availabilityfaculty_id: Number(parsedTime.availabilityfaculty_id), // ✅ exact availability slot
+      timerange_id: Number(parsedTime.timerange_id), // ✅ exact time slot
+      subject,
+      notes,
+      consultation_date: formatDate(selectedDate),
+      approval_id: DEFAULT_APPROVAL_STATUS_ID,
+    };
+
+    const response = await axios.post(
+      `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/add-bookconsultation.php`,
+      payload
+    );
+
+    if (response.data.success) {
+      toast.success("Consultation booked successfully!");
+      setOpenDialog(false);
+
+      setSelectedFaculty("");
+      setSelectedTimerange("");
+      setSubject("");
+      setNotes("");
+    } else {
+      toast.error(response.data.message || "Failed to book consultation.");
+    }
+  } catch (error) {
+    console.error("Error booking consultation:", error);
+    toast.error("An error occurred while booking the consultation.");
+  }
+};
+
+  
+ 
 
   return (
     <motion.div
@@ -451,33 +456,34 @@ const BookConsultationManagement = () => {
                 {/* Faculty */}
                 <div>
                   <Label className="pb-2 sm:pb-4">Faculty</Label>
-                  <Select
-                    value={selectedFaculty}
-                    onValueChange={(val) => {
-                      setSelectedFaculty(val);
-                      setSelectedTimerange("");
-                    }}
-                  >
-                    <SelectTrigger id="faculty" className="w-full">
-                      <SelectValue placeholder="Select faculty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {uniqueFaculty.length > 0 ? (
-                        uniqueFaculty.map((faculty) => (
-                          <SelectItem
-                            key={faculty.availabilityfaculty_id}
-                            value={faculty.availabilityfaculty_id.toString()}
-                          >
-                            {faculty.username}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem key="no-faculty" disabled>
-                          No faculty available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                 <Select
+  value={selectedFaculty}
+  onValueChange={(val) => {
+    setSelectedFaculty(val);
+    setSelectedTimerange("");
+  }}
+>
+  <SelectTrigger id="faculty" className="w-full">
+    <SelectValue placeholder="Select faculty" />
+  </SelectTrigger>
+  <SelectContent>
+    {uniqueFaculty.length > 0 ? (
+      uniqueFaculty.map((faculty) => (
+        <SelectItem
+          key={faculty.user_id}
+          value={faculty.user_id.toString()} // store user_id
+        >
+          {faculty.username}
+        </SelectItem>
+      ))
+    ) : (
+      <SelectItem key="no-faculty" disabled>
+        No faculty available
+      </SelectItem>
+    )}
+  </SelectContent>
+</Select>
+
                 </div>
 
                 <div>
@@ -485,30 +491,36 @@ const BookConsultationManagement = () => {
                     Time range
                   </Label>
 
-                  <Select
-                    value={selectedTimerange}
-                    onValueChange={(val) => setSelectedTimerange(val)}
-                  >
-                    <SelectTrigger id="time" className="w-full">
-                      <SelectValue placeholder="Select timerange" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredTimeRanges.length > 0 ? (
-                        filteredTimeRanges.map((time) => (
-                          <SelectItem
-                            key={time.timerange_id}
-                            value={time.timerange_id.toString()}
-                          >
-                            {time.time_range}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem key="no-timerange" disabled>
-                          No timerange found
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+               <Select
+  value={selectedTimerange}
+  onValueChange={(val) => setSelectedTimerange(val)}
+>
+  <SelectTrigger id="time" className="w-full">
+    <SelectValue placeholder="Select timerange" />
+  </SelectTrigger>
+  <SelectContent>
+    {filteredTimeRanges.length > 0 ? (
+      filteredTimeRanges.map((time, idx) => {
+        // Store both availabilityfaculty_id and timerange_id in one string
+        const value = JSON.stringify({
+          availabilityfaculty_id: time.availabilityfaculty_id,
+          timerange_id: time.timerange_id,
+        });
+
+        return (
+          <SelectItem key={idx} value={value}>
+            {time.time_range}
+          </SelectItem>
+        );
+      })
+    ) : (
+      <SelectItem key="no-timerange" disabled>
+        No timerange found
+      </SelectItem>
+    )}
+  </SelectContent>
+</Select>
+
                 </div>
 
                 {/* Subject */}

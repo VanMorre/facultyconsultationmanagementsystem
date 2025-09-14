@@ -51,7 +51,7 @@ import {
 import { format } from "date-fns";
 import axios from "axios";
 import { motion } from "framer-motion";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect , useRef } from "react";
 import CryptoJS from "crypto-js";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -67,9 +67,14 @@ const ConsultationManagement = () => {
   const DEFAULT_APPROVAL_STATUS_ID = 5;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [ConsultationFetch, setFetchConsultation] = useState([]);
+  const [statusFilter, setStatusFilter] = useState(""); // "", "Complete", "Schedule", "Cancel"
+  const [isLoading, setIsLoading] = useState(false);
+  const notifiedBookingIdsRef = useRef([]);
+  const toastShownBookingRef = useRef(false);
+
 
   const decryptUserId = () => {
-    const encryptedUserId = sessionStorage.getItem("user_id");
+  const encryptedUserId = sessionStorage.getItem("user_id");
 
     if (encryptedUserId) {
       try {
@@ -93,21 +98,46 @@ const ConsultationManagement = () => {
     }
   };
 
-  useEffect(() => {
-    decryptUserId();
-    fetchtimerange();
-    if (loggedInUserId) {
-      fetchbookingstudent(loggedInUserId);
-      fetchConsultation(loggedInUserId);
+
+useEffect(() => {
+  decryptUserId();
+  fetchtimerange();
+}, []);
+
+// 🔑 Second effect: runs whenever loggedInUserId changes
+useEffect(() => {
+  if (loggedInUserId) {
+    // Always fetch these once
+    fetchConsultation(loggedInUserId);
+
+    // Load session-stored notified booking IDs
+    const storedNotified = sessionStorage.getItem("notified_booking_ids");
+    if (storedNotified) {
+      notifiedBookingIdsRef.current = JSON.parse(storedNotified);
     }
-  }, [loggedInUserId]);
+
+    let isInitial = true;
+
+    // First fetch (initial load)
+    fetchbookingstudentWithNotify(loggedInUserId, isInitial);
+    isInitial = false;
+
+    // Poll every 5 seconds
+    const interval = setInterval(() => {
+      fetchbookingstudentWithNotify(loggedInUserId, false);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }
+}, [loggedInUserId]);
+
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [searchText, setSearchText] = useState("");
   const filteredConsultations = (ConsultationFetch || [])
-    .filter(
-      (finv) =>
+    .filter((finv) => {
+      const matchesSearch =
         String(finv.schedulebookings_id)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
@@ -122,8 +152,13 @@ const ConsultationManagement = () => {
           .includes(searchText.toLowerCase()) ||
         String(finv.approval_name)
           .toLowerCase()
-          .includes(searchText.toLowerCase())
-    )
+          .includes(searchText.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "" || finv.approval_name === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    })
     .sort((a, b) => a.schedulebookings_id - b.schedulebookings_id);
 
   const totalPages = Math.ceil(filteredConsultations.length / itemsPerPage);
@@ -150,21 +185,71 @@ const ConsultationManagement = () => {
     setCurrentPage(pageNumber);
   };
 
+  const onFilter = (status) => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setStatusFilter(status);
+      setIsLoading(false);
+      setCurrentPage(1); // reset to first page when filtering
+    }, 1000); // 1 second effect
+  };
+
   const uniqueStudents = [
     ...new Map(fetchbooking.map((s) => [s.student_name, s])).values(),
   ];
 
-  const fetchbookingstudent = async (UserID) => {
+   const fetchbookingstudentWithNotify = async (UserID, isInitial = false) => {
     try {
       const response = await axios.get(
         `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
-        {
-          params: { user_id: UserID }, // ✅ send user_id
-        }
+        { params: { user_id: UserID } }
       );
 
       if (response.data.success) {
-        setfetchbooking(response.data.data);
+        const newBookings = response.data.data;
+
+        // Extract unique booking IDs
+        const currentIds = newBookings.map((item) => item.booking_id);
+
+        // Find IDs that are new compared to stored ones
+        const newIds = currentIds.filter(
+          (id) => !notifiedBookingIdsRef.current.includes(id)
+        );
+
+        // 🚫 Removed toast, but still handle ID tracking
+        if (!isInitial && newIds.length > 0 && !toastShownBookingRef.current) {
+          toastShownBookingRef.current = true;
+
+          // ✅ Save notified IDs
+          notifiedBookingIdsRef.current = [
+            ...notifiedBookingIdsRef.current,
+            ...newIds,
+          ];
+
+          sessionStorage.setItem(
+            "notified_booking_ids",
+            JSON.stringify(notifiedBookingIdsRef.current)
+          );
+
+          // Reset lock after delay
+          setTimeout(() => {
+            toastShownBookingRef.current = false;
+          }, 5000);
+        }
+
+        // ✅ On initial fetch, just mark IDs without showing anything
+        if (isInitial) {
+          notifiedBookingIdsRef.current = [
+            ...notifiedBookingIdsRef.current,
+            ...currentIds,
+          ];
+          sessionStorage.setItem(
+            "notified_booking_ids",
+            JSON.stringify(notifiedBookingIdsRef.current)
+          );
+        }
+
+        setfetchbooking(newBookings);
       } else {
         setfetchbooking([]);
       }
@@ -173,6 +258,7 @@ const ConsultationManagement = () => {
       setfetchbooking([]);
     }
   };
+
 
   const fetchtimerange = async () => {
     try {
@@ -217,6 +303,7 @@ const ConsultationManagement = () => {
         setDate(null);
         setSelectedTimerange("");
         setIsDialogOpen(false);
+        await fetchConsultation(loggedInUserId);
       } else {
         toast.error(
           response.data.message || "Failed to schedule consultation."
@@ -247,8 +334,7 @@ const ConsultationManagement = () => {
     }
   };
 
-  // ✅ Mark as Completed
-  const handleCompleted = async (booking_id, currentStatus) => {
+  const handleCompleted = async (schedulebookings_id, currentStatus) => {
     if (currentStatus === "Completed") {
       toast.warning("This consultation is already marked as Completed!");
       return;
@@ -262,14 +348,23 @@ const ConsultationManagement = () => {
       const response = await axios.post(
         `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/approval-consultation.php`,
         {
-          booking_id,
+          schedulebookings_id,
           action: "Completed",
+          user_id: loggedInUserId, // ✅ Always send logged-in user
         }
       );
 
       if (response.data.success) {
         toast.success("Consultation marked as Completed");
-        fetchConsultation();
+
+        // ✅ Update only the affected row in state
+        setFetchConsultation((prev) =>
+          prev.map((consult) =>
+            consult.schedulebookings_id === schedulebookings_id
+              ? { ...consult, approval_name: "Completed" }
+              : consult
+          )
+        );
       } else {
         toast.error(response.data.message || "Failed to mark as Completed.");
       }
@@ -280,7 +375,7 @@ const ConsultationManagement = () => {
   };
 
   // ✅ Mark as Scheduled
-  const handleSchedule = async (booking_id, currentStatus) => {
+  const handleSchedule = async (schedulebookings_id, currentStatus) => {
     if (currentStatus === "Scheduled") {
       toast.warning("This consultation is already Scheduled!");
       return;
@@ -294,14 +389,23 @@ const ConsultationManagement = () => {
       const response = await axios.post(
         `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/approval-consultation.php`,
         {
-          booking_id,
+          schedulebookings_id,
           action: "Scheduled",
+          user_id: loggedInUserId, // ✅ Always send logged-in user
         }
       );
 
       if (response.data.success) {
         toast.success("Consultation marked as Scheduled");
-        fetchConsultation();
+
+        // ✅ Update only the affected row in state
+        setFetchConsultation((prev) =>
+          prev.map((consult) =>
+            consult.schedulebookings_id === schedulebookings_id
+              ? { ...consult, approval_name: "Scheduled" }
+              : consult
+          )
+        );
       } else {
         toast.error(response.data.message || "Failed to mark as Scheduled.");
       }
@@ -312,7 +416,7 @@ const ConsultationManagement = () => {
   };
 
   // ✅ Mark as Cancelled
-  const handleCancelled = async (booking_id, currentStatus) => {
+  const handleCancelled = async (schedulebookings_id, currentStatus) => {
     if (currentStatus === "Cancelled") {
       toast.warning("This consultation is already Cancelled!");
       return;
@@ -326,14 +430,23 @@ const ConsultationManagement = () => {
       const response = await axios.post(
         `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/approval-consultation.php`,
         {
-          booking_id,
+          schedulebookings_id,
           action: "Cancelled",
+          user_id: loggedInUserId, // ✅ Always send logged-in user
         }
       );
 
       if (response.data.success) {
         toast.success("Consultation marked as Cancelled");
-        fetchConsultation();
+
+        // ✅ Update only the affected row in state
+        setFetchConsultation((prev) =>
+          prev.map((consult) =>
+            consult.schedulebookings_id === schedulebookings_id
+              ? { ...consult, approval_name: "Cancelled" }
+              : consult
+          )
+        );
       } else {
         toast.error(response.data.message || "Failed to mark as Cancelled.");
       }
@@ -567,15 +680,17 @@ const ConsultationManagement = () => {
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem onClick={() => onFilter("Complete")}>
-                  Complete
+                <DropdownMenuItem onClick={() => onFilter("")}>
+                  All
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onFilter("Schedule")}>
-                  Schedule
+                <DropdownMenuItem onClick={() => onFilter("Completed")}>
+                  Completed
                 </DropdownMenuItem>
-
-                <DropdownMenuItem onClick={() => onFilter("Cancel")}>
-                  Cancel
+                <DropdownMenuItem onClick={() => onFilter("Scheduled")}>
+                  Scheduled
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onFilter("Cancelled")}>
+                  Cancelled
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -608,7 +723,35 @@ const ConsultationManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {currentItems.length > 0 ? (
+                {isLoading ? (
+                <tr>
+                  <td colSpan="22" className="text-center py-6">
+                    <div className="flex justify-center items-center gap-2 text-green-700 font-medium">
+                      <svg
+                        className="animate-spin h-6 w-6 text-green-800"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        ></path>
+                      </svg>
+                      <span>Loading...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : currentItems.length > 0 ? (
                 currentItems.map((consult, index) => (
                   <tr key={index}>
                     <td className="border px-6 py-2 text-center">

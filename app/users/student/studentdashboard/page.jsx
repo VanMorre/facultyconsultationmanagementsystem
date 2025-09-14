@@ -30,7 +30,7 @@ import StudentConsultationManagement from "./components/studentbookconsultationv
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import { motion } from "framer-motion";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef} from "react";
 
 import StudentLayout from "../layouts/studentlayout";
 
@@ -42,6 +42,9 @@ const StudentDashboard = () => {
   const [fadeTransition, setFadeTransition] = useState(false);
   const [fetchbooking, setfetchbooking] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(0); // 0 = All
+  const notifiedBookingIdsRef = useRef([]);
+  const toastShownBookingRef = useRef(false);
+
   const SECRET_KEY = "my_secret_key_123456";
 
   // 🔑 Decrypt user ID
@@ -71,25 +74,86 @@ const StudentDashboard = () => {
   };
 
 
-  useEffect(() => {
-    decryptUserId();
-    if (loggedInUserId) {
-      fetchbookingstudent(loggedInUserId);
-    }
-  }, [loggedInUserId]);
+ useEffect(() => {
+   decryptUserId();
+ 
+   if (loggedInUserId) {
+     // Load session-stored notified booking IDs
+     const storedBooking = sessionStorage.getItem("notified_booking_ids");
+     if (storedBooking) {
+       notifiedBookingIdsRef.current = JSON.parse(storedBooking);
+     }
+ 
+     // Load session-stored notified consultation IDs
 
-  const fetchbookingstudent = async (StudentID) => {
+ 
+     let isInitial = true;
+     // ✅ First fetch (initial load)
+     fetchbookingstudentWithNotify(loggedInUserId, isInitial);
+     isInitial = false;
+
+     // ✅ Poll every 5 seconds
+     const interval = setInterval(() => {
+       fetchbookingstudentWithNotify(loggedInUserId, false);
+     
+     }, 5000);
+ 
+     return () => clearInterval(interval);
+   }
+ }, [loggedInUserId]);
+
+   const fetchbookingstudentWithNotify = async (StudentID, isInitial = false) => {
     try {
-    
       const response = await axios.get(
         `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
-        {
-          params: { student_id: StudentID }, // ✅ send user_id
-        }
+        { params: { student_id: StudentID } }
       );
 
       if (response.data.success) {
-        setfetchbooking(response.data.data);
+        const newBookings = response.data.data;
+
+        // Extract unique booking IDs
+        const currentIds = newBookings.map((item) => item.booking_id);
+
+        // Find IDs that are new compared to stored ones
+        const newIds = currentIds.filter(
+          (id) => !notifiedBookingIdsRef.current.includes(id)
+        );
+
+        // 🚫 Removed toast, but still handle ID tracking
+        if (!isInitial && newIds.length > 0 && !toastShownBookingRef.current) {
+          toastShownBookingRef.current = true;
+
+          // ✅ Save notified IDs
+          notifiedBookingIdsRef.current = [
+            ...notifiedBookingIdsRef.current,
+            ...newIds,
+          ];
+
+          sessionStorage.setItem(
+            "notified_booking_ids",
+            JSON.stringify(notifiedBookingIdsRef.current)
+          );
+
+          // Reset lock after delay
+          setTimeout(() => {
+            toastShownBookingRef.current = false;
+          }, 5000);
+        }
+
+        // ✅ On initial fetch, just mark IDs without showing anything
+        if (isInitial) {
+          notifiedBookingIdsRef.current = [
+            ...notifiedBookingIdsRef.current,
+            ...currentIds,
+          ];
+          sessionStorage.setItem(
+            "notified_booking_ids",
+            JSON.stringify(notifiedBookingIdsRef.current)
+          );
+        }
+
+        setfetchbooking(newBookings);
       } else {
         setfetchbooking([]);
       }

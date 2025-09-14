@@ -9,7 +9,7 @@ const useLogout = () => {
     sessionStorage.removeItem("user_id");
     sessionStorage.removeItem("username");
     sessionStorage.clear();
-    navigate("/"); // Redirect to login page
+    navigate("/loginpage"); 
   };
 
   return logout;

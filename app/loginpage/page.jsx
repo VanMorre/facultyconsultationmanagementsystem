@@ -295,7 +295,10 @@ export default function AdminLogin() {
 
         sessionStorage.setItem("isAuthenticated", encryptData("true"));
         sessionStorage.setItem("role", encryptData(role_name.toString()));
-        sessionStorage.setItem("student_id",encryptData(student_id.toString()));
+        sessionStorage.setItem(
+          "student_id",
+          encryptData(student_id.toString())
+        );
         sessionStorage.setItem("student_name", encryptData(student_name));
         sessionStorage.setItem("age", encryptData(age));
         sessionStorage.setItem("contact", encryptData(contact));
@@ -305,7 +308,7 @@ export default function AdminLogin() {
         sessionStorage.setItem("course_name", encryptData(course_name));
 
         toast.success("Student Login Successful!");
-           setTimeout(() => {
+        setTimeout(() => {
           switch (role_name.toLowerCase()) {
             case "student":
               navigate("/student-dashboard");
@@ -501,7 +504,7 @@ export default function AdminLogin() {
               <h1 className="font-semibold text-lg lg:text-xl">
                 Phinma Cagayan de Oro College
               </h1>
-              <h1 className="font-semibold text-lg lg:text-xl">FCHMS PORTAL</h1>
+              <h1 className="font-semibold text-lg lg:text-xl">FCHMS PORTAL - CITE</h1>
               <h2 className="text-sm lg:text-md mb-2 lg:mb-2  font-semibold">
                 Max Sunniel St. Cagayan de Oro City
               </h2>
@@ -554,32 +557,6 @@ export default function AdminLogin() {
         />
         <div className="flex-1 flex flex-col justify-center items-center w-full relative z-10 px-4 sm:px-8">
           <motion.div className="w-full max-w-md sm:max-w-xl p-6 sm:p-10 bg-white rounded-lg shadow-2xl flex flex-col justify-center">
-            {/* Tabs */}
-            <div className="flex justify-center mb-8">
-              <div className="inline-flex rounded-md shadow-sm border overflow-hidden">
-                <button
-                  onClick={() => setActiveRole("faculty")}
-                  className={`px-6 py-2 flex items-center gap-2 font-semibold ${
-                    activeRole === "faculty"
-                      ? "bg-green-800 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  <FaUserTie /> Faculty
-                </button>
-                <button
-                  onClick={() => setActiveRole("student")}
-                  className={`px-6 py-2 flex items-center gap-2 font-semibold ${
-                    activeRole === "student"
-                      ? "bg-green-800 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  <FaUserGraduate /> Student
-                </button>
-              </div>
-            </div>
-
             {/* Header */}
             <motion.div className="flex items-center justify-between w-full max-w-[700px] mb-6">
               <div>
@@ -595,7 +572,7 @@ export default function AdminLogin() {
                 </motion.p>
               </div>
               <Image
-                src="/images/phinmaedlogos.png"
+                src="/images/CIT-ENCHANCEPIC.png"
                 alt="COC Logo"
                 width={100}
                 height={70}
@@ -623,7 +600,7 @@ export default function AdminLogin() {
                     id="email"
                     type="text"
                     className="pl-12 w-full h-12 border border-green-800 bg-transparent text-black rounded-md shadow-xl"
-                    value={activeRole === "faculty" ? email : student_email} // ✅ use correct state
+                    value={activeRole === "faculty" ? email : student_email}
                     placeholder={`Enter your ${activeRole} email`}
                     onChange={(e) =>
                       activeRole === "faculty"
@@ -648,7 +625,7 @@ export default function AdminLogin() {
                     className="pl-12 w-full h-12 border border-green-800 bg-transparent text-black rounded-md shadow-xl"
                     value={
                       activeRole === "faculty" ? password : student_password
-                    } // ✅ use correct state
+                    }
                     onChange={(e) =>
                       activeRole === "faculty"
                         ? setPassword(e.target.value)
@@ -697,30 +674,63 @@ export default function AdminLogin() {
                 </Button>
               </motion.div>
 
-              {/* Forgot Password */}
-              <motion.div className="text-center">
-                <Button variant="link" className="text-sm text-black-600">
-                  <span onClick={() => navigate("/recoveraccountform")}>
-                    Forgotten Your Password?
-                  </span>
+              <motion.div className="flex justify-between items-center mt-4">
+                {activeRole === "faculty" ? (
+                  <Button
+                    variant="link"
+                    className="text-sm text-green-800 font-semibold p-0"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setActiveRole("student");
+                    }}
+                  >
+                    Logged in as Student?
+                  </Button>
+                ) : (
+                  <Button
+                    variant="link"
+                    className="text-sm text-green-800 font-semibold p-0"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setActiveRole("faculty");
+                    }}
+                  >
+                    Proceed to Faculty Login?
+                  </Button>
+                )}
+
+                <Button
+                  variant="link"
+                  className="text-sm text-black-600 p-0"
+                  onClick={() => {
+                    if (activeRole === "faculty") {
+                      navigate("/forgotpassword-facultyemailform");
+                    } else {
+                      navigate("/forgotpassword-studentemailform");
+                    }
+                  }}
+                >
+                  Forgotten Your Password?
                 </Button>
+
+
+
               </motion.div>
             </motion.form>
 
+            {/* Student Create Account */}
             {activeRole === "student" && (
               <motion.div className="text-center mt-2">
-                {/* Create Account Dialog */}
                 <Dialog
                   open={studentDialogOpen}
                   onOpenChange={setStudentDialogOpen}
                 >
                   <DialogTrigger asChild>
                     <Button
-                      type="button" // ✅ add this
+                      type="button"
                       className="w-full border-2 border-green-800 text-green-800 font-semibold rounded-md 
-                 bg-transparent hover:bg-green-800 hover:text-white transition-colors duration-300"
+              bg-transparent hover:bg-green-800 hover:text-white transition-colors duration-300"
                       onClick={(e) => {
-                        // ✅ prevent submitting the outer form
                         e.preventDefault();
                         setStudentDialogOpen(true);
                       }}
@@ -829,6 +839,7 @@ export default function AdminLogin() {
                         />
                       </div>
 
+                      {/* Password */}
                       <div>
                         <Label htmlFor="studentPassword">Password</Label>
                         <Input
@@ -869,11 +880,12 @@ export default function AdminLogin() {
                         )}
                       </div>
 
+                      {/* Course */}
                       <div>
                         <Label>Course</Label>
                         <Select
                           value={selectedcourse}
-                          onValueChange={(cr) => setselectedcourse(cr)} // cr = course_id
+                          onValueChange={(cr) => setselectedcourse(cr)}
                         >
                           <SelectTrigger className="w-full border-green-800 mt-2">
                             <SelectValue placeholder="Select course" />
@@ -883,7 +895,7 @@ export default function AdminLogin() {
                               CourseFetch.map((crs) => (
                                 <SelectItem
                                   key={crs.course_id}
-                                  value={String(crs.course_id)} // ensure string type
+                                  value={String(crs.course_id)}
                                 >
                                   {crs.course_name}
                                 </SelectItem>
@@ -895,11 +907,12 @@ export default function AdminLogin() {
                         </Select>
                       </div>
 
+                      {/* Year Level */}
                       <div>
                         <Label>Year Level</Label>
                         <Select
                           value={selectedyearlevel}
-                          onValueChange={(yl) => setselectedyearlevel(yl)} // yl = year_id
+                          onValueChange={(yl) => setselectedyearlevel(yl)}
                         >
                           <SelectTrigger className="w-full border-green-800 mt-2">
                             <SelectValue placeholder="Select year level" />
@@ -909,7 +922,7 @@ export default function AdminLogin() {
                               YearlevelFetch.map((yrs) => (
                                 <SelectItem
                                   key={yrs.year_id}
-                                  value={String(yrs.year_id)} // make sure it's a string
+                                  value={String(yrs.year_id)}
                                 >
                                   {yrs.year_name}
                                 </SelectItem>

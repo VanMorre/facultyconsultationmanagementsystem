@@ -14,15 +14,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
+import { ToastContainer, toast, Bounce } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { motion } from "framer-motion";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import CryptoJS from "crypto-js";
 const StudentConsultationManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [fetchbooking, setfetchbooking] = useState([]);
+  const bookingStatusRef = useRef({});
+  const toastShownBookingRef = useRef(false);
 
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("student_id");
@@ -51,8 +54,18 @@ const StudentConsultationManagement = () => {
 
   useEffect(() => {
     decryptUserId();
+
     if (loggedInUserId) {
-      fetchbookingstudent(loggedInUserId);
+      let isInitial = true;
+
+      fetchbookingstudent(loggedInUserId, isInitial);
+      isInitial = false;
+
+      const interval = setInterval(() => {
+        fetchbookingstudent(loggedInUserId, false);
+      }, 5000);
+
+      return () => clearInterval(interval);
     }
   }, [loggedInUserId]);
 
@@ -104,17 +117,57 @@ const StudentConsultationManagement = () => {
   const goToPage = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
-  const fetchbookingstudent = async (StudentID) => {
+  const fetchbookingstudent = async (StudentID, isInitial = false) => {
     try {
       const response = await axios.get(
         `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
         {
-          params: { student_id: StudentID }, // ✅ send user_id
+          params: { student_id: StudentID }, // ✅ send student_id
         }
       );
 
       if (response.data.success) {
-        setfetchbooking(response.data.data);
+        const newBookings = response.data.data;
+
+        // ✅ Detect status changes (Approved / Disapproved)
+        newBookings.forEach((booking) => {
+          const { booking_id, approval_name } = booking;
+          const prevStatus = bookingStatusRef.current[booking_id];
+
+          // Only notify if status changed AND not the first fetch
+          if (!isInitial && prevStatus && prevStatus !== approval_name) {
+            if (approval_name === "Approve") {
+              toast.success(
+                `Your booking #${booking_id} has been Approved ✅`,
+                {
+                  toastId: `booking-${booking_id}-approved`,
+                  position: "top-right",
+                  autoClose: 3000,
+                }
+              );
+            } else if (approval_name === "Disapprove") {
+              toast.error(`Your booking #${booking_id} was Disapproved ❌`, {
+                toastId: `booking-${booking_id}-disapproved`,
+                position: "top-right",
+                autoClose: 3000,
+              });
+            }
+          }
+
+          // Update status reference
+          bookingStatusRef.current[booking_id] = approval_name;
+        });
+
+        // ✅ On first fetch, just set statuses without showing toasts
+        if (isInitial) {
+          const initialStatus = {};
+          newBookings.forEach((booking) => {
+            initialStatus[booking.booking_id] = booking.approval_name;
+          });
+          bookingStatusRef.current = initialStatus;
+        }
+
+        setfetchbooking(newBookings);
       } else {
         setfetchbooking([]);
       }
@@ -131,13 +184,32 @@ const StudentConsultationManagement = () => {
       transition={{ duration: 0.5 }}
     >
       <>
+        <ToastContainer
+          position="top-right"
+          autoClose={1000}
+          theme="light"
+          transition={Bounce}
+        />
+
         <div className="bg-white p-6  shadow-md">
-          <h1 className="text-l font-bold mb-4 text-green-800 pb-5 mt-3 flex items-center gap-2">
+          <h1 className="text-l font-bold mb-2 text-green-800 pb-5 mt-3 flex items-center gap-2">
             <TbHistory className="text-xl w-6 h-6 !w-6 !h-6" />
             Consultation History
           </h1>
+          <p className="text-sm text-gray-600 mb-2">
+            This section provides a record of all your consultation bookings,
+            including the status of each request and any notes provided by the
+            faculty.
+          </p>
 
-          {/* Search Input with Magnifier Icon and Buttons */}
+          {/* ✅ Note */}
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded-md mb-5 text-sm">
+            <strong>Note!!</strong> If the faculty you booked disapproves your
+            consultation, it means that the faculty can only cater up to{" "}
+            <strong>10 students</strong>, depending on their availability and
+            decisions.
+          </div>
+
           <div className="flex items-center gap-4 pt-6 mb-4">
             {/* Search Input */}
             <div className="relative w-full max-w-md">

@@ -30,10 +30,19 @@ import {
   FaCheckCircle,
   FaTimesCircle,
 } from "react-icons/fa";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 
 import { TbUser, TbFilter, TbArrowRight, TbArrowDown } from "react-icons/tb";
 import { Line } from "react-chartjs-2";
 // import SubjectlistManagement from "../backups/subjectslist";
+import SettingsManagement from "./components/settings";
 import ReportManagement from "./components/reports";
 import StudentrequestManagement from "./components/studentrequest";
 import AvailabilityManagement from "./components/availability";
@@ -68,8 +77,13 @@ const TeacherDashboard = () => {
   const [fetchbooking, setfetchbooking] = useState([]);
   const [ConsultationFetch, setFetchConsultation] = useState([]);
   const SECRET_KEY = "my_secret_key_123456";
+  const notifiedBookingIdsRef = useRef([]);
+  const toastShownBookingRef = useRef(false);
+  const notifiedAvailabilityIdsRef = useRef([]);
+  const toastShownAvailabilityRef = useRef(false);
+  const notifiedConsultationIdsRef = useRef([]);
+  const toastShownConsultationRef = useRef(false);
 
-  // 1) decrypt on mount
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
 
@@ -97,10 +111,46 @@ const TeacherDashboard = () => {
 
   useEffect(() => {
     decryptUserId();
+
     if (loggedInUserId) {
-      fetchAvailability(loggedInUserId);
-      fetchbookingstudent(loggedInUserId);
-      fetchConsultation(loggedInUserId);
+      // Load session-stored notified booking IDs
+      const storedBooking = sessionStorage.getItem("notified_booking_ids");
+      if (storedBooking) {
+        notifiedBookingIdsRef.current = JSON.parse(storedBooking);
+      }
+
+      // Load session-stored notified consultation IDs
+      const storedConsultation = sessionStorage.getItem(
+        "notified_consultation_ids"
+      );
+      if (storedConsultation) {
+        notifiedConsultationIdsRef.current = JSON.parse(storedConsultation);
+      }
+
+      // Load session-stored notified availability IDs
+      const storedAvailability = sessionStorage.getItem(
+        "notified_availability_ids"
+      );
+      if (storedAvailability) {
+        notifiedAvailabilityIdsRef.current = JSON.parse(storedAvailability);
+      }
+
+      let isInitial = true;
+
+      // ✅ First fetch (initial load)
+      fetchbookingstudentWithNotify(loggedInUserId, isInitial);
+      fetchConsultationWithNotify(loggedInUserId, isInitial);
+      fetchAvailabilityWithNotify(loggedInUserId, isInitial);
+      isInitial = false;
+
+      // ✅ Poll every 5 seconds
+      const interval = setInterval(() => {
+        fetchbookingstudentWithNotify(loggedInUserId, false);
+        fetchConsultationWithNotify(loggedInUserId, false);
+        fetchAvailabilityWithNotify(loggedInUserId, false);
+      }, 5000);
+
+      return () => clearInterval(interval);
     }
   }, [loggedInUserId]);
 
@@ -120,20 +170,218 @@ const TeacherDashboard = () => {
     visible: { scale: 1, opacity: 1, transition: { duration: 0.5 } },
   };
 
-  const fetchAvailability = async (userId) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 3;
+  const totalPages = Math.ceil(fetchbooking.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = fetchbooking.slice(indexOfFirstItem, indexOfLastItem);
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
+  const goToPage = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
+  const fetchAvailabilityWithNotify = async (userId, isInitial = false) => {
     try {
       const response = await axios.get(
         `http://localhost/fchms/app/api_fchms/facultyside/teacher-availability/fetch-availability.php`,
-        { params: { user_id: userId } } // send user_id as query param
+        { params: { user_id: userId } }
       );
 
       if (response.data.success) {
-        setFetchAvailability(response.data.data);
+        const newAvailability = response.data.data;
+
+        // Extract unique availability IDs
+        const currentIds = newAvailability.map(
+          (item) => item.availabilityfaculty_id
+        );
+
+        // Find IDs that are new
+        const newIds = currentIds.filter(
+          (id) => !notifiedAvailabilityIdsRef.current.includes(id)
+        );
+
+        if (
+          !isInitial &&
+          newIds.length > 0 &&
+          !toastShownAvailabilityRef.current
+        ) {
+          toastShownAvailabilityRef.current = true;
+
+          // ✅ Save notified IDs
+          notifiedAvailabilityIdsRef.current = [
+            ...notifiedAvailabilityIdsRef.current,
+            ...newIds,
+          ];
+
+          sessionStorage.setItem(
+            "notified_availability_ids",
+            JSON.stringify(notifiedAvailabilityIdsRef.current)
+          );
+
+          // Reset lock after delay
+          setTimeout(() => {
+            toastShownAvailabilityRef.current = false;
+          }, 5000);
+        }
+
+        // ✅ On initial fetch, just mark IDs
+        if (isInitial) {
+          notifiedAvailabilityIdsRef.current = [
+            ...notifiedAvailabilityIdsRef.current,
+            ...currentIds,
+          ];
+          sessionStorage.setItem(
+            "notified_availability_ids",
+            JSON.stringify(notifiedAvailabilityIdsRef.current)
+          );
+        }
+
+        setFetchAvailability(newAvailability);
       } else {
         setFetchAvailability([]);
       }
     } catch (error) {
       console.error("Error fetching faculty availability:", error);
+      setFetchAvailability([]);
+    }
+  };
+
+  const fetchbookingstudentWithNotify = async (UserID, isInitial = false) => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
+        { params: { user_id: UserID } }
+      );
+
+      if (response.data.success) {
+        const newBookings = response.data.data;
+
+        // Extract unique booking IDs
+        const currentIds = newBookings.map((item) => item.booking_id);
+
+        // Find IDs that are new compared to stored ones
+        const newIds = currentIds.filter(
+          (id) => !notifiedBookingIdsRef.current.includes(id)
+        );
+
+        // 🚫 Removed toast, but still handle ID tracking
+        if (!isInitial && newIds.length > 0 && !toastShownBookingRef.current) {
+          toastShownBookingRef.current = true;
+
+          // ✅ Save notified IDs
+          notifiedBookingIdsRef.current = [
+            ...notifiedBookingIdsRef.current,
+            ...newIds,
+          ];
+
+          sessionStorage.setItem(
+            "notified_booking_ids",
+            JSON.stringify(notifiedBookingIdsRef.current)
+          );
+
+          // Reset lock after delay
+          setTimeout(() => {
+            toastShownBookingRef.current = false;
+          }, 5000);
+        }
+
+        // ✅ On initial fetch, just mark IDs without showing anything
+        if (isInitial) {
+          notifiedBookingIdsRef.current = [
+            ...notifiedBookingIdsRef.current,
+            ...currentIds,
+          ];
+          sessionStorage.setItem(
+            "notified_booking_ids",
+            JSON.stringify(notifiedBookingIdsRef.current)
+          );
+        }
+
+        setfetchbooking(newBookings);
+      } else {
+        setfetchbooking([]);
+      }
+    } catch (error) {
+      console.error("Error fetching student booking:", error);
+      setfetchbooking([]);
+    }
+  };
+
+  const fetchConsultationWithNotify = async (UserID, isInitial = false) => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/facultyside/teacher-consultation/fetch-consultation.php`,
+        { params: { user_id: UserID } }
+      );
+
+      if (response.data.success) {
+        const newConsultations = response.data.data;
+
+        // Extract unique consultation IDs
+        const currentIds = newConsultations.map(
+          (item) => item.schedulebookings_id
+        );
+
+        // Find IDs that are new
+        const newIds = currentIds.filter(
+          (id) => !notifiedConsultationIdsRef.current.includes(id)
+        );
+
+        if (
+          !isInitial &&
+          newIds.length > 0 &&
+          !toastShownConsultationRef.current
+        ) {
+          toastShownConsultationRef.current = true;
+
+          // ✅ Save notified IDs
+          notifiedConsultationIdsRef.current = [
+            ...notifiedConsultationIdsRef.current,
+            ...newIds,
+          ];
+
+          sessionStorage.setItem(
+            "notified_consultation_ids",
+            JSON.stringify(notifiedConsultationIdsRef.current)
+          );
+
+          // Reset lock after delay
+          setTimeout(() => {
+            toastShownConsultationRef.current = false;
+          }, 5000);
+        }
+
+        // ✅ On initial fetch, just mark IDs
+        if (isInitial) {
+          notifiedConsultationIdsRef.current = [
+            ...notifiedConsultationIdsRef.current,
+            ...currentIds,
+          ];
+          sessionStorage.setItem(
+            "notified_consultation_ids",
+            JSON.stringify(notifiedConsultationIdsRef.current)
+          );
+        }
+
+        setFetchConsultation(newConsultations);
+      } else {
+        setFetchConsultation([]);
+      }
+    } catch (error) {
+      console.error("Error fetching consultation:", error);
+      setFetchConsultation([]);
     }
   };
 
@@ -146,45 +394,6 @@ const TeacherDashboard = () => {
     "Saturday",
     "Sunday",
   ];
-
-  const fetchbookingstudent = async (UserID) => {
-    try {
-      const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
-        {
-          params: { user_id: UserID }, // ✅ send user_id
-        }
-      );
-
-      if (response.data.success) {
-        setfetchbooking(response.data.data);
-      } else {
-        setfetchbooking([]);
-      }
-    } catch (error) {
-      console.error("Error fetching student booking:", error);
-      setfetchbooking([]);
-    }
-  };
-
-  const fetchConsultation = async (UserID) => {
-    try {
-      const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/fetch-consultation.php`,
-        {
-          params: { user_id: UserID }, // ✅ send user_id
-        }
-      );
-
-      if (response.data.success) {
-        setFetchConsultation(response.data.data);
-      } else {
-        setFetchConsultation([]);
-      }
-    } catch (error) {
-      console.error("Error fetching consultation:", error);
-    }
-  };
 
   const totalConsultations = ConsultationFetch.length;
   const scheduledCount = ConsultationFetch.filter(
@@ -373,14 +582,15 @@ const TeacherDashboard = () => {
                 {/* My Weekly Consultation Availability */}
                 <motion.div
                   variants={chartVariants}
-                  className="bg-white p-6 rounded-lg shadow-md flex-grow"
+                  className="bg-white p-6 rounded-lg shadow-md flex-grow h-[700px]" // fixed height card
                 >
                   <h2 className="text-l font-bold text-black mb-4">
                     My Consultation Availability
                   </h2>
-                  <div className="border rounded-md overflow-hidden">
-                    {/* Header */}
-                    <div className="grid grid-cols-7 text-center text-sm font-medium bg-green-900 text-white font-semibold">
+
+                  <div className="border rounded-md flex flex-col h-[600px]">
+                    {/* Header with rounded top corners */}
+                    <div className="grid grid-cols-7 text-center text-sm font-medium bg-green-900 text-white font-semibold rounded-t-md">
                       {days.map((day) => (
                         <div key={day} className="py-2">
                           {day}
@@ -389,9 +599,8 @@ const TeacherDashboard = () => {
                     </div>
 
                     {/* Availability Slots */}
-                    <div className="grid grid-cols-7 text-center">
+                    <div className="grid grid-cols-7 text-center flex-1 overflow-y-auto">
                       {days.map((day) => {
-                        // get all slots for this day (user_id already filtered in API)
                         const slots = AvailabilityFetch.filter(
                           (slot) => slot.availability_name === day
                         );
@@ -399,19 +608,19 @@ const TeacherDashboard = () => {
                         return (
                           <div
                             key={day}
-                            className="border p-1 h-[450px] flex flex-col items-center gap-1 overflow-y-auto"
+                            className="border p-1 flex flex-col items-center gap-1 min-h-[150px]"
                           >
                             {slots.length > 0 ? (
                               slots.map((slot) => (
                                 <div
                                   key={slot.availabilityfaculty_id}
-                                  className="bg-green-900 text-white text-xs px-3 py-1 rounded-md mt-7"
+                                  className="bg-green-900 text-white text-xs px-3 py-1 rounded-md mt-2"
                                 >
                                   {slot.time_range}
                                 </div>
                               ))
                             ) : (
-                              <span className="text-xs text-gray-400 mt-8">
+                              <span className="text-xs text-gray-400 mt-2">
                                 No assign availability
                               </span>
                             )}
@@ -427,9 +636,9 @@ const TeacherDashboard = () => {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="bg-white p-4 rounded-lg shadow-md h-full"
+                className="bg-white p-4 rounded-lg shadow-md h-[700px] flex flex-col" // ✅ fixed height
               >
-                {/* Header with icon & filter */}
+                {/* Header */}
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <TbUser className="text-green-800 w-8 h-8 !w-8 !h-8" />
@@ -437,57 +646,70 @@ const TeacherDashboard = () => {
                       Student Requests
                     </h2>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <TbFilter className="text-green-800 w-8 h-8 !w-8 !h-8" />
-                    <select className="border border-green-800 rounded px-2 py-1 text-sm text-black focus:outline-none">
-                      <option>All</option>
-                      <option>Today</option>
-                      <option>This Week</option>
-                      <option>This Month</option>
-                    </select>
-                  </div>
                 </div>
 
-                {/* Requests list */}
-                <div className="space-y-3">
-                  {fetchbooking.length > 0 ? (
-                    fetchbooking.map((req, idx) => (
+                {/* Requests list (scrollable) */}
+                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                  {currentItems.length > 0 ? (
+                    currentItems.map((req, idx) => (
                       <div
                         key={idx}
-                        className="p-4 bg-gray-50 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300"
+                        className="rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
                       >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            {/* ✅ Student Name */}
-                            <p className="font-semibold text-black">
-                              {req.student_name}
-                            </p>
-
-                            {/* ✅ Purpose */}
-                            <p className="text-sm text-gray-700">
-                              {req.purpose}
-                            </p>
-
-                            {/* ✅ Booking Date */}
-                            <p className="text-sm text-gray-600">
-                              {new Date(req.booking_date).toLocaleString(
-                                "en-US",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                  hour: "numeric",
-                                  minute: "2-digit",
-                                }
-                              )}
-                            </p>
-
-                            {/* ✅ Subject */}
-                            <p className="text-sm text-gray-700">
-                              {req.subject_name}
-                            </p>
+                        {/* Header */}
+                        <div className="bg-green-900 px-4 py-2">
+                          <h3 className="text-white font-semibold text-sm">
+                            Student Request
+                          </h3>
+                        </div>
+                        {/* Body */}
+                        <div className="p-4 bg-gray-50">
+                          <div className="flex justify-between items-center">
+                            <div className="space-y-2 text-sm">
+                              <div className="flex">
+                                <span className="w-24 font-semibold text-gray-800">
+                                  Name:
+                                </span>
+                                <span className="text-black">
+                                  {req.student_name}
+                                </span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-24 font-semibold text-gray-800">
+                                  Subject:
+                                </span>
+                                <span className="text-gray-700">
+                                  {req.subject_name}
+                                </span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-24 font-semibold text-gray-800">
+                                  Purpose:
+                                </span>
+                                <span className="text-gray-700">
+                                  {req.purpose}
+                                </span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-24 font-semibold text-gray-800">
+                                  Date:
+                                </span>
+                                <span className="text-gray-600">
+                                  {new Date(req.booking_date).toLocaleString(
+                                    "en-US",
+                                    {
+                                      month: "long",
+                                      day: "2-digit",
+                                      year: "numeric",
+                                    }
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="bg-green-900 p-2 rounded-full flex items-center justify-center ml-4">
+                              <TbArrowRight className="text-white w-5 h-5" />
+                            </div>
                           </div>
-                          <TbArrowRight className="text-green-800 w-5 h-5 flex-shrink-0" />
                         </div>
                       </div>
                     ))
@@ -498,11 +720,45 @@ const TeacherDashboard = () => {
                   )}
                 </div>
 
-                {/* See more link */}
-                <div className="mt-56 flex justify-center">
-                  <button className="w-8 h-8 flex items-center justify-center rounded-full bg-green-800 hover:bg-green-900 transition-colors">
-                    <TbArrowDown className="text-white text-lg" />
-                  </button>
+                {/* Footer fixed at bottom */}
+                {/* Footer fixed at bottom */}
+                <div className="mt-3 flex items-center justify-between ">
+                  <span className="text-sm text-green-900 font-semibold ">
+                    Showing {indexOfFirstItem + 1} to{" "}
+                    {Math.min(indexOfLastItem, fetchbooking.length)} of{" "}
+                    {fetchbooking.length} entries
+                  </span>
+
+                  <Pagination>
+                    <PaginationContent className="flex items-center pl-62">
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={goToPreviousPage}
+                          disabled={currentPage === 1}
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: totalPages }, (_, index) => (
+                        <PaginationItem key={index}>
+                          <PaginationLink
+                            onClick={() => goToPage(index + 1)}
+                            className={
+                              currentPage === index + 1
+                                ? "bg-green-900 text-white"
+                                : ""
+                            }
+                          >
+                            {index + 1}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={goToNextPage}
+                          disabled={currentPage === totalPages}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
                 </div>
               </motion.div>
             </div>
@@ -522,7 +778,8 @@ const TeacherDashboard = () => {
             />
           </>
         )}
-        {/* {currentView === "subjects" && <SubjectlistManagement />} */}
+
+        {currentView === "Settings" && <SettingsManagement />}
         {currentView === "reports" && <ReportManagement />}
         {currentView === "availability" && <AvailabilityManagement />}
         {currentView === "consultation" && <ConsultationManagement />}

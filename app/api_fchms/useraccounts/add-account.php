@@ -18,8 +18,6 @@ try {
         return htmlspecialchars(strip_tags(trim($data)));
     }
 
-
-
     $usersname = sanitize($_POST['usersname'] ?? '');
     $userpasswords = sha1(sanitize($_POST['userpasswords'] ?? ''));
     $useraddress = sanitize($_POST['useraddress'] ?? '');
@@ -30,7 +28,6 @@ try {
     $userrole = sanitize($_POST['userrole'] ?? '');
     $userstatus = 1;
     
-
     // Check for existing records
     $checkQuery = "SELECT username, email, fullname, contact, address FROM tbl_users 
                    WHERE username = :usersname OR email = :useremail OR fullname = :userfullname 
@@ -105,32 +102,11 @@ try {
     $stmt->bindParam(':userstatus', $userstatus, PDO::PARAM_INT);
     $stmt->execute();
 
-
-
-
-       if ($stmt->rowCount() > 0) {
-        $new_user_id = $conn->lastInsertId();
-
-        // Fetch role name for log description
-        $roleQuery = $conn->prepare("SELECT role_name FROM tbl_role WHERE role_id = ?");
-        $roleQuery->execute([$userrole]);
-        $roleData = $roleQuery->fetch(PDO::FETCH_ASSOC);
-        $roleName = $roleData ? $roleData['role_name'] : "Unknown Role";
-
-
-        $activity_type = "User Management";
-        $action = "Added new user account: $usersname ($roleName)";
-        $activity_time = date("Y-m-d H:i:s");
-
-        $logStmt = $conn->prepare("INSERT INTO tbl_activity_logs (user_id, activity_type, action, activity_time) VALUES (?, ?, ?, ?)");
-        $logStmt->execute([$new_user_id, $activity_type, $action, $activity_time]);
-
+    if ($stmt->rowCount() > 0) {
         $response = ["success" => true, "message" => "User successfully added"];
     } else {
         $response = ["success" => false, "message" => "Failed to add user"];
     }
-
-
 
 } catch (PDOException $e) {
     $response = ["success" => false, "message" => "Error adding user: " . $e->getMessage()];

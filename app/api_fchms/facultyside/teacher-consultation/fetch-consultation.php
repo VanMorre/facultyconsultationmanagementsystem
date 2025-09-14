@@ -31,6 +31,7 @@ try {
             a.approval_id,
             a.approval_name,
             u.user_id,
+            b.subject_name,
             u.fullname AS created_by,
             s.student_id,
             s.student_name

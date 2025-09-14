@@ -19,15 +19,12 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-import axios from "axios";
-import { PiBellRingingFill } from "react-icons/pi";
+
 import { Menu, LogOut, ChevronDown, Plus } from "lucide-react";
 import useLogout from "@/app/users/hooks/logout";
 import CryptoJS from "crypto-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TbUserFilled } from "react-icons/tb";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+
 const SECRET_KEY = "my_secret_key_123456";
 
 const TeacherHeader = ({ toggleSidebar, setCurrentView }) => {
@@ -127,13 +124,13 @@ const TeacherHeader = ({ toggleSidebar, setCurrentView }) => {
                     </DropdownMenuTrigger>
       
                     <DropdownMenuContent className="w-56 mb-2" align="end" forceMount>
-                      <DropdownMenuItem
+                      {/* <DropdownMenuItem
                         className="flex items-center gap-2 mb-2 cursor-pointer"
                         onClick={() => setCurrentView("profile")}
                       >
                         <TbUserFilled className="h-6 w-6  !h-6 !w-6 text-black" />
                         <span>Profile</span>
-                      </DropdownMenuItem>
+                      </DropdownMenuItem> */}
       
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -167,19 +164,7 @@ const TeacherHeader = ({ toggleSidebar, setCurrentView }) => {
         </div>
       </header>
 
-      <ToastContainer
-        position="top-right"
-        autoClose={1000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-        transition={Bounce}
-      />
+   
     </>
   );
 };

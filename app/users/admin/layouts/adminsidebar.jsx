@@ -11,6 +11,7 @@ import {
   TbChartLine,
   TbWaveSawTool,
   TbMailFilled,
+  TbSettings2,
 } from "react-icons/tb";
 
 const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
@@ -164,19 +165,23 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           {!collapsed && <span className="pr-8 font-semibold">Reports</span>}
         </Button>
 
-        {/* <Button
+        <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
-            currentView === "auditlogs" ? "bg-gray-200" : ""
+            currentView === "Settings" ? "bg-gray-200" : ""
           }`}
-          onClick={() => setCurrentView("auditlogs")}
+          onClick={() => setCurrentView("Settings")}
         >
-          <TbWaveSawTool
+          <TbSettings2
             className="mr-1"
             style={{ height: "28px", width: "35px", color: "#6e7a36" }}
           />
-          {!collapsed && <span className="pr-8 font-semibold">Audit logs</span>}
-        </Button> */}
+          {!collapsed && <span className="pr-8 font-semibold">Settings</span>}
+        </Button>
+
+
+
+        
       </nav>
     </aside>
   );

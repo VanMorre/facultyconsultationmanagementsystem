@@ -22,6 +22,7 @@ try {
               INNER JOIN tbl_timerange t ON saf.timerange_id = t.timerange_id
               INNER JOIN tbl_users u ON saf.user_id = u.user_id
               INNER JOIN tbl_status st ON saf.availableslotstatus_id = st.status_id
+              WHERE st.status_name = 'Active'   -- 👈 only fetch Active slots
               ORDER BY saf.availabilityfaculty_id DESC";
 
     $stmt = $conn->prepare($query);

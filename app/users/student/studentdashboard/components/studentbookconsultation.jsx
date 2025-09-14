@@ -1,7 +1,7 @@
 import { TbHistory } from "react-icons/tb";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect , useRef } from "react";
 import CryptoJS from "crypto-js";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -46,6 +46,9 @@ const BookConsultationManagement = () => {
   const [notes, setNotes] = useState("");
   const DEFAULT_APPROVAL_STATUS_ID = 5;
 
+  const notifiedAvailabilityIdsRef = useRef([]);
+  const toastShownAvailabilityRef = useRef(false);
+
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("student_id");
 
@@ -71,12 +74,24 @@ const BookConsultationManagement = () => {
     }
   };
 
-  useEffect(() => {
-    decryptUserId();
-    fetchAvailabilityData();
-    // run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loggedInUserId]);
+useEffect(() => {
+  decryptUserId();
+  const storedNotified = sessionStorage.getItem("notified_availability_ids");
+  if (storedNotified) {
+    notifiedAvailabilityIdsRef.current = JSON.parse(storedNotified);
+  }
+
+  let isInitial = true;
+
+  fetchAvailabilityDataWithNotify(isInitial);
+  isInitial = false;
+
+  const interval = setInterval(() => {
+    fetchAvailabilityDataWithNotify(false);
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, [loggedInUserId]);
 
   // Days in month util
   const daysInMonth = (month, year) => {
@@ -179,23 +194,71 @@ const BookConsultationManagement = () => {
     setOpenDialog(true);
   };
 
-  const fetchAvailabilityData = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/allavailabilityfaculty/fetch-allavailabilityfaculty.php`
+ const fetchAvailabilityDataWithNotify = async (isInitial = false) => {
+  try {
+    const response = await axios.get(
+      `http://localhost/fchms/app/api_fchms/allavailabilityfaculty/fetch-allavailabilityfaculty.php`
+    );
+
+    if (response.data.success) {
+      const newAvailabilities = response.data.data;
+
+      // Extract unique availability IDs
+      const currentIds = newAvailabilities.map((item) => item.availabilityfaculty_id);
+
+      // Find IDs that are new compared to stored ones
+      const newIds = currentIds.filter(
+        (id) => !notifiedAvailabilityIdsRef.current.includes(id)
       );
 
-      if (response.data.success) {
-        setFetchAvailability(response.data.data);
-      } else {
-        setFetchAvailability([]);
+      // 🔔 Show toast only on subsequent fetch (not on initial load)
+      if (!isInitial && newIds.length > 0 && !toastShownAvailabilityRef.current) {
+        toastShownAvailabilityRef.current = true;
+
+        toast.info(`${newIds.length} new faculty availability record(s)`, {
+          toastId: "new-availability-toast", // prevents stacking
+          position: "top-right",
+          autoClose: 2000,
+        });
+
+        // ✅ Save notified IDs
+        notifiedAvailabilityIdsRef.current = [
+          ...notifiedAvailabilityIdsRef.current,
+          ...newIds,
+        ];
+
+        sessionStorage.setItem(
+          "notified_availability_ids",
+          JSON.stringify(notifiedAvailabilityIdsRef.current)
+        );
+
+        // Reset lock after delay
+        setTimeout(() => {
+          toastShownAvailabilityRef.current = false;
+        }, 5000);
       }
-    } catch (error) {
-      console.error("Error fetching faculty availability:", error);
+
+      // ✅ On initial fetch, just mark IDs without showing a toast
+      if (isInitial) {
+        notifiedAvailabilityIdsRef.current = [
+          ...notifiedAvailabilityIdsRef.current,
+          ...currentIds,
+        ];
+        sessionStorage.setItem(
+          "notified_availability_ids",
+          JSON.stringify(notifiedAvailabilityIdsRef.current)
+        );
+      }
+
+      setFetchAvailability(newAvailabilities);
+    } else {
       setFetchAvailability([]);
     }
-  };
-
+  } catch (error) {
+    console.error("Error fetching faculty availability:", error);
+    setFetchAvailability([]);
+  }
+};
   const filteredFaculty = AvailabilityFetch.filter(
     (f) => f.availability_name === selectedDayName
   );
@@ -205,63 +268,59 @@ const BookConsultationManagement = () => {
   );
 
   // Filter time ranges for selected faculty (availabilityfaculty_id)
- const filteredTimeRanges = AvailabilityFetch.filter(
-  (f) =>
-    f.user_id === Number(selectedFaculty) &&
-    f.availability_name === selectedDayName
-);
+  const filteredTimeRanges = AvailabilityFetch.filter(
+    (f) =>
+      f.user_id === Number(selectedFaculty) &&
+      f.availability_name === selectedDayName
+  );
 
-
- const formatDate = (date) => {
+  const formatDate = (date) => {
     if (!date) return null;
     return new Date(date).toISOString().split("T")[0]; // YYYY-MM-DD
   };
 
-
-
   const handleSubmit = async () => {
-  if (!selectedFaculty || !selectedTimerange || !subject) {
-    toast.error("Please fill in all required fields (Faculty, Time range, and Subject).");
-    return;
-  }
-
-  try {
-    const parsedTime = JSON.parse(selectedTimerange);
-
-    const payload = {
-      student_id: Number(loggedInUserId),
-      availabilityfaculty_id: Number(parsedTime.availabilityfaculty_id), // ✅ exact availability slot
-      timerange_id: Number(parsedTime.timerange_id), // ✅ exact time slot
-      subject,
-      notes,
-      consultation_date: formatDate(selectedDate),
-      approval_id: DEFAULT_APPROVAL_STATUS_ID,
-    };
-
-    const response = await axios.post(
-      `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/add-bookconsultation.php`,
-      payload
-    );
-
-    if (response.data.success) {
-      toast.success("Consultation booked successfully!");
-      setOpenDialog(false);
-
-      setSelectedFaculty("");
-      setSelectedTimerange("");
-      setSubject("");
-      setNotes("");
-    } else {
-      toast.error(response.data.message || "Failed to book consultation.");
+    if (!selectedFaculty || !selectedTimerange || !subject) {
+      toast.error(
+        "Please fill in all required fields (Faculty, Time range, and Subject)."
+      );
+      return;
     }
-  } catch (error) {
-    console.error("Error booking consultation:", error);
-    toast.error("An error occurred while booking the consultation.");
-  }
-};
 
-  
- 
+    try {
+      const parsedTime = JSON.parse(selectedTimerange);
+
+      const payload = {
+        student_id: Number(loggedInUserId),
+        availabilityfaculty_id: Number(parsedTime.availabilityfaculty_id), // ✅ exact availability slot
+        timerange_id: Number(parsedTime.timerange_id), // ✅ exact time slot
+        subject,
+        notes,
+        consultation_date: formatDate(selectedDate),
+        approval_id: DEFAULT_APPROVAL_STATUS_ID,
+      };
+
+      const response = await axios.post(
+        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/add-bookconsultation.php`,
+        payload
+      );
+
+      if (response.data.success) {
+        toast.success("Consultation booked successfully!");
+        setOpenDialog(false);
+
+        setSelectedFaculty("");
+        setSelectedTimerange("");
+        setSubject("");
+        setNotes("");
+      } else {
+        toast.error(response.data.message || "Failed to book consultation.");
+      }
+    } catch (error) {
+      console.error("Error booking consultation:", error);
+      toast.error("An error occurred while booking the consultation.");
+    }
+  };
 
   return (
     <motion.div
@@ -348,29 +407,38 @@ const BookConsultationManagement = () => {
                 >
                   <div className="self-end">{date.getDate()}</div>
 
-                  {faculty && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const clickedDay = availabilities[0].availability_name;
-                        const facultyDayAvailabilities =
-                          AvailabilityFetch.filter(
-                            (f) =>
-                              f.username === faculty.username &&
-                              f.availability_name === clickedDay
-                          );
+                  {availabilities.length > 0 &&
+                    // Group by username (unique faculty only)
+                    [
+                      ...new Map(
+                        availabilities.map((f) => [f.username, f])
+                      ).values(),
+                    ].map((f, i) => (
+                      <button
+                        key={`${f.user_id}-${i}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const clickedDay = f.availability_name;
 
-                        setFacultyDialog({
-                          username: faculty.username,
-                          day: clickedDay,
-                          availabilities: facultyDayAvailabilities,
-                        });
-                      }}
-                      className="w-full text-center text-green-800 text-xs sm:text-sm font-medium underline hover:text-green-600"
-                    >
-                      {faculty.username}
-                    </button>
-                  )}
+                          // Get all slots of this faculty for this day
+                          const facultyDayAvailabilities =
+                            AvailabilityFetch.filter(
+                              (af) =>
+                                af.username === f.username &&
+                                af.availability_name === clickedDay
+                            );
+
+                          setFacultyDialog({
+                            username: f.username,
+                            day: clickedDay,
+                            availabilities: facultyDayAvailabilities,
+                          });
+                        }}
+                        className="w-full text-center text-green-800 text-xs sm:text-sm font-medium underline hover:text-green-600"
+                      >
+                        {f.username}
+                      </button>
+                    ))}
                 </div>
               );
             })}
@@ -456,34 +524,33 @@ const BookConsultationManagement = () => {
                 {/* Faculty */}
                 <div>
                   <Label className="pb-2 sm:pb-4">Faculty</Label>
-                 <Select
-  value={selectedFaculty}
-  onValueChange={(val) => {
-    setSelectedFaculty(val);
-    setSelectedTimerange("");
-  }}
->
-  <SelectTrigger id="faculty" className="w-full">
-    <SelectValue placeholder="Select faculty" />
-  </SelectTrigger>
-  <SelectContent>
-    {uniqueFaculty.length > 0 ? (
-      uniqueFaculty.map((faculty) => (
-        <SelectItem
-          key={faculty.user_id}
-          value={faculty.user_id.toString()} // store user_id
-        >
-          {faculty.username}
-        </SelectItem>
-      ))
-    ) : (
-      <SelectItem key="no-faculty" disabled>
-        No faculty available
-      </SelectItem>
-    )}
-  </SelectContent>
-</Select>
-
+                  <Select
+                    value={selectedFaculty}
+                    onValueChange={(val) => {
+                      setSelectedFaculty(val);
+                      setSelectedTimerange("");
+                    }}
+                  >
+                    <SelectTrigger id="faculty" className="w-full">
+                      <SelectValue placeholder="Select faculty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uniqueFaculty.length > 0 ? (
+                        uniqueFaculty.map((faculty) => (
+                          <SelectItem
+                            key={faculty.user_id}
+                            value={faculty.user_id.toString()} // store user_id
+                          >
+                            {faculty.username}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem key="no-faculty" disabled>
+                          No faculty available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -491,36 +558,35 @@ const BookConsultationManagement = () => {
                     Time range
                   </Label>
 
-               <Select
-  value={selectedTimerange}
-  onValueChange={(val) => setSelectedTimerange(val)}
->
-  <SelectTrigger id="time" className="w-full">
-    <SelectValue placeholder="Select timerange" />
-  </SelectTrigger>
-  <SelectContent>
-    {filteredTimeRanges.length > 0 ? (
-      filteredTimeRanges.map((time, idx) => {
-        // Store both availabilityfaculty_id and timerange_id in one string
-        const value = JSON.stringify({
-          availabilityfaculty_id: time.availabilityfaculty_id,
-          timerange_id: time.timerange_id,
-        });
+                  <Select
+                    value={selectedTimerange}
+                    onValueChange={(val) => setSelectedTimerange(val)}
+                  >
+                    <SelectTrigger id="time" className="w-full">
+                      <SelectValue placeholder="Select timerange" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredTimeRanges.length > 0 ? (
+                        filteredTimeRanges.map((time, idx) => {
+                          // Store both availabilityfaculty_id and timerange_id in one string
+                          const value = JSON.stringify({
+                            availabilityfaculty_id: time.availabilityfaculty_id,
+                            timerange_id: time.timerange_id,
+                          });
 
-        return (
-          <SelectItem key={idx} value={value}>
-            {time.time_range}
-          </SelectItem>
-        );
-      })
-    ) : (
-      <SelectItem key="no-timerange" disabled>
-        No timerange found
-      </SelectItem>
-    )}
-  </SelectContent>
-</Select>
-
+                          return (
+                            <SelectItem key={idx} value={value}>
+                              {time.time_range}
+                            </SelectItem>
+                          );
+                        })
+                      ) : (
+                        <SelectItem key="no-timerange" disabled>
+                          No timerange found
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Subject */}

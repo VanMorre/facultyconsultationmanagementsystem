@@ -6,7 +6,8 @@ import {
   TbCalendarCheck,
   TbClipboardText,
   TbMailFilled,
-  TbChartLine
+  TbChartLine,
+  TbSettings2,
 } from "react-icons/tb";
 
 const TeacherSidebar = ({ collapsed, setCurrentView, currentView }) => {
@@ -114,23 +115,33 @@ const TeacherSidebar = ({ collapsed, setCurrentView, currentView }) => {
           )}
         </Button>
 
+        <Button
+          variant="ghost"
+          className={`w-full justify-start text-black ${
+            currentView === "reports" ? "bg-gray-200" : ""
+          }`}
+          onClick={() => setCurrentView("reports")}
+        >
+          <TbChartLine
+            className="mr-1"
+            style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
+          />
+          {!collapsed && <span className="pr-8 font-semibold">Reports</span>}
+        </Button>
 
-              <Button
-                  variant="ghost"
-                  className={`w-full justify-start text-black ${
-                    currentView === "reports" ? "bg-gray-200" : ""
-                  }`}
-                  onClick={() => setCurrentView("reports")}
-                >
-                  <TbChartLine
-                    className="mr-1"
-                    style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
-                  />
-                  {!collapsed && <span className="pr-8 font-semibold">Reports</span>}
-                </Button>
-
-
-
+        <Button
+          variant="ghost"
+          className={`w-full justify-start text-black ${
+            currentView === "Settings" ? "bg-gray-200" : ""
+          }`}
+          onClick={() => setCurrentView("Settings")}
+        >
+          <TbSettings2
+            className="mr-1"
+            style={{ height: "28px", width: "35px", color: "#6e7a36" }}
+          />
+          {!collapsed && <span className="pr-8 font-semibold">Settings</span>}
+        </Button>
       </nav>
     </aside>
   );

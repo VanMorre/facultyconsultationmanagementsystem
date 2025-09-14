@@ -29,6 +29,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -39,7 +47,6 @@ import "react-toastify/dist/ReactToastify.css";
 const AvailabilityManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
-
   const [Availabilitydayfetch, setAvailabilitydayfetch] = useState([]);
   const [selectedAvailabilityday, setSelectedAvailabilityday] = useState("");
   const [TimerangeFetch, setTimerangeFetch] = useState([]);
@@ -48,43 +55,61 @@ const AvailabilityManagement = () => {
   const [selectedRecurrence, setSelectedRecurrence] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
   const [AvailabilityFetch, setFetchAvailability] = useState([]);
+
+  const [openeditDialog, setOpeneditDialog] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [StatusFetch, setStatusFetch] = useState([]);
+  const [editId, setEditId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(""); // "Active", "Inactive", or ""
+  const [isLoading, setIsLoading] = useState(false);
+  const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [studentList, setStudentList] = useState([]);
   const DEFAULT_AVAILABLESLOT_STATUS_ID = 1;
   const decryptUserId = () => {
-    const encryptedUserId = sessionStorage.getItem("user_id");
+     const encryptedUserId = sessionStorage.getItem("user_id");
+ 
+     if (encryptedUserId) {
+       try {
+         const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
+         let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+ 
+         // 🔹 Remove wrapping quotes if any
+         decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
+ 
+         // 🔹 Cast to integer
+         const numericId = parseInt(decryptedUserId, 10);
+ 
+         if (!isNaN(numericId)) {
+           setLoggedInUserId(numericId);
+         } else {
+           console.error("Invalid decrypted student ID:", decryptedUserId);
+         }
+       } catch (error) {
+         console.error("Error decrypting user ID:", error);
+       }
+     }
+   };
+  useEffect(() => {
+    decryptUserId();
+    fetchavailstatus();
+    fetchrecurrence();
+    fetchavailabilityday();
+    fetchtimerange();
 
-    if (encryptedUserId) {
-      try {
-        const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
-        setLoggedInUserId(decryptedUserId);
-      } catch (error) {
-        console.error("Error decrypting user ID:", error);
-      }
+    if (loggedInUserId) {
+      fetchAvailability(loggedInUserId);
     }
-  };
- useEffect(() => {
-  decryptUserId();
-
-  fetchrecurrence();
-  fetchavailabilityday();
-  fetchtimerange();
-
-  if (loggedInUserId) {
-    fetchAvailability(loggedInUserId); 
-  }
-}, [loggedInUserId]);
-
+  }, [loggedInUserId]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [searchText, setSearchText] = useState("");
   const filteredAvailabilitySlots = (AvailabilityFetch || [])
-    .filter(
-      (finv) =>
+    .filter((finv) => {
+      const matchesSearch =
         String(finv.availabilityfaculty_id)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-    
         String(finv.recurrence_name)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
@@ -94,8 +119,15 @@ const AvailabilityManagement = () => {
         String(finv.status_name)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-        String(finv.start_time).toLowerCase().includes(searchText.toLowerCase())
-    )
+        String(finv.start_time)
+          .toLowerCase()
+          .includes(searchText.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "" || finv.availableslot_status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    })
     .sort((a, b) => a.availabilityfaculty_id - b.availabilityfaculty_id);
 
   const totalPages = Math.ceil(filteredAvailabilitySlots.length / itemsPerPage);
@@ -122,7 +154,31 @@ const AvailabilityManagement = () => {
     setCurrentPage(pageNumber);
   };
 
- 
+  const onFilter = (status) => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setStatusFilter(status);
+      setIsLoading(false);
+      setCurrentPage(1); // reset to first page when filtering
+    }, 1000); // half-second transition effect
+  };
+
+  const fetchavailstatus = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/status/fetch-status.php`
+      );
+
+      if (response.data.success) {
+        setStatusFetch(response.data.data);
+      } else {
+        console.log(response.data.message || "No status found");
+        setStatusFetch([]);
+      }
+    } catch (error) {
+      console.error("Error fetching status :", error);
+    }
+  };
 
   const fetchrecurrence = async () => {
     try {
@@ -209,7 +265,7 @@ const AvailabilityManagement = () => {
         toast.success("Availability set successfully!");
 
         // ✅ clear form
-   
+
         setSelectedRecurrence("");
         setSelectedAvailabilityday("");
         setSelectedTimerange("");
@@ -218,7 +274,7 @@ const AvailabilityManagement = () => {
         setOpenDialog(false);
 
         // ✅ refresh list
-        await fetchAvailability();
+        await fetchAvailability(loggedInUserId);
       } else {
         toast.error(response.data.message || "Failed to set availability.");
       }
@@ -229,21 +285,148 @@ const AvailabilityManagement = () => {
   };
 
   const fetchAvailability = async (userId) => {
-  try {
-    const response = await axios.get(
-      `http://localhost/fchms/app/api_fchms/adminside/admin-availability/fetch-availability.php`,
-      { params: { user_id: userId } } // send user_id as query param
-    );
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/adminside/admin-availability/fetch-availability.php`,
+        { params: { user_id: userId } } // send user_id as query param
+      );
 
-    if (response.data.success) {
-      setFetchAvailability(response.data.data);
-    } else {
-      setFetchAvailability([]);
+      if (response.data.success) {
+        setFetchAvailability(response.data.data);
+      } else {
+        setFetchAvailability([]);
+      }
+    } catch (error) {
+      console.error("Error fetching faculty availability:", error);
     }
-  } catch (error) {
-    console.error("Error fetching faculty availability:", error);
-  }
-};
+  };
+
+  const handleEdit = async (availabilityfaculty_id) => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/adminside/admin-availability/get-availability.php?id=${availabilityfaculty_id}`
+      );
+
+      if (response.data.success) {
+        const details = response.data.data;
+
+        setEditId(details.availabilityfaculty_id);
+        setSelectedRecurrence(details.recurrence_id);
+        setSelectedAvailabilityday(details.availability_id);
+        setSelectedTimerange(details.timerange_id);
+        setSelectedStatus(details.status_id);
+
+        setOpeneditDialog(true);
+      } else {
+        toast.error("Failed to fetch availability details.");
+      }
+    } catch (error) {
+      console.error("Error fetching availability details:", error);
+      toast.error("An error occurred while loading availability details.");
+    }
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+
+    if (!selectedRecurrence) {
+      toast.error("Please select a recurrence.");
+      return;
+    }
+    if (!selectedAvailabilityday) {
+      toast.error("Please select a day.");
+      return;
+    }
+    if (!selectedTimerange) {
+      toast.error("Please select a time range.");
+      return;
+    }
+    if (!selectedStatus) {
+      toast.error("Please select a status.");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `http://localhost/fchms/app/api_fchms/adminside/admin-availability/edit-availability.php`,
+        {
+          availabilityfaculty_id: editId,
+          recurrence_id: selectedRecurrence,
+          availability_id: selectedAvailabilityday,
+          timerange_id: selectedTimerange,
+          availableslotstatus_id: selectedStatus,
+          user_id: loggedInUserId,
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Availability updated successfully!");
+
+        // 🔹 Update local state instead of reloading
+        setFetchAvailability((prev) =>
+          prev.map((item) =>
+            item.availabilityfaculty_id === editId
+              ? {
+                  ...item,
+                  recurrence_id: selectedRecurrence,
+                  availability_id: selectedAvailabilityday,
+                  timerange_id: selectedTimerange,
+                  status_id: selectedStatus,
+                  recurrence_name: RecurrenceFetch.find(
+                    (r) => r.recurrence_id == selectedRecurrence
+                  )?.recurrence_name,
+                  availability_name: Availabilitydayfetch.find(
+                    (a) => a.availability_id == selectedAvailabilityday
+                  )?.availability_name,
+                  time_range: (() => {
+                    const t = TimerangeFetch.find(
+                      (tr) => tr.timerange_id == selectedTimerange
+                    );
+                    return t ? `${t.start_time} - ${t.end_time}` : "";
+                  })(),
+                  availableslot_status: StatusFetch.find(
+                    (s) => s.status_id == selectedStatus
+                  )?.status_name,
+                }
+              : item
+          )
+        );
+
+        // ✅ reset edit state
+        setEditId(null);
+        setSelectedRecurrence("");
+        setSelectedAvailabilityday("");
+        setSelectedTimerange("");
+        setSelectedStatus("");
+
+        // ✅ close dialog
+        setOpeneditDialog(false);
+      } else {
+        toast.error(response.data.message || "Failed to update availability.");
+      }
+    } catch (error) {
+      console.error("Error updating availability:", error);
+      toast.error("An error occurred while updating availability.");
+    }
+  };
+
+  const handleView = async (availabilityfaculty_id) => {
+    try {
+      const response = await axios.get(
+        `http://localhost/fchms/app/api_fchms/adminside/admin-availability/view-availability.php?id=${availabilityfaculty_id}`
+      );
+
+      if (response.data.success) {
+        setStudentList(response.data.data);
+        setOpenViewDialog(true);
+      } else {
+        toast.error("No student bookings found for this slot.");
+      }
+    } catch (error) {
+      console.error("Error fetching student bookings:", error);
+      toast.error("An error occurred while loading student bookings.");
+    }
+  };
 
   return (
     <motion.div
@@ -282,7 +465,7 @@ const AvailabilityManagement = () => {
                 value={searchText}
                 onChange={(e) => {
                   setSearchText(e.target.value);
-                  setCurrentPage(1); // Reset to page 1 when searching
+                  setCurrentPage(1);
                 }}
               />
               <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
@@ -309,9 +492,6 @@ const AvailabilityManagement = () => {
                 </DialogHeader>
 
                 <div className="space-y-4 mt-2">
-          
-            
-            
                   <div>
                     <Label htmlFor="subject" className="mb-2 mt-4">
                       Recurrence
@@ -421,15 +601,26 @@ const AvailabilityManagement = () => {
               Add Slot
             </button>
 
-            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
-              <TbEye className="h-5 w-5 transition-colors duration-300" />
-              View logs
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
+                  <TbFilter className="h-5 w-5 transition-colors duration-300" />
+                  Filter availability status
+                </button>
+              </DropdownMenuTrigger>
 
-            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
-              <TbFilter className="h-5 w-5 transition-colors duration-300" />
-              Filter Availability day
-            </button>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem onClick={() => onFilter("")}>
+                  All
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onFilter("Active")}>
+                  Active
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onFilter("Inactive")}>
+                  Inactive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <table className="w-full border-collapse bg-white shadow-lg  overflow-hidden mx-auto">
@@ -451,7 +642,6 @@ const AvailabilityManagement = () => {
                   Recurrence
                 </th>
 
-               
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Status
                 </th>
@@ -461,7 +651,35 @@ const AvailabilityManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {currentItems.length > 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan="22" className="text-center py-6">
+                    <div className="flex justify-center items-center gap-2 text-green-700 font-medium">
+                      <svg
+                        className="animate-spin h-6 w-6 text-green-800"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        ></path>
+                      </svg>
+                      <span>Loading...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : currentItems.length > 0 ? (
                 currentItems.map((availday, index) => (
                   <tr key={index}>
                     <td className="border px-6 py-2 text-center">
@@ -477,7 +695,6 @@ const AvailabilityManagement = () => {
                       {availday.recurrence_name}
                     </td>
 
-                  
                     <td className="border px-6 py-3 text-center text-sm font-semibold">
                       <span
                         className={`inline-block px-3 py-1 text-sm font-semibold rounded-md ${
@@ -496,14 +713,21 @@ const AvailabilityManagement = () => {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() =>
-                            handleEdit(usersaccountdetails.user_id)
+                            handleEdit(availday.availabilityfaculty_id)
                           }
                           className="px-2 py-1 border-2 border-blue-500 text-blue-500 rounded-md focus:outline-none hover:bg-blue-600 hover:text-white transition"
                         >
                           <TbEdit className="w-6 h-6" />
                         </button>
 
-                    
+                        <button
+                          onClick={() =>
+                            handleView(availday.availabilityfaculty_id)
+                          }
+                          className="px-2 py-1 border-2 border-yellow-500 text-yellow-500 rounded-md focus:outline-none hover:bg-yellow-600 hover:text-white transition"
+                        >
+                          <TbEye className="w-6 h-6" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -517,6 +741,188 @@ const AvailabilityManagement = () => {
               )}
             </tbody>
           </table>
+
+          <Dialog open={openeditDialog} onOpenChange={setOpeneditDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-semibold text-blue-900">
+                  Edit Availability
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-2">
+                {/* Recurrence Dropdown */}
+                <div>
+                  <Label className="mb-2">Recurrence</Label>
+                  <Select
+                    value={selectedRecurrence}
+                    onValueChange={(val) => setSelectedRecurrence(val)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select recurrence" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RecurrenceFetch.map((recur) => (
+                        <SelectItem
+                          key={recur.recurrence_id}
+                          value={recur.recurrence_id}
+                        >
+                          {recur.recurrence_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Day Dropdown */}
+                <div>
+                  <Label className="mb-2">Day</Label>
+                  <Select
+                    value={selectedAvailabilityday}
+                    onValueChange={(val) => setSelectedAvailabilityday(val)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Availabilitydayfetch.map((avail) => (
+                        <SelectItem
+                          key={avail.availability_id}
+                          value={avail.availability_id}
+                        >
+                          {avail.availability_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Time Range Dropdown */}
+                <div>
+                  <Label className="mb-2">Time Range</Label>
+                  <Select
+                    value={selectedTimerange}
+                    onValueChange={(val) => setSelectedTimerange(val)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select time range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TimerangeFetch.map((time) => (
+                        <SelectItem
+                          key={time.timerange_id}
+                          value={time.timerange_id}
+                        >
+                          {time.start_time} - {time.end_time}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="mb-2">Status</Label>
+                  <Select
+                    value={selectedStatus}
+                    onValueChange={(val) => setSelectedStatus(val)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {StatusFetch.map((stat, index) => (
+                        <SelectItem
+                          key={`${stat.status_id}-${index}`}
+                          value={stat.status_id}
+                        >
+                          {stat.status_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Update Button */}
+                <div className="pt-2">
+                  <button
+                    onClick={handleUpdate}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition"
+                  >
+                    Update
+                  </button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={openViewDialog} onOpenChange={setOpenViewDialog}>
+            <DialogContent className="max-w-3xl">
+              {" "}
+              {/* increased width for balance */}
+              <DialogHeader>
+                <DialogTitle>Student List:</DialogTitle>
+                <p className="text-sm text-gray-600">
+                  This table shows all students who booked a consultation for
+                  the selected availability.
+                </p>
+              </DialogHeader>
+              {studentList.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse bg-white shadow-md rounded-md overflow-hidden text-sm">
+                    <thead className="bg-gray-100 text-gray-500">
+                      <tr>
+                        <th className="w-1/3 border px-4 py-2 text-center font-semibold">
+                          Student
+                        </th>
+                        <th className="w-1/3 border px-4 py-2 text-center font-semibold">
+                          Subject
+                        </th>
+                        <th className="w-1/3 border px-4 py-2 text-center font-semibold">
+                          Booking Date
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {studentList.map((student, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="w-1/3 border px-4 py-2 text-center">
+                            {student.student_name}
+                          </td>
+                          <td className="w-1/3 border px-4 py-2 text-center">
+                            {student.subject_name}
+                          </td>
+                          <td className="w-1/3 border px-4 py-2 text-center">
+                            {new Date(student.booking_date).toLocaleString(
+                              "en-US",
+                              {
+                                month: "short", // shortened month for tighter fit
+                                day: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No student bookings found.
+                </p>
+              )}
+              <div className="mt-4 flex justify-end">
+                <Button
+                  onClick={() => setOpenViewDialog(false)}
+                  className="bg-green-700 hover:bg-green-800"
+                >
+                  Close
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <div className="flex items-center justify-between mt-14">
             <span className="text-sm text-green-800 font-semibold pl-4">
