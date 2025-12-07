@@ -8,7 +8,6 @@ include '../../dbconnection.php';
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-
 if (
     !isset($data['availabilityfaculty_id']) || empty($data['availabilityfaculty_id']) ||
     !isset($data['recurrence_id']) || empty($data['recurrence_id']) ||
@@ -25,6 +24,10 @@ if (
 }
 
 try {
+    // ✅ Start transaction
+    $conn->beginTransaction();
+
+    // Update availability
     $query = "UPDATE tbl_setavailabilityfaculty 
               SET recurrence_id = :recurrence_id,
                   availability_id = :availability_id,
@@ -42,17 +45,36 @@ try {
     $stmt->bindParam(':availableslotstatus_id', $data['availableslotstatus_id'], PDO::PARAM_INT);
 
     if ($stmt->execute()) {
+        // ✅ Log update action
+        $logQuery = "INSERT INTO tbl_activitylogs (user_id, activity_type, action, activity_time)
+                     VALUES (:user_id, :activity_type, :action, NOW())";
+        $logStmt = $conn->prepare($logQuery);
+
+        $activityType = "Availability";
+        $action = "Updated faculty availability (ID: {$data['availabilityfaculty_id']}, Recurrence: {$data['recurrence_id']}, Availability: {$data['availability_id']}, TimeRange: {$data['timerange_id']}, SlotStatus: {$data['availableslotstatus_id']})";
+
+        $logStmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
+        $logStmt->bindParam(':activity_type', $activityType, PDO::PARAM_STR);
+        $logStmt->bindParam(':action', $action, PDO::PARAM_STR);
+
+        $logStmt->execute();
+
+        // Commit transaction
+        $conn->commit();
+
         echo json_encode([
             "success" => true,
-            "message" => "Availability updated successfully."
+            "message" => "Availability updated successfully and activity logged."
         ]);
     } else {
+        $conn->rollBack();
         echo json_encode([
             "success" => false,
             "message" => "Failed to update availability."
         ]);
     }
 } catch (PDOException $e) {
+    $conn->rollBack();
     echo json_encode([
         "success" => false,
         "message" => "Database error: " . $e->getMessage()

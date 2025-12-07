@@ -6,102 +6,146 @@ header("Access-Control-Allow-Headers: Content-Type");
 
 include '../dbconnection.php';
 
+$response = [];
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(["success" => false, "message" => "Invalid request method"]);
+    echo json_encode(["success" => false, "message" => "Invalid request method. Only POST is allowed."]);
     exit;
 }
 
-if (!isset($_POST['user_id'])) {
-    echo json_encode(["success" => false, "message" => "Missing required field: user_id"]);
-    exit;
-}
-
-$user_id = intval($_POST['user_id']);
-
-// Get current user
-$checkSql = "SELECT * FROM tbl_users WHERE user_id = :user_id";
-$checkStmt = $conn->prepare($checkSql);
-$checkStmt->execute(['user_id' => $user_id]);
-if ($checkStmt->rowCount() === 0) {
-    echo json_encode(["success" => false, "message" => "User not found."]);
-    exit;
-}
-$current = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
-// Allowed editable fields
-$allowedFields = ['username','fullname','age','address','contact','email','role_id','user_status'];
-
-$updates = [];
-$params = ['user_id' => $user_id];
-
-foreach ($allowedFields as $field) {
-    if (isset($_POST[$field]) && $_POST[$field] !== '') {
-        if ($field === 'role_id' || $field === 'user_status') {
-            $val = intval($_POST[$field]);
-            if ($val > 0) { // ✅ only allow > 0
-                $params[$field] = $val;
-                $updates[] = "$field = :$field";
-            }
-        } else {
-            $params[$field] = trim($_POST[$field]);
-            $updates[] = "$field = :$field";
-        }
-    }
-}
-
-
-if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-    // ✅ uploads folder inside api_fchms
-    $uploadDir = __DIR__ . "/../uploads/"; 
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0777, true);
+try {
+    function sanitize($data) {
+        return htmlspecialchars(strip_tags(trim($data)));
     }
 
-    $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
-    $username = preg_replace("/[^a-zA-Z0-9]/", "", strtolower($current['username'])); // sanitize username
-    $timestamp = time();
-    $photoFileName = $timestamp . "_" . $username . "." . $ext; // ✅ correct format
+    // Required fields
+    $user_id   = intval($_POST['user_id'] ?? 0);
+    $username  = sanitize($_POST['username'] ?? '');
+    $fullname  = sanitize($_POST['fullname'] ?? '');
+    $age       = sanitize($_POST['age'] ?? '');
+    $address   = sanitize($_POST['address'] ?? '');
+    $contact   = sanitize($_POST['contact'] ?? '');
+    $email     = sanitize($_POST['email'] ?? '');
 
-    $uploadPath = $uploadDir . $photoFileName;
+    // Optional fields
+    $role_id     = isset($_POST['role_id']) ? intval($_POST['role_id']) : null;
+    $user_status = isset($_POST['user_status']) ? intval($_POST['user_status']) : null;
 
-    if (!move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
-        echo json_encode(["success" => false, "message" => "Failed to upload photo"]);
+    if (!$user_id || !$username || !$fullname || !$age || !$address || !$contact || !$email) {
+        echo json_encode(["success" => false, "message" => "All fields are required."]);
         exit;
     }
 
-    $updates[] = "photo_url = :photo_url";
-    // ✅ Save with "uploads/" so DB stores uploads/1757483288_darwingaludo.png
-    $params['photo_url'] = "uploads/" . $photoFileName;
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(["success" => false, "message" => "Invalid email format."]);
+        exit;
+    }
+
+    // ✅ Check if user exists
+    $checkSql = "SELECT * FROM tbl_users WHERE user_id = :user_id";
+    $checkStmt = $conn->prepare($checkSql);
+    $checkStmt->execute(['user_id' => $user_id]);
+
+    if ($checkStmt->rowCount() === 0) {
+        echo json_encode(["success" => false, "message" => "User not found."]);
+        exit;
+    }
+
+    $current = $checkStmt->fetch(PDO::FETCH_ASSOC);
+    $photo_url = $current['photo_url']; // ✅ Keep old photo if no new upload
+
+    // ✅ Handle new image (if uploaded)
+    if (isset($_FILES['userImage']) && $_FILES['userImage']['error'] === UPLOAD_ERR_OK) {
+        $file = $_FILES['userImage'];
+        $fileName = time() . '_' . basename($file['name']);
+        $targetDir = dirname(__DIR__) . '/uploads/';
+        $targetPath = $targetDir . $fileName;
+
+        if (!file_exists($targetDir)) {
+            mkdir($targetDir, 0755, true);
+        }
+
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+        $fileType = mime_content_type($file['tmp_name']);
+        $maxFileSize = 2 * 1024 * 1024;
+
+        if (!in_array($fileType, $allowedTypes)) {
+            echo json_encode(["success" => false, "message" => "Invalid file type."]);
+            exit;
+        }
+        if ($file['size'] > $maxFileSize) {
+            echo json_encode(["success" => false, "message" => "File size exceeds 2MB."]);
+            exit;
+        }
+
+        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+            $photo_url = 'uploads/' . $fileName; // ✅ Replace with new photo if uploaded
+        } else {
+            echo json_encode(["success" => false, "message" => "Failed to move uploaded file."]);
+            exit;
+        }
+    }
+
+    // ✅ Build dynamic SQL (role_id & user_status only if provided)
+    $updateFields = "
+        username = :username,
+        fullname = :fullname,
+        age = :age,
+        address = :address,
+        contact = :contact,
+        email = :email,
+        photo_url = :photo_url,
+        updated_at = NOW()";
+
+    if ($role_id !== null) {
+        $updateFields .= ", role_id = :role_id";
+    }
+    if ($user_status !== null) {
+        $updateFields .= ", user_status = :user_status";
+    }
+
+    $sql = "UPDATE tbl_users SET $updateFields WHERE user_id = :user_id";
+    $stmt = $conn->prepare($sql);
+
+    // Bind required fields
+    $params = [
+        'username' => $username,
+        'fullname' => $fullname,
+        'age' => $age,
+        'address' => $address,
+        'contact' => $contact,
+        'email' => $email,
+        'photo_url' => $photo_url, // ✅ Always keep or update photo_url
+        'user_id' => $user_id
+    ];
+
+    // Bind optional fields if provided
+    if ($role_id !== null) {
+        $params['role_id'] = $role_id;
+    }
+    if ($user_status !== null) {
+        $params['user_status'] = $user_status;
+    }
+
+    $success = $stmt->execute($params);
+
+    if ($success) {
+        $baseImageUrl = "http://localhost/fchms/app/api_fchms/";
+        $response = [
+            "success" => true,
+            "message" => "User updated successfully",
+            // ✅ Always return full photo_url (old or new)
+            "newPhotoUrl" => $photo_url ? $baseImageUrl . $photo_url : null
+        ];
+    } else {
+        $response = ["success" => false, "message" => "Failed to update user"];
+    }
+
+} catch (PDOException $e) {
+    $response = ["success" => false, "message" => "Database error: " . $e->getMessage()];
+} catch (Exception $e) {
+    $response = ["success" => false, "message" => $e->getMessage()];
 }
 
-
-if (empty($updates)) {
-    echo json_encode(["success" => false, "message" => "No fields to update"]);
-    exit;
-}
-
-// Add updated_at
-$updates[] = "updated_at = NOW()";
-
-$sql = "UPDATE tbl_users SET " . implode(", ", $updates) . " WHERE user_id = :user_id";
-$stmt = $conn->prepare($sql);
-$success = $stmt->execute($params);
-
-// Fetch updated row
-$updatedStmt = $conn->prepare("SELECT * FROM tbl_users WHERE user_id = :user_id");
-$updatedStmt->execute(['user_id' => $user_id]);
-$updatedUser = $updatedStmt->fetch(PDO::FETCH_ASSOC);
-
-// ✅ Return relative path like "uploads/1757041703_sampleuser.png"
-if (!empty($updatedUser['photo_url'])) {
-    $updatedUser['photo_url'] = "uploads/" . $updatedUser['photo_url'];
-}
-
-echo json_encode([
-    "success" => $success,
-    "message" => $success ? "User updated successfully" : "Failed to update user",
-    "data" => $updatedUser
-]);
-
+echo json_encode($response);
 $conn = null;
-?>

@@ -5,7 +5,6 @@ import {
   TbEdit,
   TbChevronDown,
   TbEye,
-  TbUsers,
 } from "react-icons/tb";
 import {
   Pagination,
@@ -25,13 +24,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -42,6 +34,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
 import CryptoJS from "crypto-js";
+import { FiFilter } from "react-icons/fi";
 const ACTIVE_STATUS_ID = 1;
 
 const FacultyManagement = () => {
@@ -57,7 +50,6 @@ const FacultyManagement = () => {
   const [userstatus, setuserStatus] = useState("");
   const [passwordStrength, setPasswordStrength] = useState("");
 
-  //
   const [statusadminOptions, setStatusadminOptions] = useState([]);
   const [roleadminOptions, setroleadminOptions] = useState([]);
   const [userfullname, setuserfullname] = useState("");
@@ -66,13 +58,17 @@ const FacultyManagement = () => {
   const [userImage, setuserImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const SECRET_KEY = "my_secret_key_123456";
+  const [editImage, setEditImage] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [loading, setLoading] = useState(false);
   const itemsPerPage = 10;
 
-  const filteredaccounts = fetchusersaccounts.filter(
-    (faccounts) =>
+  const filteredaccounts = fetchusersaccounts.filter((faccounts) => {
+    const matchesSearch =
       String(faccounts.username || "")
         .toLowerCase()
         .includes(searchText.toLowerCase()) ||
@@ -84,8 +80,15 @@ const FacultyManagement = () => {
         .includes(searchText.toLowerCase()) ||
       String(faccounts.status || "")
         .toLowerCase()
-        .includes(searchText.toLowerCase())
-  );
+        .includes(searchText.toLowerCase());
+
+    const matchesStatus = statusFilter
+      ? faccounts.status.toLowerCase() === statusFilter.toLowerCase()
+      : true;
+
+    return matchesSearch && matchesStatus;
+  });
+
   const totalPages = Math.ceil(filteredaccounts.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -123,19 +126,8 @@ const FacultyManagement = () => {
     if (encryptedUserId) {
       try {
         const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
-
-        // 🔹 Remove wrapping quotes if any
-        decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
-
-        // 🔹 Cast to integer
-        const numericId = parseInt(decryptedUserId, 10);
-
-        if (!isNaN(numericId)) {
-          setLoggedInUserId(numericId);
-        } else {
-          console.error("Invalid decrypted student ID:", decryptedUserId);
-        }
+        const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+        setLoggedInUserId(decryptedUserId);
       } catch (error) {
         console.error("Error decrypting user ID:", error);
       }
@@ -145,7 +137,8 @@ const FacultyManagement = () => {
   const fetchRoleadmin = async () => {
     try {
       const response = await axios.get(
-        "http://localhost/fchms/app/api_fchms/role/fetch-role.php"
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/role/fetch-role.php`
       );
       if (response.data.success) {
         setroleadminOptions(response.data.data);
@@ -173,7 +166,8 @@ const FacultyManagement = () => {
   const fetchStatusesadmin = async () => {
     try {
       const response = await axios.get(
-        "http://localhost/fchms/app/api_fchms/status/fetch-status.php"
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/status/fetch-status.php`
       );
       if (response.data.success) {
         setStatusadminOptions(response.data.data);
@@ -209,7 +203,8 @@ const FacultyManagement = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost/fchms/app/api_fchms/useraccounts/add-account.php",
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/add-account.php`,
         formData,
         {
           headers: {
@@ -244,7 +239,8 @@ const FacultyManagement = () => {
   const fetchuseraccounts_info = async () => {
     try {
       const response = await axios.get(
-        "http://localhost/fchms/app/api_fchms/useraccounts/fetch-account.php"
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/fetch-account.php`
       );
 
       // Check if response is successful and has data
@@ -265,7 +261,8 @@ const FacultyManagement = () => {
   const handleView = async (user_id) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/useraccounts/view-account.php?user_id=${user_id}`
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/view-account.php?user_id=${user_id}`
       );
       if (response.data.success) {
         setUserDetails(response.data.data);
@@ -279,33 +276,31 @@ const FacultyManagement = () => {
     }
   };
 
-  // ---------------------- React Code ----------------------
-
   const [originalUserData, setOriginalUserData] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [UserData, setUserData] = useState({
+    user_id: "",
     username: "",
     fullname: "",
     contact: "",
     address: "",
     email: "",
     age: "",
+    photo_url: "",
     role_id: "",
     user_status: "",
-    photo_url: "",
-    photo_file: null,
   });
 
   const handleEdit = async (user_id) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/useraccounts/view-account.php?user_id=${user_id}`
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/view-account.php?user_id=${user_id}`
       );
+
       if (response.data.success) {
         const data = response.data.data;
-
-        // ✅ Ensure role_id and user_status are numbers
-        setUserData({ ...data, user_id, photo_file: null });
+        setUserData(data); // data includes all correct fields
         setOriginalUserData(data);
         setEditDialogOpen(true);
       } else {
@@ -317,8 +312,17 @@ const FacultyManagement = () => {
     }
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setEditImage(file);
+      setEditImagePreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleUsersUpdateSubmit = async () => {
     const {
+      user_id,
       username,
       fullname,
       age,
@@ -327,67 +331,57 @@ const FacultyManagement = () => {
       email,
       role_id,
       user_status,
-      photo_file,
     } = UserData;
 
-    // Prevent saving with no changes
     if (
-      originalUserData &&
-      username === originalUserData.username &&
-      fullname === originalUserData.fullname &&
-      age === originalUserData.age &&
-      address === originalUserData.address &&
-      contact === originalUserData.contact &&
-      email === originalUserData.email &&
-      Number(role_id) === Number(originalUserData.role_id) &&
-      Number(user_status) === Number(originalUserData.user_status) &&
-      !photo_file
+      !username.trim() ||
+      !fullname.trim() ||
+      !address.trim() ||
+      !contact.trim() ||
+      !email.trim()
     ) {
-      toast.error("No changes detected.");
+      toast.error("All fields are required.");
+      return;
+    }
+
+    const isEmailValid = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!isEmailValid(email)) {
+      toast.error("Invalid email format.");
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append("user_id", UserData.user_id);
+      formData.append("user_id", user_id);
       formData.append("username", username);
       formData.append("fullname", fullname);
       formData.append("age", age);
       formData.append("address", address);
       formData.append("contact", contact);
       formData.append("email", email);
+      formData.append("role_id", role_id ? Number(role_id) : "");
+      formData.append("user_status", user_status ? Number(user_status) : "");
 
-      // ✅ Only append role_id if valid and changed
-      if (
-        role_id &&
-        !isNaN(Number(role_id)) &&
-        Number(role_id) !== Number(originalUserData.role_id)
-      ) {
-        formData.append("role_id", Number(role_id));
-      }
-
-      // ✅ Only append user_status if valid and changed
-      if (
-        user_status &&
-        !isNaN(Number(user_status)) &&
-        Number(user_status) !== Number(originalUserData.user_status)
-      ) {
-        formData.append("user_status", Number(user_status));
-      }
-
-      if (photo_file) {
-        formData.append("photo", photo_file);
+      if (editImage) {
+        formData.append("userImage", editImage); // new uploaded image
+      } else {
+        formData.append("photo_url", UserData.photo_url || ""); // keep old image if not updated
       }
 
       const { data } = await axios.post(
-        "http://localhost/fchms/app/api_fchms/useraccounts/edit-account.php",
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/edit-account.php`,
         formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
       );
 
       if (data.success) {
         toast.success("User updated successfully!");
         setEditDialogOpen(false);
+        setEditImage(null);
+        setEditImagePreview(null);
         await fetchuseraccounts_info();
       } else {
         toast.error(`Update failed: ${data.message}`);
@@ -405,27 +399,70 @@ const FacultyManagement = () => {
       transition={{ duration: 0.5 }}
     >
       <>
+        <ToastContainer
+          position="top-right"
+          autoClose={1000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+          transition={Bounce}
+        />
+
         <div className="bg-white p-6  shadow-md">
-          <h1 className="text-l font-bold mb-4 text-green-800 pb-5 mt-3 flex items-center gap-2">
-            <TbUsers className="text-xl w-6 h-6 !w-6 !h-6" />
+          <h1 className="text-m font-bold mb-4 text-green-800 mt-3">
             Faculty Accounts
           </h1>
+          <p className="text-gray-600 mb-6">
+            This table displays a list of all faculty accounts including their
+            username, email, role, account status, and the date the account was
+            created. You can also manage each account using the available
+            actions.
+          </p>
           {/* Search Input with Magnifier Icon and Buttons */}
           <div className="flex items-center justify-between pt-6 mb-4">
-            <div className="relative w-full max-w-md">
-              {/* Input Field with Icon on the Right */}
-              <input
-                type="text"
-                placeholder="Search..."
-                className="w-full border border-green-800 text-black placeholder-black rounded-lg pl-4 pr-10 py-2 shadow-sm"
-                value={searchText}
-                onChange={(e) => {
-                  setSearchText(e.target.value);
-                  setCurrentPage(1);
-                }}
-              />
+            <div className="flex gap-2 items-center">
+              {/* Search Input */}
+              <div className="relative w-full max-w-md">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="w-full border border-black text-black placeholder-black rounded-lg pl-4 pr-10 py-2 shadow-sm"
+                  value={searchText}
+                  onChange={(e) => {
+                    setSearchText(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+                <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
+              </div>
 
-              <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
+              {/* ✅ Status Filter Dropdown */}
+              <div className="relative inline-block w-fit">
+                <select
+                  className="border border-black text-black rounded-lg px-3 py-2 pr-9 shadow-sm appearance-none"
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setLoading(true);
+                    setStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                    setTimeout(() => {
+                      setLoading(false);
+                    }, 600);
+                  }}
+                >
+                  <option value="">Filter Account Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+
+                {/* Icon on the right */}
+                <FiFilter className="absolute right-3 top-1/2 -translate-y-1/2 text-black pointer-events-none h-5 w-5 !h-5 !w-5" />
+              </div>
             </div>
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -440,7 +477,7 @@ const FacultyManagement = () => {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[900px]">
                 <DialogHeader>
-                  <DialogTitle>Add Faculty</DialogTitle>
+                  <DialogTitle>Add Users</DialogTitle>
                   <DialogDescription>
                     Fill in the user's details below and click save to add them.
                   </DialogDescription>
@@ -665,7 +702,37 @@ const FacultyManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {currentItems.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="8" className="text-center py-6">
+                    <div className="flex justify-center items-center gap-2">
+                      <svg
+                        className="animate-spin h-18 w-16 text-black"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 00-8 8h4z"
+                        ></path>
+                      </svg>
+                      <span className="text-black font-large">
+                        Loading data...
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ) : currentItems.length > 0 ? (
                 currentItems.map((usersaccountdetails) => (
                   <tr key={usersaccountdetails.user_id}>
                     <td
@@ -765,17 +832,17 @@ const FacultyManagement = () => {
               </DialogHeader>
 
               <div className="mt-4 space-y-4">
-                <div className="flex flex-col items-center">
+                <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-300">
                   <img
-                    src={Users.photo_url || "/default-avatar.png"}
-                    alt="Profile"
-                    className="w-28 h-28 object-cover rounded-full border shadow-sm"
+                    src={
+                      editImagePreview
+                        ? editImagePreview
+                        : `http://localhost/fchms/app/api_fchms/${Users.photo_url}`
+                    }
+                    alt="User Profile"
+                    className="w-full h-full object-cover"
                   />
-                  <span className="text-sm text-gray-500 mt-2">
-                    Profile Photo
-                  </span>
                 </div>
-
                 <div className="flex flex-col">
                   <Label className="text-sm font-semibold text-black mb-1">
                     Username
@@ -875,60 +942,32 @@ const FacultyManagement = () => {
               </DialogHeader>
 
               <div className="mt-4 space-y-4">
-                <div className="flex flex-col">
-                  <Label className="text-sm font-semibold text-black mb-1">
-                    Profile Photo
-                  </Label>
-
-                  <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-300">
                     <img
                       src={
-                        UserData.photo_file
-                          ? URL.createObjectURL(UserData.photo_file)
-                          : UserData.photo_url || "/default-avatar.png"
+                        editImagePreview
+                          ? editImagePreview
+                          : `http://localhost/fchms/app/api_fchms/${UserData.photo_url}`
                       }
-                      alt="Profile"
-                      className="w-24 h-24 object-cover rounded-full border"
+                      alt="User Profile"
+                      className="w-full h-full object-cover"
                     />
-
-                    {/* Custom upload button */}
-                    <div>
+                  </div>
+                  <div>
+                    <label className="cursor-pointer px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300">
+                      Upload Image
                       <input
-                        id="upload-photo"
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          setUserData({
-                            ...UserData,
-                            photo_file: file || null,
-                          });
-                        }}
+                        onChange={handleImageChange}
                       />
-                      <label
-                        htmlFor="upload-photo"
-                        className="flex items-center gap-2 border border-green-600 text-green-600 px-4 py-2 rounded cursor-pointer hover:bg-green-50"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16v4h16v-4M12 12V4m0 8l-4-4m4 4l4-4"
-                          />
-                        </svg>
-                        Upload Photo
-                      </label>
-                    </div>
+                    </label>
                   </div>
                 </div>
+
+                {/* Full Name */}
                 <div className="flex flex-col">
                   <Label className="text-sm font-semibold text-black mb-1">
                     Username
@@ -1037,7 +1076,10 @@ const FacultyManagement = () => {
                     className="w-full border rounded px-2 py-1"
                     value={UserData.user_status}
                     onChange={(e) =>
-                      setUserData({ ...UserData, user_status: e.target.value })
+                      setUserData({
+                        ...UserData,
+                        user_status: e.target.value,
+                      })
                     }
                   >
                     <option value="">Select Status</option>
@@ -1058,7 +1100,10 @@ const FacultyManagement = () => {
                     className="w-full border rounded px-2 py-1"
                     value={UserData.role_id}
                     onChange={(e) =>
-                      setUserData({ ...UserData, role_id: e.target.value })
+                      setUserData({
+                        ...UserData,
+                        role_id: e.target.value,
+                      })
                     }
                   >
                     <option value="">Select Role</option>
@@ -1084,7 +1129,7 @@ const FacultyManagement = () => {
 
           <div className="flex items-center justify-between mt-14">
             {/* Entries Text */}
-            <span className="text-sm text-green-800 font-semibold pl-4">
+            <span className="text-sm text-black pl-4">
               Showing {indexOfFirstItem + 1} to{" "}
               {Math.min(indexOfLastItem, fetchusersaccounts.length)} of{" "}
               {fetchusersaccounts.length} entries
@@ -1126,20 +1171,6 @@ const FacultyManagement = () => {
           </div>
         </div>
       </>
-
-      <ToastContainer
-        position="top-right"
-        autoClose={1000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-        transition={Bounce}
-      />
     </motion.div>
   );
 };

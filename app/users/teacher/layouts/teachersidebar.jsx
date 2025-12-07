@@ -31,7 +31,7 @@ const TeacherSidebar = ({ collapsed, setCurrentView, currentView }) => {
               Faculty Consultation
             </p>
             <p className="text-m font-semibold text-white pb-1 text-center">
-              Hours Portal.
+              Hours Portal - CITE.
             </p>
             <div className="w-full border-b-2 border-white"></div>
           </div>

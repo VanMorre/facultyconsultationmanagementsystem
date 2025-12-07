@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { toast } from "react-toastify";
+import Image from "next/image";
+import { ToastContainer, toast, Bounce } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function ForgotPasswordStudentCreateNewPassword() {
   const [oldPassword, setOldPassword] = useState("");
@@ -30,9 +32,9 @@ export default function ForgotPasswordStudentCreateNewPassword() {
 
     try {
       const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/studentside/verifystudent/verifypasswordchange-student.php`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/verifystudent/verifypasswordchange-student.php`,
         {
-          email, // ✅ pulled from localStorage
+          email,
           old_password: oldPassword,
           new_password: newPassword,
         }
@@ -54,42 +56,76 @@ export default function ForgotPasswordStudentCreateNewPassword() {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow-md">
-      <h2 className="text-2xl font-semibold text-green-800 mb-4">
-        Create New Password
-      </h2>
-      <p className="text-gray-600 mb-6">
-        Enter your old and new password to update your credentials.
-      </p>
-
-      <input
-        type="password"
-        placeholder="Enter old password"
-        value={oldPassword}
-        onChange={(e) => setOldPassword(e.target.value)}
-        className="w-full border border-green-800 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-green-600"
-      />
-      <input
-        type="password"
-        placeholder="Enter new password"
-        value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-        className="w-full border border-green-800 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-green-600"
-      />
-      <input
-        type="password"
-        placeholder="Confirm new password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        className="w-full border border-green-800 rounded-lg px-4 py-2 mb-6 focus:outline-none focus:ring-2 focus:ring-green-600"
+    <>
+      <ToastContainer
+        position="top-right"
+        autoClose={1000}
+        theme="light"
+        transition={Bounce}
       />
 
-      <button
-        onClick={handleChangePassword}
-        className="w-full bg-green-800 text-white py-2 rounded-lg hover:bg-green-700 transition"
-      >
-        Update Password
-      </button>
-    </div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="flex w-full max-w-6xl bg-white shadow-2xl overflow-hidden">
+          {/* Left Side - Image + Text */}
+          <div className="hidden md:flex w-1/2 bg-white flex-col items-center justify-center p-6">
+            <Image
+              src="/images/CIT-ENCHANCEPIC.png"
+              alt="Enhance"
+              width={500}
+              height={600}
+              className="object-contain"
+              priority
+            />
+            <p className="mt-6 text-center text-gray-700 text-lg font-medium">
+              Secure your account with a strong new password.
+              <br />
+              Keep your credentials safe at all times.
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="hidden md:block w-px bg-gray-300"></div>
+
+          {/* Right Side - Form */}
+          <div className="w-full md:w-1/2 p-12 flex flex-col justify-center">
+            <h2 className="text-3xl font-semibold text-green-800 mb-6">
+              Create New Password
+            </h2>
+            <p className="text-gray-600 mb-6 text-lg">
+              Enter your old and new password to update your credentials.
+            </p>
+
+            <input
+              type="password"
+              placeholder="Enter old password"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              className="w-full border border-green-800 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+            <input
+              type="password"
+              placeholder="Enter new password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full border border-green-800 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+            <input
+              type="password"
+              placeholder="Confirm new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full border border-green-800 rounded-lg px-4 py-3 mb-6 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+
+            <button
+              onClick={handleChangePassword}
+              className="w-full bg-green-800 text-white py-3 rounded-lg hover:bg-green-900 transition text-lg"
+            >
+              Update Password
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

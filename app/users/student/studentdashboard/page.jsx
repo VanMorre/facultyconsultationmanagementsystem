@@ -27,10 +27,11 @@ ChartJS.register(
 import { Line } from "react-chartjs-2";
 import BookConsultationManagement from "./components/studentbookconsultation";
 import StudentConsultationManagement from "./components/studentbookconsultationview";
+import SettingsManagement from "./components/settings";
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import { motion } from "framer-motion";
-import React, { useState, useEffect, useRef} from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import StudentLayout from "../layouts/studentlayout";
 
@@ -56,10 +57,8 @@ const StudentDashboard = () => {
         const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
         let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
 
-        // 🔹 Remove wrapping quotes if any
         decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
 
-        // 🔹 Cast to integer
         const numericId = parseInt(decryptedUserId, 10);
 
         if (!isNaN(numericId)) {
@@ -73,58 +72,49 @@ const StudentDashboard = () => {
     }
   };
 
+  useEffect(() => {
+    decryptUserId();
 
- useEffect(() => {
-   decryptUserId();
- 
-   if (loggedInUserId) {
-     // Load session-stored notified booking IDs
-     const storedBooking = sessionStorage.getItem("notified_booking_ids");
-     if (storedBooking) {
-       notifiedBookingIdsRef.current = JSON.parse(storedBooking);
-     }
- 
-     // Load session-stored notified consultation IDs
+    if (loggedInUserId) {
+      const storedBooking = sessionStorage.getItem("notified_booking_ids");
+      if (storedBooking) {
+        notifiedBookingIdsRef.current = JSON.parse(storedBooking);
+      }
 
- 
-     let isInitial = true;
-     // ✅ First fetch (initial load)
-     fetchbookingstudentWithNotify(loggedInUserId, isInitial);
-     isInitial = false;
+      let isInitial = true;
+      fetchbookingstudentWithNotify(loggedInUserId, isInitial);
+      isInitial = false;
 
-     // ✅ Poll every 5 seconds
-     const interval = setInterval(() => {
-       fetchbookingstudentWithNotify(loggedInUserId, false);
-     
-     }, 5000);
- 
-     return () => clearInterval(interval);
-   }
- }, [loggedInUserId]);
+      const interval = setInterval(() => {
+        fetchbookingstudentWithNotify(loggedInUserId, false);
+      }, 5000);
 
-   const fetchbookingstudentWithNotify = async (StudentID, isInitial = false) => {
+      return () => clearInterval(interval);
+    }
+  }, [loggedInUserId]);
+
+  const fetchbookingstudentWithNotify = async (
+    StudentID,
+    isInitial = false
+  ) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
         { params: { student_id: StudentID } }
       );
 
       if (response.data.success) {
         const newBookings = response.data.data;
 
-        // Extract unique booking IDs
         const currentIds = newBookings.map((item) => item.booking_id);
 
-        // Find IDs that are new compared to stored ones
         const newIds = currentIds.filter(
           (id) => !notifiedBookingIdsRef.current.includes(id)
         );
 
-        // 🚫 Removed toast, but still handle ID tracking
         if (!isInitial && newIds.length > 0 && !toastShownBookingRef.current) {
           toastShownBookingRef.current = true;
 
-          // ✅ Save notified IDs
           notifiedBookingIdsRef.current = [
             ...notifiedBookingIdsRef.current,
             ...newIds,
@@ -135,13 +125,11 @@ const StudentDashboard = () => {
             JSON.stringify(notifiedBookingIdsRef.current)
           );
 
-          // Reset lock after delay
           setTimeout(() => {
             toastShownBookingRef.current = false;
           }, 5000);
         }
 
-        // ✅ On initial fetch, just mark IDs without showing anything
         if (isInitial) {
           notifiedBookingIdsRef.current = [
             ...notifiedBookingIdsRef.current,
@@ -177,12 +165,45 @@ const StudentDashboard = () => {
 
   const monthlyData = getMonthlyBookings();
 
-  // 🗓️ Filtered bookings (for card)
+  // 🗓️ Filtered bookings (for card only)
   const filteredBookings = fetchbooking.filter((booking) => {
     if (selectedMonth === 0) return true;
     const month = new Date(booking.booking_date).getMonth() + 1;
     return month === selectedMonth;
   });
+
+  // 🔹 Month labels
+  const monthLabels = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  // 🔹 Chart Data (always keep full line)
+  const chartData = {
+    labels: monthLabels,
+    datasets: [
+      {
+        label: "Book Consultation",
+        data: monthlyData.map((count, idx) =>
+          selectedMonth === 0 ? count : idx + 1 === selectedMonth ? count : 0
+        ), // ✅ Keeps line across 12 months
+        borderColor: "#246919ff",
+        backgroundColor: "rgba(31, 118, 110, 0.2)",
+        tension: 0.4,
+        fill: true,
+      },
+    ],
+  };
 
   // Animations
   const containerVariants = {
@@ -261,20 +282,7 @@ const StudentDashboard = () => {
                     onChange={(e) => setSelectedMonth(Number(e.target.value))}
                   >
                     <option value={0}>All</option>
-                    {[
-                      "January",
-                      "February",
-                      "March",
-                      "April",
-                      "May",
-                      "June",
-                      "July",
-                      "August",
-                      "September",
-                      "October",
-                      "November",
-                      "December",
-                    ].map((m, idx) => (
+                    {monthLabels.map((m, idx) => (
                       <option key={idx} value={idx + 1}>
                         {m}
                       </option>
@@ -283,32 +291,7 @@ const StudentDashboard = () => {
                 </div>
                 <div className="h-[300px]">
                   <Line
-                    data={{
-                      labels: [
-                        "Jan",
-                        "Feb",
-                        "Mar",
-                        "Apr",
-                        "May",
-                        "Jun",
-                        "Jul",
-                        "Aug",
-                        "Sep",
-                        "Oct",
-                        "Nov",
-                        "Dec",
-                      ],
-                      datasets: [
-                        {
-                          label: "Book Consultation",
-                          data: monthlyData, // ✅ dynamic data
-                          borderColor: "#246919ff",
-                          backgroundColor: "rgba(31, 118, 110, 0.2)",
-                          tension: 0.4,
-                          fill: true,
-                        },
-                      ],
-                    }}
+                    data={chartData}
                     options={{
                       responsive: true,
                       maintainAspectRatio: false,
@@ -324,6 +307,7 @@ const StudentDashboard = () => {
 
         {currentView === "bookconsultation" && <BookConsultationManagement />}
         {currentView === "consultation" && <StudentConsultationManagement />}
+        {currentView === "Settings" && <SettingsManagement />}
       </motion.div>
     </StudentLayout>
   );

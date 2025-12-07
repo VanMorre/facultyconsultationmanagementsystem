@@ -25,13 +25,16 @@ if (
 }
 
 try {
+    // ✅ Start transaction (so both inserts succeed together)
+    $conn->beginTransaction();
+
+    // Insert into tbl_setavailabilityfaculty
     $query = "INSERT INTO tbl_setavailabilityfaculty 
                 (recurrence_id, availability_id, timerange_id, user_id, availableslotstatus_id) 
               VALUES 
                 (:recurrence_id, :availability_id, :timerange_id, :user_id, :availableslotstatus_id)";
     $stmt = $conn->prepare($query);
 
-    // Bind values (removed subject_id)
     $stmt->bindParam(':recurrence_id', $data['recurrence_id'], PDO::PARAM_INT);
     $stmt->bindParam(':availability_id', $data['availability_id'], PDO::PARAM_INT);
     $stmt->bindParam(':timerange_id', $data['timerange_id'], PDO::PARAM_INT);
@@ -39,17 +42,36 @@ try {
     $stmt->bindParam(':availableslotstatus_id', $data['availableslotstatus_id'], PDO::PARAM_INT);
 
     if ($stmt->execute()) {
+        // ✅ Insert activity log
+        $logQuery = "INSERT INTO tbl_activitylogs (user_id, activity_type, action, activity_time)
+                     VALUES (:user_id, :activity_type, :action, NOW())";
+        $logStmt = $conn->prepare($logQuery);
+
+        $activityType = "Add-Availabilityschedule"; // you can change this if you want
+        $action = "Set faculty availability (Recurrence: {$data['recurrence_id']}, Availability: {$data['availability_id']}, TimeRange: {$data['timerange_id']})";
+
+        $logStmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
+        $logStmt->bindParam(':activity_type', $activityType, PDO::PARAM_STR);
+        $logStmt->bindParam(':action', $action, PDO::PARAM_STR);
+
+        $logStmt->execute();
+
+        // Commit transaction
+        $conn->commit();
+
         echo json_encode([
             "success" => true,
-            "message" => "Availability set successfully."
+            "message" => "Availability set successfully and activity logged."
         ]);
     } else {
+        $conn->rollBack();
         echo json_encode([
             "success" => false,
             "message" => "Failed to set availability."
         ]);
     }
 } catch (PDOException $e) {
+    $conn->rollBack();
     echo json_encode([
         "success" => false,
         "message" => "Database error: " . $e->getMessage()

@@ -13,8 +13,6 @@ if (!isset($_GET['user_id'])) {
 
 $user_id = intval($_GET['user_id']);
 
-$baseImageUrl = "http://localhost/fchms/app/api_fchms/uploads/";
-
 $sql = "SELECT 
             u.user_id,
             u.username,
@@ -40,13 +38,6 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$user) {
     echo json_encode(["success" => false, "message" => "User not found"]);
     exit;
-}
-
-// ✅ Prepend base URL if photo_url exists (use basename like fetch-account.php)
-if (!empty($user['photo_url'])) {
-    $user['photo_url'] = $baseImageUrl . basename($user['photo_url']);
-} else {
-    $user['photo_url'] = null;
 }
 
 echo json_encode([

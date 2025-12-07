@@ -190,7 +190,7 @@ export default function AdminLogin() {
     }
     try {
       const response = await axios.post(
-        "http://localhost/fchms/app/api_fchms/loginphp/loginform.php",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/loginphp/loginform.php`,
         { email, password }
       );
       if (response.data.success) {
@@ -273,7 +273,7 @@ export default function AdminLogin() {
 
     try {
       const response = await axios.post(
-        "http://localhost/fchms/app/api_fchms/studentside/fetch-studentaccount.php",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/fetch-studentaccount.php`,
         {
           student_email, // ✅ match PHP
           student_password, // ✅ match PHP
@@ -302,7 +302,7 @@ export default function AdminLogin() {
         sessionStorage.setItem("student_name", encryptData(student_name));
         sessionStorage.setItem("age", encryptData(age));
         sessionStorage.setItem("contact", encryptData(contact));
-        sessionStorage.setItem("photo_url", encryptData(photo_url || ""));
+        sessionStorage.setItem("photo_url", encryptData(photo_url));
         sessionStorage.setItem("student_email", encryptData(student_email));
         sessionStorage.setItem("year_name", encryptData(year_name));
         sessionStorage.setItem("course_name", encryptData(course_name));
@@ -405,7 +405,8 @@ export default function AdminLogin() {
 
     try {
       const response = await axios.post(
-        "http://localhost/fchms/app/api_fchms/studentside/add-studentaccount.php",
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/add-studentaccount.php`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -441,7 +442,8 @@ export default function AdminLogin() {
   const fetchyearlevel = async () => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/yearlevel/fetch-yearlevel.php`
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/yearlevel/fetch-yearlevel.php`
       );
 
       if (response.data.success) {
@@ -458,7 +460,8 @@ export default function AdminLogin() {
   const fetchcourse = async () => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/course/fetch-course.php`
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.php`
       );
 
       if (response.data.success) {
@@ -504,7 +507,9 @@ export default function AdminLogin() {
               <h1 className="font-semibold text-lg lg:text-xl">
                 Phinma Cagayan de Oro College
               </h1>
-              <h1 className="font-semibold text-lg lg:text-xl">FCHMS PORTAL - CITE</h1>
+              <h1 className="font-semibold text-lg lg:text-xl">
+                FCHMS PORTAL - CITE
+              </h1>
               <h2 className="text-sm lg:text-md mb-2 lg:mb-2  font-semibold">
                 Max Sunniel St. Cagayan de Oro City
               </h2>
@@ -712,9 +717,6 @@ export default function AdminLogin() {
                 >
                   Forgotten Your Password?
                 </Button>
-
-
-
               </motion.div>
             </motion.form>
 

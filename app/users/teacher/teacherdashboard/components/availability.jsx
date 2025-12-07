@@ -2,9 +2,8 @@ import {
   TbZoom,
   TbClipboardList,
   TbPlus,
-  TbEye,
-  TbEdit,
   TbFilter,
+  TbDotsVertical,
 } from "react-icons/tb";
 import {
   Pagination,
@@ -21,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -66,7 +66,15 @@ const AvailabilityManagement = () => {
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [studentList, setStudentList] = useState([]);
   const DEFAULT_AVAILABLESLOT_STATUS_ID = 1;
- const decryptUserId = () => {
+
+  
+    const [openAddSlotDialog, setOpenAddSlotDialog] = useState(false);
+    const [currentAvailabilityFacultyId, setCurrentAvailabilityFacultyId] =
+      useState(null);
+
+
+
+  const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
 
     if (encryptedUserId) {
@@ -101,6 +109,57 @@ const AvailabilityManagement = () => {
       fetchAvailability(loggedInUserId);
     }
   }, [loggedInUserId]);
+
+  // 🔍 Search and Pagination state
+  const [studentSearchText, setStudentSearchText] = useState("");
+  const [studentCurrentPage, setStudentCurrentPage] = useState(1);
+  const studentItemsPerPage = 5; // adjust as needed
+
+  // Filter students by search
+  const studentFilteredList = (studentList || []).filter((student) => {
+    return (
+      student.student_name
+        .toLowerCase()
+        .includes(studentSearchText.toLowerCase()) ||
+      student.subject_name
+        .toLowerCase()
+        .includes(studentSearchText.toLowerCase()) ||
+      new Date(student.booking_date)
+        .toLocaleString("en-US", {
+          month: "short",
+          day: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+        .toLowerCase()
+        .includes(studentSearchText.toLowerCase())
+    );
+  });
+
+  // Pagination calculation
+  const studentTotalPages = Math.ceil(
+    studentFilteredList.length / studentItemsPerPage
+  );
+  const studentLastIndex = studentCurrentPage * studentItemsPerPage;
+  const studentFirstIndex = studentLastIndex - studentItemsPerPage;
+  const studentPaginatedItems = studentFilteredList.slice(
+    studentFirstIndex,
+    studentLastIndex
+  );
+
+  const handleNextStudentPage = () => {
+    if (studentCurrentPage < studentTotalPages)
+      setStudentCurrentPage((prev) => prev + 1);
+  };
+
+  const handlePreviousStudentPage = () => {
+    if (studentCurrentPage > 1) setStudentCurrentPage((prev) => prev - 1);
+  };
+
+  const handleGoToStudentPage = (pageNumber) => {
+    setStudentCurrentPage(pageNumber);
+  };
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -167,7 +226,8 @@ const AvailabilityManagement = () => {
   const fetchavailstatus = async () => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/status/fetch-status.php`
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/status/fetch-status.php`
       );
 
       if (response.data.success) {
@@ -184,7 +244,8 @@ const AvailabilityManagement = () => {
   const fetchrecurrence = async () => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/recurrence/fetch-recurrence.php`
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/recurrence/fetch-recurrence.php`
       );
 
       if (response.data.success) {
@@ -201,7 +262,8 @@ const AvailabilityManagement = () => {
   const fetchtimerange = async () => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/timerange/fetch-timerange.php`
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/timerange/fetch-timerange.php`
       );
 
       if (response.data.success) {
@@ -218,7 +280,8 @@ const AvailabilityManagement = () => {
   const fetchavailabilityday = async () => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/availabilityday/fetch-availabilityday.php`
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/availabilityday/fetch-availabilityday.php`
       );
 
       if (response.data.success) {
@@ -252,7 +315,8 @@ const AvailabilityManagement = () => {
 
     try {
       const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/facultyside/teacher-availability/add-availability.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-availability/add-availability.php`,
         {
           recurrence_id: selectedRecurrence,
           availability_id: selectedAvailabilityday,
@@ -288,7 +352,8 @@ const AvailabilityManagement = () => {
   const fetchAvailability = async (userId) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/facultyside/teacher-availability/fetch-availability.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-availability/fetch-availability.php`,
         { params: { user_id: userId } } // send user_id as query param
       );
 
@@ -305,7 +370,8 @@ const AvailabilityManagement = () => {
   const handleEdit = async (availabilityfaculty_id) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/facultyside/teacher-availability/get-availability.php?id=${availabilityfaculty_id}`
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-availability/get-availability.php?id=${availabilityfaculty_id}`
       );
 
       if (response.data.success) {
@@ -349,7 +415,8 @@ const AvailabilityManagement = () => {
 
     try {
       const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/facultyside/teacher-availability/edit-availability.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-availability/edit-availability.php`,
         {
           availabilityfaculty_id: editId,
           recurrence_id: selectedRecurrence,
@@ -411,10 +478,11 @@ const AvailabilityManagement = () => {
     }
   };
 
-   const handleView = async (availabilityfaculty_id) => {
+  const handleView = async (availabilityfaculty_id) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/facultyside/teacher-availability/view-availability.php?id=${availabilityfaculty_id}`
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-availability/view-availability.php?id=${availabilityfaculty_id}`
       );
 
       if (response.data.success) {
@@ -430,6 +498,57 @@ const AvailabilityManagement = () => {
   };
 
 
+    const handleAddSlot = async (availabilityfaculty_id) => {
+    try {
+      if (!selectedTimerange) {
+        toast.error("Please select a time range before adding.");
+        return;
+      }
+
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-availability/add-slot.php`,
+        {
+          availabilityfaculty_id,
+          timerange_id: selectedTimerange,
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Slot added successfully.");
+
+        setFetchAvailability((prev) => [
+          ...prev,
+          {
+            availabilityfaculty_id: response.data.new_id, // ✅ backend returns this
+            recurrence_id: selectedRecurrence,
+            availability_id: selectedAvailabilityday,
+            timerange_id: selectedTimerange,
+            status_id: selectedStatus,
+            recurrence_name: RecurrenceFetch.find(
+              (r) => r.recurrence_id == selectedRecurrence
+            )?.recurrence_name,
+            availability_name: Availabilitydayfetch.find(
+              (a) => a.availability_id == selectedAvailabilityday
+            )?.availability_name,
+            time_range: (() => {
+              const t = TimerangeFetch.find(
+                (tr) => tr.timerange_id == selectedTimerange
+              );
+              return t ? `${t.start_time} - ${t.end_time}` : "";
+            })(),
+            availableslot_status: StatusFetch.find(
+              (s) => s.status_id == selectedStatus
+            )?.status_name,
+          },
+        ]);
+      } else {
+        toast.error(response.data.message || "Failed to add slot.");
+      }
+    } catch (error) {
+      console.error("Error adding slot:", error);
+      toast.error("An error occurred while adding slot.");
+    }
+  };
 
 
 
@@ -602,11 +721,6 @@ const AvailabilityManagement = () => {
               </DialogContent>
             </Dialog>
 
-            <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
-              <TbPlus className="h-5 w-5 transition-colors duration-300" />
-              Add Slot
-            </button>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white">
@@ -716,24 +830,43 @@ const AvailabilityManagement = () => {
                     </td>
 
                     <td className="border px-6 py-3 text-center text-sm font-semibold">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() =>
-                            handleEdit(availday.availabilityfaculty_id)
-                          }
-                          className="px-2 py-1 border-2 border-blue-500 text-blue-500 rounded-md focus:outline-none hover:bg-blue-600 hover:text-white transition"
-                        >
-                          <TbEdit className="w-6 h-6" />
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            handleView(availday.availabilityfaculty_id)
-                          }
-                          className="px-2 py-1 border-2 border-yellow-500 text-yellow-500 rounded-md focus:outline-none hover:bg-yellow-600 hover:text-white transition"
-                        >
-                          <TbEye className="w-6 h-6" />
-                        </button>
+                      <div className="flex items-center justify-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none hover:bg-gray-100 transition">
+                              <TbDotsVertical className="w-5 h-5 text-gray-700" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setCurrentAvailabilityFacultyId(
+                                  availday.availabilityfaculty_id
+                                );
+                                setOpenAddSlotDialog(true);
+                              }}
+                              className="cursor-pointer text-green-700 hover:bg-green-50"
+                            >
+                              Add slot
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleEdit(availday.availabilityfaculty_id)
+                              }
+                              className="cursor-pointer text-blue-700 hover:bg-blue-50"
+                            >
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleView(availday.availabilityfaculty_id)
+                              }
+                              className="cursor-pointer text-yellow-700 hover:bg-yellow-50"
+                            >
+                              View
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </td>
                   </tr>
@@ -862,17 +995,30 @@ const AvailabilityManagement = () => {
           </Dialog>
 
           <Dialog open={openViewDialog} onOpenChange={setOpenViewDialog}>
-            <DialogContent className="max-w-3xl">
-              {" "}
-              {/* increased width for balance */}
+            <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col">
               <DialogHeader>
                 <DialogTitle>Student List:</DialogTitle>
                 <p className="text-sm text-gray-600">
                   This table shows all students who booked a consultation for
                   the selected availability.
                 </p>
+
+                <div className="relative mt-4 w-full max-w-sm">
+                  <input
+                    type="text"
+                    placeholder="Search student name.."
+                    value={studentSearchText}
+                    onChange={(e) => {
+                      setStudentSearchText(e.target.value);
+                      setStudentCurrentPage(1); // reset to first page when searching
+                    }}
+                    className="w-full border border-black rounded-lg px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 placeholder-black"
+                  />
+                  <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
+                </div>
               </DialogHeader>
-              {studentList.length > 0 ? (
+
+              {studentPaginatedItems.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse bg-white shadow-md rounded-md overflow-hidden text-sm">
                     <thead className="bg-gray-100 text-gray-500">
@@ -889,19 +1035,19 @@ const AvailabilityManagement = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {studentList.map((student, idx) => (
+                      {studentPaginatedItems.map((student, idx) => (
                         <tr key={idx} className="hover:bg-gray-50">
-                          <td className="w-1/3 border px-4 py-2 text-center">
+                          <td className="border px-4 py-2 text-center">
                             {student.student_name}
                           </td>
-                          <td className="w-1/3 border px-4 py-2 text-center">
+                          <td className="border px-4 py-2 text-center">
                             {student.subject_name}
                           </td>
-                          <td className="w-1/3 border px-4 py-2 text-center">
+                          <td className="border px-4 py-2 text-center">
                             {new Date(student.booking_date).toLocaleString(
                               "en-US",
                               {
-                                month: "short", // shortened month for tighter fit
+                                month: "short",
                                 day: "2-digit",
                                 year: "numeric",
                                 hour: "2-digit",
@@ -913,12 +1059,52 @@ const AvailabilityManagement = () => {
                       ))}
                     </tbody>
                   </table>
+
+                  {/* 📄 Entries + Pagination */}
+                  <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+                    <p>
+                      Showing {studentFirstIndex + 1} to{" "}
+                      {Math.min(studentLastIndex, studentFilteredList.length)}{" "}
+                      of {studentFilteredList.length} entries
+                    </p>
+                    <div className="flex">
+                      <Pagination>
+                        <PaginationContent className="flex">
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={handlePreviousStudentPage}
+                              disabled={studentCurrentPage === 1}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: studentTotalPages }, (_, i) => (
+                            <PaginationItem key={i}>
+                              <PaginationLink
+                                isActive={studentCurrentPage === i + 1}
+                                onClick={() => handleGoToStudentPage(i + 1)}
+                              >
+                                {i + 1}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ))}
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={handleNextStudentPage}
+                              disabled={
+                                studentCurrentPage === studentTotalPages
+                              }
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mt-4">
                   No student bookings found.
                 </p>
               )}
+
               <div className="mt-4 flex justify-end">
                 <Button
                   onClick={() => setOpenViewDialog(false)}
@@ -929,6 +1115,63 @@ const AvailabilityManagement = () => {
               </div>
             </DialogContent>
           </Dialog>
+          
+
+
+             <Dialog open={openAddSlotDialog} onOpenChange={setOpenAddSlotDialog}>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Add New Slot</DialogTitle>
+                        </DialogHeader>
+          
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-1">
+                              Select Time Range
+                            </label>
+                            <Select
+                              value={selectedTimerange}
+                              onValueChange={(val) => setSelectedTimerange(val)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Choose time range" />
+                              </SelectTrigger>
+                              {/* Force dropdown to open below the trigger */}
+                              <SelectContent side="bottom" align="start" sideOffset={4}>
+                                {TimerangeFetch.map((tr) => (
+                                  <SelectItem
+                                    key={tr.timerange_id}
+                                    value={tr.timerange_id}
+                                  >
+                                    {tr.start_time} - {tr.end_time}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+          
+                        <DialogFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => setOpenAddSlotDialog(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            className="bg-green-800 hover:bg-green-900 text-white"
+                            onClick={() => {
+                              handleAddSlot(currentAvailabilityFacultyId);
+                              setOpenAddSlotDialog(false);
+                            }}
+                            disabled={!selectedTimerange}
+                          >
+                            Add Slot
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>     
+
 
           <div className="flex items-center justify-between mt-14">
             <span className="text-sm text-green-800 font-semibold pl-4">

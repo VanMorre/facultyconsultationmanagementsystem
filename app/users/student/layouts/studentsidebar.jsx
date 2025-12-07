@@ -2,20 +2,16 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 import { LayoutDashboard } from "lucide-react";
-import {
-  TbCalendarCheck,
-  TbClipboardText,
-
-} from "react-icons/tb";
+import { TbCalendarCheck, TbClipboardText, TbSettings2 } from "react-icons/tb";
 
 const StudentSidebar = ({ collapsed, setCurrentView, currentView }) => {
   return (
     <aside
       className={`${
-        collapsed ? "w-16" : "w-62"
-      } bg-white shadow-2xl transition-all duration-300 overflow-hidden`}
+        collapsed ? "w-16" : "w-64"
+      } h-full bg-white shadow-2xl transition-all duration-300 overflow-y-auto`}
     >
-    <div className="p-4 flex items-center justify-center pl-1 bg-green-900 shadow-xl">
+      <div className="p-4 flex items-center justify-center pl-1 bg-green-900 shadow-xl">
         <img
           src="/images/coclogo-removebg.png"
           alt="PatientCare Logo"
@@ -26,10 +22,10 @@ const StudentSidebar = ({ collapsed, setCurrentView, currentView }) => {
         {!collapsed && (
           <div className="flex flex-col items-start pb-1">
             <p className="text-m font-semibold text-white pb-0 leading-tight">
-              Faculty Consultation 
+              Faculty Consultation
             </p>
             <p className="text-m font-semibold text-white pb-1 text-center">
-               Hours Portal.
+              Hours Portal - CITE.
             </p>
             <div className="w-full border-b-2 border-white"></div>
           </div>
@@ -83,7 +79,19 @@ const StudentSidebar = ({ collapsed, setCurrentView, currentView }) => {
           )}
         </Button>
 
-   
+        <Button
+          variant="ghost"
+          className={`w-full justify-start text-black ${
+            currentView === "Settings" ? "bg-gray-200" : ""
+          }`}
+          onClick={() => setCurrentView("Settings")}
+        >
+          <TbSettings2
+            className="mr-1"
+            style={{ height: "28px", width: "35px", color: "#6e7a36" }}
+          />
+          {!collapsed && <span className="pr-8 font-semibold">Settings</span>}
+        </Button>
       </nav>
     </aside>
   );

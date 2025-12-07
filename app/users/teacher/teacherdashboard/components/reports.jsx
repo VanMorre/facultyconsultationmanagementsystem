@@ -1,4 +1,4 @@
-import { TbCalendar, TbPrinter, TbWaveSawTool } from "react-icons/tb";
+import { TbPrinter, TbWaveSawTool } from "react-icons/tb";
 import {
   FaClipboardList,
   FaCheckCircle,
@@ -45,8 +45,8 @@ const ReportManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [ConsultationFetch, setFetchConsultation] = useState([]);
-  const [filter, setFilter] = useState("Today"); // ✅ Default filter
-  const [startDate, setStartDate] = useState(null); // for custom
+  // ❗ Default to "no date filter" so all consultations show initially
+  const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const notifiedConsultationIdsRef = useRef([]);
   const toastShownConsultationRef = useRef(false);
@@ -106,7 +106,8 @@ const ReportManagement = () => {
 const fetchConsultationWithNotify = async (UserID, isInitial = false) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/facultyside/teacher-consultation/fetch-consultation.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-consultation/fetch-consultation.php`,
         { params: { user_id: UserID } }
       );
 
@@ -169,47 +170,32 @@ const fetchConsultationWithNotify = async (UserID, isInitial = false) => {
     }
   };
 
-  // ✅ Filter consultations based on date
+  // ✅ Filter consultations based on date range
   const filterData = () => {
-    const today = new Date();
+    if (!ConsultationFetch || ConsultationFetch.length === 0) {
+      return [];
+    }
+
+    // If either date is not set, do not filter by date
+    if (!startDate || !endDate) {
+      return ConsultationFetch;
+    }
+
     return ConsultationFetch.filter((c) => {
+      if (!c.schedulebookdate) return true; // keep rows with no date
+
       const consultDate = new Date(c.schedulebookdate);
-      switch (filter) {
-        case "Today":
-          return consultDate.toDateString() === today.toDateString();
-        case "Yesterday":
-          const yesterday = new Date(today);
-          yesterday.setDate(today.getDate() - 1);
-          return consultDate.toDateString() === yesterday.toDateString();
-        case "This Week":
-          const weekStart = new Date(today);
-          weekStart.setDate(today.getDate() - today.getDay());
-          return consultDate >= weekStart && consultDate <= today;
-        case "Last Week":
-          const lastWeekStart = new Date(today);
-          lastWeekStart.setDate(today.getDate() - today.getDay() - 7);
-          const lastWeekEnd = new Date(today);
-          lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
-          return consultDate >= lastWeekStart && consultDate <= lastWeekEnd;
-        case "This Month":
-          return (
-            consultDate.getMonth() === today.getMonth() &&
-            consultDate.getFullYear() === today.getFullYear()
-          );
-        case "Previous Month":
-          const prevMonth = new Date(today);
-          prevMonth.setMonth(today.getMonth() - 1);
-          return (
-            consultDate.getMonth() === prevMonth.getMonth() &&
-            consultDate.getFullYear() === prevMonth.getFullYear()
-          );
-        case "Custom":
-          return startDate && endDate
-            ? consultDate >= startDate && consultDate <= endDate
-            : true;
-        default:
-          return true;
-      }
+      if (isNaN(consultDate.getTime())) return true;
+
+      // Set time to start/end of day for accurate comparison
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+
+      consultDate.setHours(0, 0, 0, 0);
+
+      return consultDate >= start && consultDate <= end;
     });
   };
 
@@ -217,7 +203,11 @@ const fetchConsultationWithNotify = async (UserID, isInitial = false) => {
 
   // ✅ Group by subject
   const subjects = [
-    ...new Set(filteredConsultations.map((c) => c.subject_name)),
+    ...new Set(
+      filteredConsultations
+        .map((c) => c.subject_name)
+        .filter((subject) => subject && subject.trim() !== "")
+    ),
   ];
   const subjectCounts = subjects.map(
     (subject) =>
@@ -270,25 +260,22 @@ const fetchConsultationWithNotify = async (UserID, isInitial = false) => {
 const generatePDF = () => {
   const doc = new jsPDF("p", "mm", "a4");
 
-  // --- LOGO WATERMARK ---
-  const logoPath = "/images/coclogo-removebg.png";
+  const logoPath = "/images/CIT-ENCHANCEPIC.png";
   const pageWidth = doc.internal.pageSize.getWidth();
 
+  // ❌ Removed watermark (center background logo)
+
+  // --- HEADER (small logo + header text) ---
+  const headerLogoSize = 25; // size of top-left logo
   doc.addImage(
     logoPath,
-    "PNG",
-    pageWidth / 2 - 50, // center horizontally
-    90, // Y position
-    100, // width
-    100, // height
-    undefined,
-    "FAST",
-    0
+    "PNG",  
+    15, // X position (left side)
+    12, // Y position (align with header text)
+    headerLogoSize,
+    headerLogoSize
   );
 
-  doc.setGState(new doc.GState({ opacity: 0.65 }));
-
-  // --- HEADER ---
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   doc.text("College of Information Technology Education", pageWidth / 2, 20, {
@@ -302,10 +289,10 @@ const generatePDF = () => {
   });
 
   doc.setFontSize(12);
-  doc.setFont("helvetica", "italic");
+  doc.setFont("helvetica", "normal");
   doc.text("Consultation Report", pageWidth / 2, 34, { align: "center" });
 
-  // Separator
+  // Separator line
   doc.setDrawColor(0);
   doc.setLineWidth(0.5);
   doc.line(10, 40, 200, 40);
@@ -319,17 +306,18 @@ const generatePDF = () => {
   const tableColumn = [
     "Student name",
     "Subject",
+    "Purpose",
     "Schedule date",
     "Time range",
-    "Approval",
+    "Status",
   ];
 
-  // ✅ Use filteredConsultations instead of ConsultationFetch
   let tableRows = [];
   if (filteredConsultations.length > 0) {
     tableRows = filteredConsultations.map((item) => [
       item.student_name,
       item.subject_name,
+      item.purpose,
       item.schedulebookdate,
       item.timeranges,
       item.approval_name,
@@ -359,7 +347,6 @@ const generatePDF = () => {
       fontSize: 10,
     },
     didParseCell: (data) => {
-      // ✅ Merge "No data available" across all columns
       if (
         filteredConsultations.length === 0 &&
         data.row.index === 0 &&
@@ -370,31 +357,24 @@ const generatePDF = () => {
     },
   });
 
-  // --- TOTAL RENDERED HOURS ---
-  let totalHours = 0;
+  // --- TOTAL STUDENTS RENDERED ---
   if (filteredConsultations.length > 0) {
-    filteredConsultations.forEach((item) => {
-      if (item.timeranges) {
-        const [start, end] = item.timeranges.split(" - ");
-        const startTime = new Date(`1970-01-01T${start}`);
-        const endTime = new Date(`1970-01-01T${end}`);
-        const diffHours = (endTime - startTime) / (1000 * 60 * 60);
-        totalHours += diffHours;
-      }
-    });
+    const uniqueBookings = new Set(
+      filteredConsultations.map((item) => item.schedulebookings_id)
+    );
+    const totalStudents = uniqueBookings.size;
 
-    // ✅ Display below the table
     const finalY = doc.lastAutoTable.finalY || 90;
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.text(
-      `Total Rendered Hours: ${totalHours} hour${totalHours > 1 ? "s" : ""}`,
+      `Total Number of Students Rendered: ${totalStudents}`,
       14,
       finalY + 10
     );
   }
 
-  // --- SIGNATURE (only if there is data) ---
+  // --- SIGNATURE SECTION ---
   if (filteredConsultations.length > 0) {
     const finalY = doc.lastAutoTable.finalY || 100;
     const lineWidth = 50;
@@ -433,7 +413,6 @@ const generatePDF = () => {
 };
 
 
-
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -453,46 +432,32 @@ const generatePDF = () => {
           >
             <TbPrinter className="h-5 w-5" /> Generate Report
           </button>
-          {/* ✅ Dropdown for filter */}
-          <div className="relative">
-            <select
-              className="border border-green-800 text-green-800 px-4 py-2 rounded-lg"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            >
-              <option>Today</option>
-              <option>Yesterday</option>
-              <option>This Week</option>
-              <option>Last Week</option>
-              <option>This Month</option>
-              <option>Previous Month</option>
-              <option value="Custom">Custom Range</option>
-            </select>
+          
+          {/* ✅ Date Range Picker */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-green-800 font-semibold">From:</label>
+            <DatePicker
+              selected={startDate}
+              onChange={(date) => setStartDate(date)}
+              selectsStart
+              startDate={startDate}
+              endDate={endDate}
+              maxDate={endDate}
+              placeholderText="Start Date"
+              className="border border-green-800 px-4 py-2 rounded-lg text-green-800"
+            />
+            <label className="text-sm text-green-800 font-semibold">To:</label>
+            <DatePicker
+              selected={endDate}
+              onChange={(date) => setEndDate(date)}
+              selectsEnd
+              startDate={startDate}
+              endDate={endDate}
+              minDate={startDate}
+              placeholderText="End Date"
+              className="border border-green-800 px-4 py-2 rounded-lg text-green-800"
+            />
           </div>
-
-          {/* ✅ Show date picker only for custom */}
-          {filter === "Custom" && (
-            <div className="flex items-center gap-2">
-              <DatePicker
-                selected={startDate}
-                onChange={(date) => setStartDate(date)}
-                selectsStart
-                startDate={startDate}
-                endDate={endDate}
-                placeholderText="Start Date"
-                className="border px-2 py-1 rounded"
-              />
-              <DatePicker
-                selected={endDate}
-                onChange={(date) => setEndDate(date)}
-                selectsEnd
-                startDate={startDate}
-                endDate={endDate}
-                placeholderText="End Date"
-                className="border px-2 py-1 rounded"
-              />
-            </div>
-          )}
         </div>
 
         {/* Stats */}

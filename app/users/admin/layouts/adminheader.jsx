@@ -31,42 +31,47 @@ const AdminHeader = ({ toggleSidebar, setCurrentView }) => {
   const [userImage, setUserImage] = useState("");
   const [loggedInUserId, setLoggedInUserId] = useState(null);
 
-  const decryptData = (data) => {
-    if (!data) return null;
-    try {
-      const bytes = CryptoJS.AES.decrypt(data, SECRET_KEY);
-      return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-    } catch (error) {
-      console.error("Decryption failed:", error);
-      return null;
-    }
-  };
- const decryptUserId = () => {
-    const encryptedUserId = sessionStorage.getItem("user_id");
+   const decryptData = (data) => {
+     if (!data) return null;
+     try {
+       const bytes = CryptoJS.AES.decrypt(data, SECRET_KEY);
+       const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+ 
+       // 🔒 safeguard against empty/invalid
+       if (!decrypted) {
+         console.warn("Decryption returned empty string");
+         return null;
+       }
+ 
+       try {
+         return JSON.parse(decrypted);
+       } catch (parseError) {
+         console.error("Invalid JSON after decryption:", parseError);
+         return null;
+       }
+     } catch (error) {
+       console.error("Decryption failed:", error);
+       return null;
+     }
+   };
 
-    if (encryptedUserId) {
-      try {
-        const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
 
-        // 🔹 Remove wrapping quotes if any
-        decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
-
-        // 🔹 Cast to integer
-        const numericId = parseInt(decryptedUserId, 10);
-
-        if (!isNaN(numericId)) {
-          setLoggedInUserId(numericId);
-        } else {
-          console.error("Invalid decrypted student ID:", decryptedUserId);
+   const decryptUserId = () => {
+      const encryptedUserId = sessionStorage.getItem("user_id");
+  
+      if (encryptedUserId) {
+        try {
+          const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
+          const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+          setLoggedInUserId(decryptedUserId);
+        } catch (error) {
+          console.error("Error decrypting user ID:", error);
         }
-      } catch (error) {
-        console.error("Error decrypting user ID:", error);
       }
-    }
-  };
+    };
 
-  useEffect(() => {
+useEffect(() => {
+  const updateProfile = () => {
     const storedUsername = sessionStorage.getItem("username");
     const storedImage = sessionStorage.getItem("userImage");
 
@@ -79,11 +84,25 @@ const AdminHeader = ({ toggleSidebar, setCurrentView }) => {
       const decryptedImage = decryptData(storedImage);
       setUserImage(decryptedImage || "");
     }
+  };
 
-    decryptUserId();
+  // Run on mount
+  updateProfile();
 
-    //bag o ni
-  }, [loggedInUserId]);
+  // 🔹 Listen for profile updates
+  window.addEventListener("userProfileUpdated", updateProfile);
+
+  decryptUserId();
+
+  // 🔹 Example: refresh every 5s
+  const interval = setInterval(updateProfile, 5000);
+
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener("userProfileUpdated", updateProfile);
+  };
+}, [loggedInUserId]);
+
 
   return (
     <>

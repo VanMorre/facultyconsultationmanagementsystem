@@ -9,7 +9,7 @@ include '../../dbconnection.php';
 try {
     $data = json_decode(file_get_contents("php://input"), true);
 
-    if (!isset($data['schedulebookings_id']) || !isset($data['action'])) {
+    if (!isset($data['schedulebookings_id']) || !isset($data['action']) || !isset($data['user_id'])) {
         echo json_encode([
             "success" => false,
             "message" => "Invalid request."
@@ -19,6 +19,7 @@ try {
 
     $schedulebookings_id = intval($data['schedulebookings_id']);
     $action = $data['action'];
+    $userId = intval($data['user_id']); // ✅ who performed the action
 
     // ✅ approval_id mapping (adjust to match tbl_approval values)
     $approval_id = null;
@@ -45,7 +46,7 @@ try {
     $checkStmt->execute();
     $current = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($current && in_array($current['approval_id'], [$approval_id])) { 
+    if ($current && $current['approval_id'] == $approval_id) { 
         echo json_encode([
             "success" => false,
             "message" => "Consultation is already marked as $action."
@@ -53,7 +54,10 @@ try {
         exit;
     }
 
-    // 🔎 Step 2: Update
+    // ✅ Start transaction
+    $conn->beginTransaction();
+
+    // 🔎 Step 2: Update status
     $query = "UPDATE tbl_scheduledbookings 
               SET approval_id = :approval_id
               WHERE schedulebookings_id = :schedulebookings_id";
@@ -63,17 +67,37 @@ try {
     $stmt->bindParam(":schedulebookings_id", $schedulebookings_id, PDO::PARAM_INT);
 
     if ($stmt->execute()) {
+        // ✅ Step 3: Insert into activity logs
+        $logQuery = "INSERT INTO tbl_activitylogs (user_id, activity_type, action, activity_time)
+                     VALUES (:user_id, :activity_type, :action, NOW())";
+        $logStmt = $conn->prepare($logQuery);
+
+        $activityType = "Consultation Status Update";
+        $logAction = "Updated consultation (ID: {$schedulebookings_id}) to status: {$action}";
+
+        $logStmt->execute([
+            ':user_id' => $userId,
+            ':activity_type' => $activityType,
+            ':action' => $logAction
+        ]);
+
+        $conn->commit();
+
         echo json_encode([
             "success" => true,
-            "message" => "Consultation status updated to $action successfully."
+            "message" => "Consultation status updated to $action successfully and activity logged."
         ]);
     } else {
+        $conn->rollBack();
         echo json_encode([
             "success" => false,
             "message" => "Failed to update consultation."
         ]);
     }
 } catch (PDOException $e) {
+    if ($conn->inTransaction()) {
+        $conn->rollBack();
+    }
     echo json_encode([
         "success" => false,
         "message" => "Database error: " . $e->getMessage()

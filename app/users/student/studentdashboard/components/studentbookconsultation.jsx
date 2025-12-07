@@ -1,7 +1,7 @@
 import { TbHistory } from "react-icons/tb";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
-import React, { useState, useEffect , useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import CryptoJS from "crypto-js";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -74,24 +74,24 @@ const BookConsultationManagement = () => {
     }
   };
 
-useEffect(() => {
-  decryptUserId();
-  const storedNotified = sessionStorage.getItem("notified_availability_ids");
-  if (storedNotified) {
-    notifiedAvailabilityIdsRef.current = JSON.parse(storedNotified);
-  }
+  useEffect(() => {
+    decryptUserId();
+    const storedNotified = sessionStorage.getItem("notified_availability_ids");
+    if (storedNotified) {
+      notifiedAvailabilityIdsRef.current = JSON.parse(storedNotified);
+    }
 
-  let isInitial = true;
+    let isInitial = true;
 
-  fetchAvailabilityDataWithNotify(isInitial);
-  isInitial = false;
+    fetchAvailabilityDataWithNotify(isInitial);
+    isInitial = false;
 
-  const interval = setInterval(() => {
-    fetchAvailabilityDataWithNotify(false);
-  }, 5000);
+    const interval = setInterval(() => {
+      fetchAvailabilityDataWithNotify(false);
+    }, 5000);
 
-  return () => clearInterval(interval);
-}, [loggedInUserId]);
+    return () => clearInterval(interval);
+  }, [loggedInUserId]);
 
   // Days in month util
   const daysInMonth = (month, year) => {
@@ -194,71 +194,78 @@ useEffect(() => {
     setOpenDialog(true);
   };
 
- const fetchAvailabilityDataWithNotify = async (isInitial = false) => {
-  try {
-    const response = await axios.get(
-      `http://localhost/fchms/app/api_fchms/allavailabilityfaculty/fetch-allavailabilityfaculty.php`
-    );
-
-    if (response.data.success) {
-      const newAvailabilities = response.data.data;
-
-      // Extract unique availability IDs
-      const currentIds = newAvailabilities.map((item) => item.availabilityfaculty_id);
-
-      // Find IDs that are new compared to stored ones
-      const newIds = currentIds.filter(
-        (id) => !notifiedAvailabilityIdsRef.current.includes(id)
+  const fetchAvailabilityDataWithNotify = async (isInitial = false) => {
+    try {
+      const response = await axios.get(
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/allavailabilityfaculty/fetch-allavailabilityfaculty.php`
       );
 
-      // 🔔 Show toast only on subsequent fetch (not on initial load)
-      if (!isInitial && newIds.length > 0 && !toastShownAvailabilityRef.current) {
-        toastShownAvailabilityRef.current = true;
+      if (response.data.success) {
+        const newAvailabilities = response.data.data;
 
-        toast.info(`${newIds.length} new faculty availability record(s)`, {
-          toastId: "new-availability-toast", // prevents stacking
-          position: "top-right",
-          autoClose: 2000,
-        });
-
-        // ✅ Save notified IDs
-        notifiedAvailabilityIdsRef.current = [
-          ...notifiedAvailabilityIdsRef.current,
-          ...newIds,
-        ];
-
-        sessionStorage.setItem(
-          "notified_availability_ids",
-          JSON.stringify(notifiedAvailabilityIdsRef.current)
+        // Extract unique availability IDs
+        const currentIds = newAvailabilities.map(
+          (item) => item.availabilityfaculty_id
         );
 
-        // Reset lock after delay
-        setTimeout(() => {
-          toastShownAvailabilityRef.current = false;
-        }, 5000);
-      }
-
-      // ✅ On initial fetch, just mark IDs without showing a toast
-      if (isInitial) {
-        notifiedAvailabilityIdsRef.current = [
-          ...notifiedAvailabilityIdsRef.current,
-          ...currentIds,
-        ];
-        sessionStorage.setItem(
-          "notified_availability_ids",
-          JSON.stringify(notifiedAvailabilityIdsRef.current)
+        // Find IDs that are new compared to stored ones
+        const newIds = currentIds.filter(
+          (id) => !notifiedAvailabilityIdsRef.current.includes(id)
         );
-      }
 
-      setFetchAvailability(newAvailabilities);
-    } else {
+        // 🔔 Show toast only on subsequent fetch (not on initial load)
+        if (
+          !isInitial &&
+          newIds.length > 0 &&
+          !toastShownAvailabilityRef.current
+        ) {
+          toastShownAvailabilityRef.current = true;
+
+          toast.info(`${newIds.length} new faculty availability record(s)`, {
+            toastId: "new-availability-toast", // prevents stacking
+            position: "top-right",
+            autoClose: 2000,
+          });
+
+          // ✅ Save notified IDs
+          notifiedAvailabilityIdsRef.current = [
+            ...notifiedAvailabilityIdsRef.current,
+            ...newIds,
+          ];
+
+          sessionStorage.setItem(
+            "notified_availability_ids",
+            JSON.stringify(notifiedAvailabilityIdsRef.current)
+          );
+
+          // Reset lock after delay
+          setTimeout(() => {
+            toastShownAvailabilityRef.current = false;
+          }, 5000);
+        }
+
+        // ✅ On initial fetch, just mark IDs without showing a toast
+        if (isInitial) {
+          notifiedAvailabilityIdsRef.current = [
+            ...notifiedAvailabilityIdsRef.current,
+            ...currentIds,
+          ];
+          sessionStorage.setItem(
+            "notified_availability_ids",
+            JSON.stringify(notifiedAvailabilityIdsRef.current)
+          );
+        }
+
+        setFetchAvailability(newAvailabilities);
+      } else {
+        setFetchAvailability([]);
+      }
+    } catch (error) {
+      console.error("Error fetching faculty availability:", error);
       setFetchAvailability([]);
     }
-  } catch (error) {
-    console.error("Error fetching faculty availability:", error);
-    setFetchAvailability([]);
-  }
-};
+  };
   const filteredFaculty = AvailabilityFetch.filter(
     (f) => f.availability_name === selectedDayName
   );
@@ -301,7 +308,8 @@ useEffect(() => {
       };
 
       const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/add-bookconsultation.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookconsultation/add-bookconsultation.php`,
         payload
       );
 
@@ -381,67 +389,78 @@ useEffect(() => {
           </div>
 
           {/* Days of Week */}
-          <div className="grid grid-cols-7 text-center font-semibold border-b bg-gray-100 text-black shadow-xl text-xs sm:text-sm">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-              <div key={day} className="p-1 sm:p-2 border border-gray-200">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 shadow-xl text-xs sm:text-sm">
-            {calendarDays.map(({ date, currentMonth }, idx) => {
-              const availabilities = getFacultyForDate(date);
-              const faculty =
-                availabilities.length > 0 ? availabilities[0] : null;
-
-              return (
-                <div
-                  key={date.toISOString()} // more stable key than idx
-                  onClick={() => openDateDialog(date)}
-                  className={`h-16 sm:h-28 border flex flex-col items-start p-1 sm:p-2 cursor-pointer
-          ${!currentMonth ? "text-gray-400 bg-gray-50" : "bg-white"}
-          ${isToday(date) ? "bg-gray-200 font-bold" : ""}
-          hover:bg-green-100`}
-                >
-                  <div className="self-end">{date.getDate()}</div>
-
-                  {availabilities.length > 0 &&
-                    // Group by username (unique faculty only)
-                    [
-                      ...new Map(
-                        availabilities.map((f) => [f.username, f])
-                      ).values(),
-                    ].map((f, i) => (
-                      <button
-                        key={`${f.user_id}-${i}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const clickedDay = f.availability_name;
-
-                          // Get all slots of this faculty for this day
-                          const facultyDayAvailabilities =
-                            AvailabilityFetch.filter(
-                              (af) =>
-                                af.username === f.username &&
-                                af.availability_name === clickedDay
-                            );
-
-                          setFacultyDialog({
-                            username: f.username,
-                            day: clickedDay,
-                            availabilities: facultyDayAvailabilities,
-                          });
-                        }}
-                        className="w-full text-center text-green-800 text-xs sm:text-sm font-medium underline hover:text-green-600"
+          {/* Calendar Container with vertical + horizontal scroll */}
+          <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+            {/* Horizontal scroll area */}
+            <div className="overflow-x-auto touch-pan-x scroll-smooth">
+              <div className="min-w-[900px]">
+                {/* Days Header */}
+                <div className="grid grid-cols-7 text-center font-semibold border-b bg-gray-100 text-black shadow-xl text-xs sm:text-sm">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                    (day) => (
+                      <div
+                        key={day}
+                        className="p-1 sm:p-2 border border-gray-200"
                       >
-                        {f.username}
-                      </button>
-                    ))}
+                        {day}
+                      </div>
+                    )
+                  )}
                 </div>
-              );
-            })}
+
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 shadow-xl text-xs sm:text-sm">
+                  {calendarDays.map(({ date, currentMonth }) => {
+                    const availabilities = getFacultyForDate(date);
+
+                    return (
+                      <div
+                        key={date.toISOString()}
+                        onClick={() => openDateDialog(date)}
+                        className={`h-20 sm:h-28 border flex flex-col items-start p-1 sm:p-2 cursor-pointer
+                ${!currentMonth ? "text-gray-400 bg-gray-50" : "bg-white"}
+                ${isToday(date) ? "bg-gray-200 font-bold" : ""}
+                hover:bg-green-100`}
+                      >
+                        <div className="self-end">{date.getDate()}</div>
+
+                        {availabilities.length > 0 &&
+                          [
+                            ...new Map(
+                              availabilities.map((f) => [f.username, f])
+                            ).values(),
+                          ].map((f, i) => (
+                            <button
+                              key={`${f.user_id}-${i}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const clickedDay = f.availability_name;
+
+                                const facultyDayAvailabilities =
+                                  AvailabilityFetch.filter(
+                                    (af) =>
+                                      af.username === f.username &&
+                                      af.availability_name === clickedDay
+                                  );
+
+                                setFacultyDialog({
+                                  username: f.username,
+                                  day: clickedDay,
+                                  availabilities: facultyDayAvailabilities,
+                                });
+                              }}
+                              className="w-full text-center text-green-800 text-xs sm:text-sm font-medium underline hover:text-green-600 truncate"
+                              title={f.username}
+                            >
+                              {f.username}
+                            </button>
+                          ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Faculty Availability Dialog */}

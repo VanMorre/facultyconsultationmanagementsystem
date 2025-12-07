@@ -2,12 +2,10 @@ import {
   TbZoom,
   TbClipboardList,
   TbPlus,
-  TbCalendar,
   TbFilter,
-  TbHistory,
+  TbDotsVertical,
 } from "react-icons/tb";
-import { HiCheckCircle, HiXCircle } from "react-icons/hi";
-
+import { Textarea } from "@/components/ui/textarea";
 import {
   Pagination,
   PaginationContent,
@@ -41,40 +39,36 @@ import {
 
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { format } from "date-fns";
 import axios from "axios";
 import { motion } from "framer-motion";
-import React, { useState, useEffect , useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import CryptoJS from "crypto-js";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const ConsultationManagement = () => {
-  const [date, setDate] = useState(null); // ✅ fixed for .jsx
   const [fetchbooking, setfetchbooking] = useState([]);
-  const [TimerangeFetch, setTimerangeFetch] = useState([]);
-  const [selectedTimerange, setSelectedTimerange] = useState("");
-  const [selectedStudents, setSelectedStudents] = useState("");
+  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [scheduledStudentIds, setScheduledStudentIds] = useState(new Set()); // Track already scheduled student booking_ids
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const DEFAULT_APPROVAL_STATUS_ID = 5;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [ConsultationFetch, setFetchConsultation] = useState([]);
+  const [feedback, setFeedback] = useState("");
+  const [openFeedbackDialog, setopenFeedbackDialog] = useState(false);
+  const [selectedConsultationId, setSelectedConsultationId] = useState(null);
+  const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [selectedConsultation, setSelectedConsultation] = useState(null);
+  const [discussion, setDiscussion] = useState("");
+  const [recommendation, setRecommendation] = useState("");
   const [statusFilter, setStatusFilter] = useState(""); // "", "Complete", "Schedule", "Cancel"
   const [isLoading, setIsLoading] = useState(false);
   const notifiedBookingIdsRef = useRef([]);
   const toastShownBookingRef = useRef(false);
 
-
   const decryptUserId = () => {
-  const encryptedUserId = sessionStorage.getItem("user_id");
+    const encryptedUserId = sessionStorage.getItem("user_id");
 
     if (encryptedUserId) {
       try {
@@ -98,39 +92,36 @@ const ConsultationManagement = () => {
     }
   };
 
+  useEffect(() => {
+    decryptUserId();
+  }, []);
 
-useEffect(() => {
-  decryptUserId();
-  fetchtimerange();
-}, []);
+  // 🔑 Second effect: runs whenever loggedInUserId changes
+  useEffect(() => {
+    if (loggedInUserId) {
+      // Always fetch these once
+      fetchConsultation(loggedInUserId);
 
-// 🔑 Second effect: runs whenever loggedInUserId changes
-useEffect(() => {
-  if (loggedInUserId) {
-    // Always fetch these once
-    fetchConsultation(loggedInUserId);
+      // Load session-stored notified booking IDs
+      const storedNotified = sessionStorage.getItem("notified_booking_ids");
+      if (storedNotified) {
+        notifiedBookingIdsRef.current = JSON.parse(storedNotified);
+      }
 
-    // Load session-stored notified booking IDs
-    const storedNotified = sessionStorage.getItem("notified_booking_ids");
-    if (storedNotified) {
-      notifiedBookingIdsRef.current = JSON.parse(storedNotified);
+      let isInitial = true;
+
+      // First fetch (initial load)
+      fetchbookingstudentWithNotify(loggedInUserId, isInitial);
+      isInitial = false;
+
+      // Poll every 5 seconds
+      const interval = setInterval(() => {
+        fetchbookingstudentWithNotify(loggedInUserId, false);
+      }, 5000);
+
+      return () => clearInterval(interval);
     }
-
-    let isInitial = true;
-
-    // First fetch (initial load)
-    fetchbookingstudentWithNotify(loggedInUserId, isInitial);
-    isInitial = false;
-
-    // Poll every 5 seconds
-    const interval = setInterval(() => {
-      fetchbookingstudentWithNotify(loggedInUserId, false);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }
-}, [loggedInUserId]);
-
+  }, [loggedInUserId]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -142,12 +133,6 @@ useEffect(() => {
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
         String(finv.student_name)
-          .toLowerCase()
-          .includes(searchText.toLowerCase()) ||
-        String(finv.schedulebookdate)
-          .toLowerCase()
-          .includes(searchText.toLowerCase()) ||
-        String(finv.timeranges)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
         String(finv.approval_name)
@@ -194,14 +179,20 @@ useEffect(() => {
     }, 1000); // 1 second effect
   };
 
+  // Filter out already scheduled students and get unique students
   const uniqueStudents = [
-    ...new Map(fetchbooking.map((s) => [s.student_name, s])).values(),
+    ...new Map(
+      fetchbooking
+        .filter((s) => !scheduledStudentIds.has(s.booking_id)) // Exclude already scheduled
+        .map((s) => [s.student_name, s])
+    ).values(),
   ];
 
-   const fetchbookingstudentWithNotify = async (UserID, isInitial = false) => {
+  const fetchbookingstudentWithNotify = async (UserID, isInitial = false) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
         { params: { user_id: UserID } }
       );
 
@@ -260,50 +251,33 @@ useEffect(() => {
   };
 
 
-  const fetchtimerange = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/timerange/fetch-timerange.php`
-      );
-
-      if (response.data.success) {
-        setTimerangeFetch(response.data.data);
-      } else {
-        console.log(response.data.message || "No timerange found");
-        setTimerangeFetch([]);
-      }
-    } catch (error) {
-      console.error("Error fetching timerange :", error);
-    }
-  };
-
   const handleSubmitConsultation = async () => {
-    if (selectedStudents.length === 0 || !date || !selectedTimerange) {
-      toast.error("Please select students, date, and a time range.");
+    if (selectedStudents.length === 0) {
+      toast.error("Please select at least one student.");
       return;
     }
 
     try {
       const payload = {
         students: selectedStudents.map((id) => Number(id)), // ✅ these should be booking_id values
-        consultation_date: format(date, "yyyy-MM-dd"),
-        timerange_id: Number(selectedTimerange),
         approval_id: DEFAULT_APPROVAL_STATUS_ID,
         user_id: Number(loggedInUserId),
       };
 
       const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/add-consultation.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/add-consultation.php`,
         payload
       );
 
       if (response.data.success) {
         toast.success("Consultation scheduled successfully!");
         setSelectedStudents([]);
-        setDate(null);
-        setSelectedTimerange("");
         setIsDialogOpen(false);
+        
+        // Refresh both consultations and student bookings to update the list
         await fetchConsultation(loggedInUserId);
+        await fetchbookingstudentWithNotify(loggedInUserId, false);
       } else {
         toast.error(
           response.data.message || "Failed to schedule consultation."
@@ -318,59 +292,90 @@ useEffect(() => {
   const fetchConsultation = async (UserID) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/fetch-consultation.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/fetch-consultation.php`,
         {
           params: { user_id: UserID }, // ✅ send user_id
         }
       );
 
       if (response.data.success) {
-        setFetchConsultation(response.data.data);
+        const consultations = response.data.data;
+        setFetchConsultation(consultations);
+        
+        // Extract booking_ids from scheduled consultations
+        const scheduledIds = new Set(
+          consultations.map((c) => c.booking_id).filter((id) => id != null)
+        );
+        setScheduledStudentIds(scheduledIds);
       } else {
         setFetchConsultation([]);
+        setScheduledStudentIds(new Set());
       }
     } catch (error) {
       console.error("Error fetching consultation:", error);
     }
   };
 
-  const handleCompleted = async (schedulebookings_id, currentStatus) => {
-    if (currentStatus === "Completed") {
-      toast.warning("This consultation is already marked as Completed!");
+  const fetchConsultationDetails = async (schedulebookings_id) => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/view-consultation.php`,
+        {
+          params: { schedulebookings_id },
+        }
+      );
+
+      if (response.data.success) {
+        const consultation = response.data.data;
+        setSelectedConsultation(consultation);
+        setDiscussion(consultation.discussion || "");
+        setRecommendation(consultation.recommendation || "");
+      }
+    } catch (error) {
+      console.error("Error fetching consultation details:", error);
+      toast.error("Failed to load consultation details.");
+    }
+  };
+
+  const handleSubmitConsultationDetails = async () => {
+    if (selectedConsultation?.approval_name === "Completed") {
+      toast.warning("This consultation is already completed!");
       return;
     }
-    if (currentStatus === "Cancelled") {
-      toast.warning("This consultation has been Cancelled!");
+
+    if (!selectedConsultationId || !discussion.trim() || !recommendation.trim()) {
+      toast.error("Please fill in both Key Discussion Points and Recommendations.");
       return;
     }
 
     try {
       const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/approval-consultation.php`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/complete-consultation.php`,
         {
-          schedulebookings_id,
-          action: "Completed",
-          user_id: loggedInUserId, // ✅ Always send logged-in user
+          schedulebookings_id: selectedConsultationId,
+          discussion: discussion.trim(),
+          recommendation: recommendation.trim(),
+          user_id: loggedInUserId,
         }
       );
 
       if (response.data.success) {
-        toast.success("Consultation marked as Completed");
-
-        // ✅ Update only the affected row in state
-        setFetchConsultation((prev) =>
-          prev.map((consult) =>
-            consult.schedulebookings_id === schedulebookings_id
-              ? { ...consult, approval_name: "Completed" }
-              : consult
-          )
-        );
+        toast.success("Consultation completed successfully!");
+        setOpenViewDialog(false);
+        setDiscussion("");
+        setRecommendation("");
+        setSelectedConsultation(null);
+        setSelectedConsultationId(null);
+        
+        // Refresh consultations list
+        await fetchConsultation(loggedInUserId);
       } else {
-        toast.error(response.data.message || "Failed to mark as Completed.");
+        toast.error(response.data.message || "Failed to complete consultation.");
       }
     } catch (error) {
-      console.error(error);
-      toast.error("Server error while updating to Completed.");
+      console.error("Error completing consultation:", error);
+      toast.error("Server error while completing consultation.");
     }
   };
 
@@ -387,7 +392,8 @@ useEffect(() => {
 
     try {
       const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/approval-consultation.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/approval-consultation.php`,
         {
           schedulebookings_id,
           action: "Scheduled",
@@ -428,7 +434,8 @@ useEffect(() => {
 
     try {
       const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/approval-consultation.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/approval-consultation.php`,
         {
           schedulebookings_id,
           action: "Cancelled",
@@ -456,6 +463,42 @@ useEffect(() => {
     }
   };
 
+const handleFeedback = async (schedulebookings_id) => {
+  try {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/feedback-consultation.php`,
+      {
+        schedulebookings_id,
+        user_id: loggedInUserId,
+        feedback_text: feedback, // ✅ match backend
+      }
+    );
+
+    if (response.data.success) {
+      toast.success("Feedback submitted successfully!");
+
+      setFetchConsultation((prev) =>
+        prev.map((consult) =>
+          consult.schedulebookings_id === schedulebookings_id
+            ? { ...consult, feedback: feedback }
+            : consult
+        )
+      );
+
+      setFeedback(""); 
+      setopenFeedbackDialog(false);
+      setSelectedConsultationId(null); 
+    } else {
+      toast.error(response.data.message || "Failed to submit feedback.");
+    }
+  } catch (error) {
+    console.error(error);
+    toast.error("Server error while submitting feedback.");
+  }
+};
+
+
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -471,12 +514,16 @@ useEffect(() => {
         />
 
         <div className="bg-white p-6  shadow-md">
-          <h1 className="text-l font-bold mb-4 text-green-800 pb-5 mt-3 flex items-center gap-2">
+          <h1 className="text-l font-bold mb-4 text-green-800  mt-3 flex items-center gap-2">
             <TbClipboardList className="text-xl w-6 h-6 !w-6 !h-6" />
             Consultations
           </h1>
+          <p className="text-sm text-gray-600 mb-4">
+            This table provides a detailed record of student consultations,
+            including the consultation number, student name, date, time, status,
+            and available actions for managing each entry.
+          </p>
 
-          {/* Search Input with Magnifier Icon and Buttons */}
           <div className="flex items-center gap-4 pt-6 mb-4">
             {/* Search Input */}
             <div className="relative w-full max-w-md">
@@ -493,7 +540,19 @@ useEffect(() => {
               <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
             </div>
 
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog 
+              open={isDialogOpen} 
+              onOpenChange={(open) => {
+                setIsDialogOpen(open);
+                if (open && loggedInUserId) {
+                  // Refresh consultations when dialog opens to get latest scheduled students
+                  fetchConsultation(loggedInUserId);
+                }
+                if (!open) {
+                  setSelectedStudents([]);
+                }
+              }}
+            >
               <DialogTrigger asChild>
                 <button
                   onClick={() => setIsDialogOpen(true)}
@@ -505,35 +564,61 @@ useEffect(() => {
               </DialogTrigger>
               <DialogContent
                 className="w-full h-auto max-h-[85vh] flex flex-col"
-                style={{ maxWidth: "1200px", height: "700px" }}
+                style={{ maxWidth: "700px", height: "650px" }}
               >
-                <DialogHeader className="pb-4">
+                <DialogHeader className="pb-4 flex-shrink-0">
                   <DialogTitle className="text-green-800 text-xl font-semibold">
                     Schedule Consultation
                   </DialogTitle>
                   <p className="text-sm text-gray-500">
-                    Select students and set a consultation schedule
+                    Select students for consultation
                   </p>
                 </DialogHeader>
 
-                {/* Two-column layout */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-y-auto px-1">
-                  {/* Left side: Students */}
-                  <div className="flex flex-col h-full">
-                    <Label className="mb-3 block text-green-800 font-medium">
-                      Student list:
-                    </Label>
+                {/* Student list */}
+                <div className="flex flex-col flex-1 min-h-0">
+                  <Label className="mb-3 block text-green-800 font-medium flex-shrink-0">
+                    Student list:
+                  </Label>
 
-                    <div className="grid grid-cols-1 gap-2 flex-1 overflow-y-auto border border-green-800 shadow-xl p-2 bg-green-50 rounded-md">
+                  {/* Select All checkbox */}
+                  <div className="mb-3 pb-2 border-b border-gray-300 flex-shrink-0">
+                    <label className="flex items-center gap-3 px-3 py-2 hover:bg-green-50 cursor-pointer rounded">
+                      <input
+                        type="checkbox"
+                        checked={
+                          uniqueStudents.length > 0 &&
+                          selectedStudents.length === uniqueStudents.length
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedStudents(
+                              uniqueStudents.map((s) => s.booking_id)
+                            );
+                          } else {
+                            setSelectedStudents([]);
+                          }
+                        }}
+                        className="h-4 w-4 text-green-800 border-green-800 rounded"
+                      />
+                      <span className="text-sm font-semibold text-green-800">
+                        Select All
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Student list with scroll */}
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden border border-green-800 shadow-xl bg-green-50 rounded-md pr-1 custom-scrollbar" style={{ maxHeight: "450px" }}>
+                    <div className="grid grid-cols-1 gap-2 p-3">
                       {uniqueStudents.length > 0 ? (
                         uniqueStudents.map((student) => (
                           <label
-                            key={student.booking_id} // ✅ keep booking_id as unique key
-                            className="flex items-center gap-3 px-3 py-2 border border-gray-200 rounded-sm hover:bg-green-100 cursor-pointer w-full"
+                            key={student.booking_id}
+                            className="flex items-start gap-3 px-4 py-3 border border-gray-200 rounded-md hover:bg-green-100 cursor-pointer w-full bg-white"
                           >
                             <input
                               type="checkbox"
-                              value={student.booking_id} // ✅ use booking_id here
+                              value={student.booking_id}
                               checked={selectedStudents.includes(
                                 student.booking_id
                               )}
@@ -551,111 +636,50 @@ useEffect(() => {
                                   );
                                 }
                               }}
-                              className="h-4 w-4 text-green-800 border-green-800 rounded"
+                              className="h-4 w-4 text-green-800 border-green-800 rounded mt-1 flex-shrink-0"
                             />
-                            <span className="text-sm">
-                              {student.student_name}
-                            </span>
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className="text-sm font-medium text-gray-900">
+                                {student.student_name}
+                              </span>
+                              {(student.course_name || student.year_name) && (
+                                <span className="text-xs text-gray-600 mt-1">
+                                  {student.course_name || ""}
+                                  {student.course_name && student.year_name
+                                    ? " • "
+                                    : ""}
+                                  {student.year_name || ""}
+                                </span>
+                              )}
+                              {student.booking_date && (
+                                <span className="text-xs text-gray-500 mt-1">
+                                  Request Date: {student.booking_date}
+                                </span>
+                              )}
+                              {student.time_range && (
+                                <span className="text-xs text-gray-500">
+                                  Time: {student.time_range}
+                                </span>
+                              )}
+                            </div>
                           </label>
                         ))
                       ) : (
-                        <p className="text-gray-500 text-sm">
+                        <p className="text-gray-500 text-sm text-center py-4">
                           No students found.
                         </p>
                       )}
                     </div>
                   </div>
-
-                  {/* Right side: Date & Time */}
-                  <div className="flex flex-col h-full justify-between">
-                    {/* Date Picker */}
-                    <div>
-                      <Label className="mb-2 block text-green-800 font-medium">
-                        Date
-                      </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={`w-full justify-between border-green-800 ${
-                              !date && "text-muted-foreground"
-                            }`}
-                          >
-                            {date ? (
-                              format(date, "PPP")
-                            ) : (
-                              <span>Select date</span>
-                            )}
-                            <CalendarIcon className="ml-2 h-4 w-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={date}
-                            onSelect={setDate}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    {/* Start Time */}
-                    <div>
-                      <Label
-                        htmlFor="subject"
-                        className="mb-2 block text-green-800"
-                      >
-                        Start time
-                      </Label>
-                      <Select
-                        value={selectedTimerange}
-                        onValueChange={(val) => setSelectedTimerange(val)}
-                      >
-                        <SelectTrigger
-                          id="time"
-                          className="w-full border-2 border-green-800 rounded-md focus:ring-2 focus:ring-green-600"
-                        >
-                          <SelectValue placeholder="Select timerange" />
-                        </SelectTrigger>
-                        <SelectContent className="border-2 border-green-800 rounded-md">
-                          {TimerangeFetch.length > 0 ? (
-                            TimerangeFetch.map((time) => (
-                              <SelectItem
-                                key={time.timerange_id}
-                                value={time.timerange_id}
-                              >
-                                {time.start_time} - {time.end_time}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem disabled>No timerange found</SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Note */}
-                    <div className="mt-6">
-                      <p className="text-sm text-gray-500">
-                        Note!: Please ensure the end time is later than the
-                        start time. I cater consultation only 10 students per
-                        day, the rest may be rescheduled or cancelled if there
-                        are conflicts in my schedule.
-                      </p>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Sticky Footer Save */}
-                <div className="pt-4 border-t flex justify-end gap-3 bg-white mt-4">
+                <div className="pt-4 border-t flex justify-end gap-3 bg-white mt-4 flex-shrink-0">
                   <Button
                     variant="outline"
                     className="border-green-800 text-green-800"
                     onClick={() => {
                       setSelectedStudents([]);
-                      setDate(null);
-                      setSelectedTimerange("");
                     }}
                   >
                     Cancel
@@ -707,14 +731,6 @@ useEffect(() => {
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Date
-                </th>
-
-                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Time
-                </th>
-
-                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Status
                 </th>
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
@@ -723,9 +739,9 @@ useEffect(() => {
               </tr>
             </thead>
             <tbody>
-                {isLoading ? (
+              {isLoading ? (
                 <tr>
-                  <td colSpan="22" className="text-center py-6">
+                  <td colSpan="4" className="text-center py-6">
                     <div className="flex justify-center items-center gap-2 text-green-700 font-medium">
                       <svg
                         className="animate-spin h-6 w-6 text-green-800"
@@ -760,12 +776,6 @@ useEffect(() => {
                     <td className="border px-6 py-2 text-center">
                       {consult.student_name}
                     </td>
-                    <td className="border px-6 py-2 text-center">
-                      {consult.schedulebookdate}
-                    </td>
-                    <td className="border px-6 py-2 text-center">
-                      {consult.timeranges}
-                    </td>
 
                     <td className="border px-6 py-3 text-center text-sm font-semibold">
                       <span
@@ -784,55 +794,234 @@ useEffect(() => {
                     </td>
 
                     <td className="border px-6 py-3 text-center text-sm font-semibold">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() =>
-                            handleCompleted(
-                              consult.schedulebookings_id,
-                              consult.approval_name
-                            )
-                          }
-                          className="px-2 py-1 border-2 border-green-500 text-green-500 rounded-md focus:outline-none hover:bg-green-600 hover:text-white transition"
-                        >
-                          <HiCheckCircle className="w-6 h-6" />
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            handleSchedule(
-                              consult.schedulebookings_id,
-                              consult.approval_name
-                            )
-                          }
-                          className="px-2 py-1 border-2 border-blue-500 text-blue-500 rounded-md focus:outline-none hover:bg-blue-600 hover:text-white transition"
-                        >
-                          <TbHistory className="w-6 h-6" />
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            handleCancelled(
-                              consult.schedulebookings_id,
-                              consult.approval_name
-                            )
-                          }
-                          className="px-2 py-1 border-2 border-red-500 text-red-500 rounded-md focus:outline-none hover:bg-red-600 hover:text-white transition"
-                        >
-                          <HiXCircle className="w-6 h-6" />
-                        </button>
+                      <div className="flex items-center justify-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none hover:bg-gray-100 transition">
+                              <TbDotsVertical className="w-5 h-5 text-gray-700" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={async () => {
+                                setSelectedConsultationId(consult.schedulebookings_id);
+                                await fetchConsultationDetails(consult.schedulebookings_id);
+                                setOpenViewDialog(true);
+                              }}
+                              className="cursor-pointer text-blue-700 hover:bg-blue-50"
+                            >
+                              View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleSchedule(
+                                  consult.schedulebookings_id,
+                                  consult.approval_name
+                                )
+                              }
+                              className="cursor-pointer text-blue-700 hover:bg-blue-50"
+                            >
+                              Scheduled
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleCancelled(
+                                  consult.schedulebookings_id,
+                                  consult.approval_name
+                                )
+                              }
+                              className="cursor-pointer text-red-700 hover:bg-red-50"
+                            >
+                              Cancelled
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedConsultationId(consult.schedulebookings_id);
+                                setopenFeedbackDialog(true);
+                              }}
+                              className="cursor-pointer text-yellow-700 hover:bg-yellow-50"
+                            >
+                              Send feedback
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </td>
+
+
+
+
+                    
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="22" className="text-center py-4 text-gray-500">
+                  <td colSpan="4" className="text-center py-4 text-gray-500">
                     No consultation found.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+
+          {/* Feedback Dialog */}
+          <Dialog
+            open={openFeedbackDialog}
+            onOpenChange={(open) => {
+              setopenFeedbackDialog(open);
+              if (!open) {
+                setSelectedConsultationId(null);
+                setFeedback("");
+              }
+            }}
+          >
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Send Feedback</DialogTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  Please share your comments or suggestions about this
+                  consultation. Your feedback will help improve our service.
+                </p>
+              </DialogHeader>
+
+              <div className="flex flex-col gap-4">
+                <Textarea
+                  placeholder="Write your feedback here..."
+                  className="w-full"
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  required
+                />
+
+                <Button
+                  onClick={() => {
+                    if (selectedConsultationId) {
+                      handleFeedback(selectedConsultationId);
+                    }
+                  }}
+                  className="w-full bg-yellow-600 hover:bg-yellow-700"
+                >
+                  Submit
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* View Consultation Dialog */}
+          <Dialog
+            open={openViewDialog}
+            onOpenChange={(open) => {
+              setOpenViewDialog(open);
+              if (!open) {
+                setSelectedConsultation(null);
+                setDiscussion("");
+                setRecommendation("");
+                setSelectedConsultationId(null);
+              }
+            }}
+          >
+            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-green-800 text-xl font-semibold">
+                  Consultation Details
+                </DialogTitle>
+              </DialogHeader>
+
+              {selectedConsultation && (
+                <div className="flex flex-col gap-4 mt-4">
+                  {/* Student Information */}
+                  <div className="border-b pb-4">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Student Information</h3>
+                    <div className="space-y-2">
+                      <p className="text-sm">
+                        <span className="font-medium">Name:</span> {selectedConsultation.student_name}
+                      </p>
+                      {(selectedConsultation.course_name || selectedConsultation.year_name) && (
+                        <p className="text-sm">
+                          <span className="font-medium">Course • Year Level:</span>{" "}
+                          {selectedConsultation.course_name || ""}
+                          {selectedConsultation.course_name && selectedConsultation.year_name ? " • " : ""}
+                          {selectedConsultation.year_name || ""}
+                        </p>
+                      )}
+                      {selectedConsultation.subject_name && (
+                        <p className="text-sm">
+                          <span className="font-medium">Subject:</span> {selectedConsultation.subject_name}
+                        </p>
+                      )}
+                      {selectedConsultation.purpose && (
+                        <p className="text-sm">
+                          <span className="font-medium">Purpose:</span> {selectedConsultation.purpose}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Key Discussion Points */}
+                  <div>
+                    <Label htmlFor="discussion" className="mb-2 block text-green-800 font-medium">
+                      Key Discussion Points {selectedConsultation.approval_name !== "Completed" && <span className="text-red-500">*</span>}
+                    </Label>
+                    <Textarea
+                      id="discussion"
+                      placeholder={selectedConsultation.approval_name === "Completed" ? "No discussion points entered." : "Enter key discussion points..."}
+                      className={`w-full min-h-[120px] ${selectedConsultation.approval_name === "Completed" ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      value={discussion}
+                      onChange={(e) => setDiscussion(e.target.value)}
+                      readOnly={selectedConsultation.approval_name === "Completed"}
+                      required={selectedConsultation.approval_name !== "Completed"}
+                    />
+                  </div>
+
+                  {/* Recommendations */}
+                  <div>
+                    <Label htmlFor="recommendation" className="mb-2 block text-green-800 font-medium">
+                      Recommendations {selectedConsultation.approval_name !== "Completed" && <span className="text-red-500">*</span>}
+                    </Label>
+                    <Textarea
+                      id="recommendation"
+                      placeholder={selectedConsultation.approval_name === "Completed" ? "No recommendations entered." : "Enter recommendations..."}
+                      className={`w-full min-h-[120px] ${selectedConsultation.approval_name === "Completed" ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      value={recommendation}
+                      onChange={(e) => setRecommendation(e.target.value)}
+                      readOnly={selectedConsultation.approval_name === "Completed"}
+                      required={selectedConsultation.approval_name !== "Completed"}
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="flex justify-end gap-3 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      className="border-green-800 text-green-800"
+                      onClick={() => {
+                        setOpenViewDialog(false);
+                        setDiscussion("");
+                        setRecommendation("");
+                        setSelectedConsultation(null);
+                        setSelectedConsultationId(null);
+                      }}
+                    >
+                      {selectedConsultation.approval_name === "Completed" ? "Close" : "Cancel"}
+                    </Button>
+                    <Button
+                      onClick={handleSubmitConsultationDetails}
+                      className="bg-green-800 hover:bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      disabled={
+                        selectedConsultation.approval_name === "Completed" ||
+                        !discussion.trim() ||
+                        !recommendation.trim()
+                      }
+                    >
+                      {selectedConsultation.approval_name === "Completed"
+                        ? "Already Completed"
+                        : "Complete Consultation"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           <div className="flex items-center justify-between mt-14">
             {/* Entries Text */}

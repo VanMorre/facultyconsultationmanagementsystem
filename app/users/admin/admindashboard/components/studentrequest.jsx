@@ -1,4 +1,4 @@
-import { TbZoom, TbFilter } from "react-icons/tb";
+import { TbZoom, TbFilter, TbDotsVertical } from "react-icons/tb";
 import {
   Pagination,
   PaginationContent,
@@ -15,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { HiThumbUp, HiThumbDown } from "react-icons/hi";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect, useRef } from "react";
@@ -153,7 +152,8 @@ const StudentrequestManagement = () => {
   ) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
         { params: { user_id: UserID } }
       );
 
@@ -221,61 +221,83 @@ const StudentrequestManagement = () => {
     }
   };
 
-  const handleApprove = async (booking_id, currentStatus) => {
-    if (currentStatus === "Approve") {
-      toast.warning("This booking is already approved!");
-      return;
-    }
-    if (currentStatus === "Disapprove") {
-      toast.warning("This booking has already been disapproved!");
-      return;
-    }
 
-    try {
-      const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-studentrequest/approve-studentrequest.php`,
-        { booking_id, action: "Approve" }
-      );
 
-      if (response.data.success) {
-        toast.success("Booking approved successfully!");
-        fetchbookingstudentWithNotify(loggedInUserId, false, true); // ✅ skip notify
-      } else {
-        toast.error(response.data.message || "Approval failed.");
+
+
+
+ const handleApprove = async (booking_id, currentStatus) => {
+  if (currentStatus === "Approve") {
+    toast.warning("This booking is already approved!");
+    return;
+  }
+  if (currentStatus === "Disapprove") {
+    toast.warning("This booking has already been disapproved!");
+    return;
+  }
+  if (currentStatus === "Cancelled") {
+    toast.warning("This booking has already been cancelled!");
+    return;
+  }
+
+  try {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-studentrequest/approve-studentrequest.php`,
+      {
+        booking_id,
+        action: "Approve",
+        user_id: loggedInUserId, // ✅ FIXED
       }
-    } catch (error) {
-      console.error(error);
-      toast.error("Server error while approving.");
-    }
-  };
+    );
 
-  const handleReject = async (booking_id, currentStatus) => {
-    if (currentStatus === "Disapprove") {
-      toast.warning("This booking is already disapproved!");
-      return;
+    if (response.data.success) {
+      toast.success("Booking approved successfully!");
+      fetchbookingstudentWithNotify(loggedInUserId, false, true);
+    } else {
+      toast.error(response.data.message || "Approval failed.");
     }
-    if (currentStatus === "Approve") {
-      toast.warning("This booking has already been approved!");
-      return;
-    }
+  } catch (error) {
+    console.error(error);
+    toast.error("Server error while approving.");
+  }
+};
 
-    try {
-      const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-studentrequest/approve-studentrequest.php`,
-        { booking_id, action: "Disapprove" }
-      );
+const handleReject = async (booking_id, currentStatus) => {
+  if (currentStatus === "Disapprove") {
+    toast.warning("This booking is already disapproved!");
+    return;
+  }
+  if (currentStatus === "Approve") {
+    toast.warning("This booking has already been approved!");
+    return;
+  }
+  if (currentStatus === "Cancelled") {
+    toast.warning("This booking has already been cancelled!");
+    return;
+  }
 
-      if (response.data.success) {
-        toast.success("Booking rejected successfully!");
-        fetchbookingstudentWithNotify(loggedInUserId, false, true); // ✅ skip notify
-      } else {
-        toast.error(response.data.message || "Rejection failed.");
+  try {
+    const response = await axios.post(
+     `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-studentrequest/approve-studentrequest.php`,
+      {
+        booking_id,
+        action: "Disapprove",
+        user_id: loggedInUserId, // ✅ FIXED
       }
-    } catch (error) {
-      console.error(error);
-      toast.error("Server error while rejecting.");
+    );
+
+    if (response.data.success) {
+      toast.success("Booking rejected successfully!");
+      fetchbookingstudentWithNotify(loggedInUserId, false, true);
+    } else {
+      toast.error(response.data.message || "Rejection failed.");
     }
-  };
+  } catch (error) {
+    console.error(error);
+    toast.error("Server error while rejecting.");
+  }
+};
+
 
   return (
     <motion.div
@@ -458,24 +480,32 @@ const StudentrequestManagement = () => {
                     </td>
 
                     <td className="border px-6 py-3 text-center text-sm font-semibold">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() =>
-                            handleApprove(bks.booking_id, bks.approval_name)
-                          }
-                          className="px-2 py-1 border-2 border-green-500 text-green-500 rounded-md focus:outline-none hover:bg-green-600 hover:text-white transition"
-                        >
-                          <HiThumbUp className="w-6 h-6" />
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            handleReject(bks.booking_id, bks.approval_name)
-                          }
-                          className="px-2 py-1 border-2 border-red-500 text-red-500 rounded-md focus:outline-none hover:bg-red-600 hover:text-white transition"
-                        >
-                          <HiThumbDown className="w-6 h-6" />
-                        </button>
+                      <div className="flex items-center justify-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none hover:bg-gray-100 transition">
+                              <TbDotsVertical className="w-5 h-5 text-gray-700" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleApprove(bks.booking_id, bks.approval_name)
+                              }
+                              className="cursor-pointer text-green-700 hover:bg-green-50"
+                            >
+                              Approve
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleReject(bks.booking_id, bks.approval_name)
+                              }
+                              className="cursor-pointer text-red-700 hover:bg-red-50"
+                            >
+                              Reject
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </td>
                   </tr>

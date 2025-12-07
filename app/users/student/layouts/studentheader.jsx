@@ -19,48 +19,64 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-import axios from "axios";
+
 
 import { Menu, LogOut, ChevronDown, Plus } from "lucide-react";
 import useLogout from "@/app/users/hooks/logout";
 import CryptoJS from "crypto-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TbUserFilled } from "react-icons/tb";
+
 
 const SECRET_KEY = "my_secret_key_123456";
 
 const StudentHeader = ({ toggleSidebar, setCurrentView }) => {
   const logout = useLogout();
   const [username, setUsername] = useState("");
-  const [userImage, setUserImage] = useState("");
+  const [photo_url, setPhotoUrl] = useState("");
   const [loggedInUserId, setLoggedInUserId] = useState(null);
 
 
   const decryptData = (data) => {
-    if (!data) return null;
-    try {
-      const bytes = CryptoJS.AES.decrypt(data, SECRET_KEY);
-      return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-    } catch (error) {
-      console.error("Decryption failed:", error);
-      return null;
-    }
-  };
-  const decryptUserId = () => {
-    const encryptedUserId = sessionStorage.getItem("user_id");
-
-    if (encryptedUserId) {
-      try {
-        const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
-        setLoggedInUserId(decryptedUserId);
-      } catch (error) {
-        console.error("Error decrypting user ID:", error);
-      }
-    }
-  };
+       if (!data) return null;
+       try {
+         const bytes = CryptoJS.AES.decrypt(data, SECRET_KEY);
+         const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+   
+         // 🔒 safeguard against empty/invalid
+         if (!decrypted) {
+           console.warn("Decryption returned empty string");
+           return null;
+         }
+   
+         try {
+           return JSON.parse(decrypted);
+         } catch (parseError) {
+           console.error("Invalid JSON after decryption:", parseError);
+           return null;
+         }
+       } catch (error) {
+         console.error("Decryption failed:", error);
+         return null;
+       }
+     };
+  
+  
+     const decryptUserId = () => {
+        const encryptedUserId = sessionStorage.getItem("student_id");
+    
+        if (encryptedUserId) {
+          try {
+            const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
+            const decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+            setLoggedInUserId(decryptedUserId);
+          } catch (error) {
+            console.error("Error decrypting user ID:", error);
+          }
+        }
+      };
 
   useEffect(() => {
+    const updateProfile = () => {
     const storedUsername = sessionStorage.getItem("student_email");
     const storedImage = sessionStorage.getItem("photo_url");
 
@@ -71,12 +87,24 @@ const StudentHeader = ({ toggleSidebar, setCurrentView }) => {
 
     if (storedImage) {
       const decryptedImage = decryptData(storedImage);
-      setUserImage(decryptedImage || "");
+      setPhotoUrl(decryptedImage || "");
     }
+      };
+
+
+       updateProfile();
+
+  // 🔹 Listen for profile updates
+  window.addEventListener("studentProfileUpdated", updateProfile);
 
     decryptUserId();
 
-    //bag o ni
+  const interval = setInterval(updateProfile, 5000);
+
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener("studentProfileUpdated", updateProfile);
+  };
  
   }, [loggedInUserId]);
 
@@ -106,7 +134,7 @@ const StudentHeader = ({ toggleSidebar, setCurrentView }) => {
                 >
                   <Avatar>
                     <AvatarImage
-                      src={userImage || "https://github.com/shadcn.png"}
+                      src={photo_url || "https://github.com/shadcn.png"}
                       alt="User Avatar"
                     />
                     <AvatarFallback>

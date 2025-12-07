@@ -9,24 +9,27 @@ include '../../dbconnection.php';
 try {
     $data = json_decode(file_get_contents("php://input"), true);
 
-    if (!isset($data['booking_id']) || !isset($data['action'])) {
+    // ✅ Require booking_id, action, and user_id
+    if (!isset($data['booking_id']) || !isset($data['action']) || !isset($data['user_id'])) {
         echo json_encode([
             "success" => false,
-            "message" => "Invalid request."
+            "message" => "Invalid request. Missing required fields."
         ]);
         exit;
     }
 
     $booking_id = intval($data['booking_id']);
-    $action = $data['action'];
+    $action = trim($data['action']);
+    $userId = intval($data['user_id']); // ✅ Who performed the action
 
-    // ✅ approval_id mapping (adjust based on tbl_approval values)
-    // e.g., 1 = Approve, 2 = Disapprove, 3 = Pending
+    // ✅ approval_id mapping (adjust according to tbl_approval values)
     $approval_id = null;
     if ($action === "Approve") {
         $approval_id = 1;
     } elseif ($action === "Disapprove") {
         $approval_id = 2;
+    } elseif ($action === "Cancelled") {
+        $approval_id = 38;
     }
 
     if ($approval_id === null) {
@@ -52,7 +55,10 @@ try {
         exit;
     }
 
-    // 🔎 Step 2: Proceed with update if still pending
+    // ✅ Step 2: Start transaction
+    $conn->beginTransaction();
+
+    // ✅ Step 3: Update booking
     $query = "UPDATE tbl_booking 
               SET approval_id = :approval_id, approval_date = NOW()
               WHERE booking_id = :booking_id";
@@ -62,19 +68,40 @@ try {
     $stmt->bindParam(":booking_id", $booking_id, PDO::PARAM_INT);
 
     if ($stmt->execute()) {
+        // ✅ Step 4: Insert into activity logs
+        $logQuery = "INSERT INTO tbl_activitylogs (user_id, activity_type, action, activity_time)
+                     VALUES (:user_id, :activity_type, :action, NOW())";
+        $logStmt = $conn->prepare($logQuery);
+
+        $activityType = "Booking Approval";
+        $logAction = "Updated booking (ID: {$booking_id}) to status: {$action}";
+
+        $logStmt->execute([
+            ':user_id' => $userId,
+            ':activity_type' => $activityType,
+            ':action' => $logAction
+        ]);
+
+        $conn->commit();
+
         echo json_encode([
             "success" => true,
-            "message" => "Booking updated successfully."
+            "message" => "Booking updated successfully and activity logged."
         ]);
     } else {
+        $conn->rollBack();
         echo json_encode([
             "success" => false,
             "message" => "Failed to update booking."
         ]);
     }
 } catch (PDOException $e) {
+    if ($conn->inTransaction()) {
+        $conn->rollBack();
+    }
     echo json_encode([
         "success" => false,
         "message" => "Database error: " . $e->getMessage()
     ]);
 }
+?>

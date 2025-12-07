@@ -48,7 +48,7 @@ if ($user) {
         $_SESSION['role_id'] = $user['role_id'];
         $token = bin2hex(random_bytes(16));
 
-        $baseImageUrl = "http://localhost/rai/app/api_raielectrical/uploads/";
+        $baseImageUrl = "http://localhost/fchms/app/api_fchms/uploads/";
         $photoUrl = $user['photo_url'] ? $baseImageUrl . basename($user['photo_url']) : null;
 
         echo json_encode([

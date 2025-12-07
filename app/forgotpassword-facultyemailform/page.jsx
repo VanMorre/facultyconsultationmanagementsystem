@@ -17,7 +17,7 @@ export default function ForgotPasswordFacultyEmailForm() {
 
     try {
       const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/useraccounts/verifyfaculty/verifyemail-faculty.php`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/verifyfaculty/verifyemail-faculty.php`,
         { email }
       );
 
@@ -93,7 +93,7 @@ export default function ForgotPasswordFacultyEmailForm() {
             </button>
 
             <p
-              onClick={() => navigate("/loginform")}
+              onClick={() => navigate("/loginpage")}
               className="mt-6 flex items-center justify-center gap-2 text-green-800 font-medium cursor-pointer hover:underline"
             >
               <AiOutlineArrowLeft size={20} /> Back to Login

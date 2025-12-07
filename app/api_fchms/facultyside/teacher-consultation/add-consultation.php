@@ -9,14 +9,12 @@ include '../../dbconnection.php';
 $data = json_decode(file_get_contents("php://input"), true);
 
 // Extract payload
-$bookings = isset($data['students']) && is_array($data['students']) ? $data['students'] : []; // ✅ actually booking_ids
-$consultationDate = !empty($data['consultation_date']) ? date('Y-m-d', strtotime($data['consultation_date'])) : null;
-$timerangeId = isset($data['timerange_id']) ? (int)$data['timerange_id'] : null;
+$bookings = isset($data['students']) && is_array($data['students']) ? $data['students'] : []; // ✅ booking_ids
 $approvalId = isset($data['approval_id']) ? (int)$data['approval_id'] : null;
 $userId = isset($data['user_id']) ? (int)$data['user_id'] : null;
 
 // Validate required fields
-if (empty($bookings) || !$consultationDate || !$timerangeId || !$approvalId || !$userId) {
+if (empty($bookings) || !$approvalId || !$userId) {
     echo json_encode([
         "success" => false,
         "message" => "Missing required fields."
@@ -28,22 +26,18 @@ try {
     $conn->beginTransaction();
 
     $query = "INSERT INTO tbl_scheduledbookings 
-                 (booking_id, schedulebookdate, timerange_id, approval_id, user_id) 
+                 (booking_id, approval_id, user_id) 
               VALUES 
-                 (:booking_id, :schedulebookdate, :timerange_id, :approval_id, :user_id)";
+                 (:booking_id, :approval_id, :user_id)";
     $stmt = $conn->prepare($query);
 
     foreach ($bookings as $bookingId) {
-        // 🔎 Prevent duplicates (same booking, same date, same time)
+        // 🔎 Prevent duplicates (check if booking already scheduled)
         $checkQuery = "SELECT COUNT(*) FROM tbl_scheduledbookings 
-                       WHERE booking_id = :booking_id 
-                       AND schedulebookdate = :schedulebookdate 
-                       AND timerange_id = :timerange_id";
+                       WHERE booking_id = :booking_id";
         $checkStmt = $conn->prepare($checkQuery);
         $checkStmt->execute([
-            ':booking_id' => $bookingId,
-            ':schedulebookdate' => $consultationDate,
-            ':timerange_id' => $timerangeId
+            ':booking_id' => $bookingId
         ]);
 
         if ($checkStmt->fetchColumn() > 0) {
@@ -51,11 +45,23 @@ try {
         }
 
         $stmt->execute([
-            ':booking_id' => $bookingId,   // ✅ booking_id from tbl_booking
-            ':schedulebookdate' => $consultationDate,
-            ':timerange_id' => $timerangeId,
+            ':booking_id' => $bookingId,
             ':approval_id' => $approvalId,
             ':user_id' => $userId
+        ]);
+
+        // ✅ Insert into activity logs for each scheduled booking
+        $logQuery = "INSERT INTO tbl_activitylogs (user_id, activity_type, action, activity_time)
+                     VALUES (:user_id, :activity_type, :action, NOW())";
+        $logStmt = $conn->prepare($logQuery);
+
+        $activityType = "Consultation Scheduling";
+        $action = "Scheduled consultation (Booking ID: {$bookingId})";
+
+        $logStmt->execute([
+            ':user_id' => $userId,
+            ':activity_type' => $activityType,
+            ':action' => $action
         ]);
     }
 
@@ -63,7 +69,7 @@ try {
 
     echo json_encode([
         "success" => true,
-        "message" => "Consultation scheduled successfully."
+        "message" => "Consultation scheduled successfully and activities logged."
     ]);
 } catch (PDOException $e) {
     $conn->rollBack();

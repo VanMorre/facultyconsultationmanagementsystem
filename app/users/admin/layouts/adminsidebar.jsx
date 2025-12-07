@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { MdMenuBook } from "react-icons/md";
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard , ChevronDown } from "lucide-react";
 
 import {
   TbCalendarCheck,
@@ -15,6 +14,7 @@ import {
 } from "react-icons/tb";
 
 const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
+  const [isOpenss, setIsOpenss] = useState(false);
   return (
     <aside
       className={`${
@@ -35,7 +35,7 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
               Faculty Consultation
             </p>
             <p className="text-m font-semibold text-white pb-1 text-center">
-              Hours Portal.
+              Hours Portal - CITE.
             </p>
             <div className="w-full border-b-2 border-white"></div>
           </div>
@@ -105,38 +105,6 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           )}
         </Button>
 
-        {/* <Button
-          variant="ghost"
-          className={`w-full justify-start text-black ${
-            currentView === "subjects" ? "bg-gray-200" : ""
-          }`}
-          onClick={() => setCurrentView("subjects")}
-        >
-          <MdMenuBook
-            className="mr-1"
-            style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
-          />
-          {!collapsed && (
-            <span className="pr-8 font-semibold">Subjects List</span>
-          )}
-        </Button> */}
-
-        {/* <Button
-          variant="ghost"
-          className={`w-full justify-start text-black ${
-            currentView === "departments" ? "bg-gray-200" : ""
-          }`}
-          onClick={() => setCurrentView("departments")}
-        >
-          <TbBuildingCommunity
-            className="mr-1"
-            style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
-          />
-          {!collapsed && (
-            <span className="pr-8 font-semibold">Departments</span>
-          )}
-        </Button> */}
-
         <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
@@ -151,18 +119,77 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           {!collapsed && <span className="pr-8 font-semibold">Faculty</span>}
         </Button>
 
+         <div className="mb-2">
+          <Button
+            variant="ghost"
+            className={`w-full justify-start text-black ${
+              currentView === "reports" || currentView === "facultyreports"
+                ? "bg-gray-200"
+                : ""
+            }`}
+            onClick={() => setIsOpenss(!isOpenss)}
+          >
+            <TbChartLine
+              className="mr-1"
+              style={{ height: "28px", width: "35px", color: "#FF5733" }}
+            />
+            {!collapsed && (
+              <span className="pr-4 font-semibold">Manage Reports </span>
+            )}
+            {!collapsed && (
+              <ChevronDown
+                className={`ml-auto transition-transform duration-300  ${
+                  isOpenss ? "rotate-180" : "rotate-0"
+                }`}
+              />
+            )}
+          </Button>
+
+          <div
+            className={`transition-all duration-300 overflow-hidden mt-2 ${
+              isOpenss ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+            }`}
+            style={{ maxHeight: isOpenss ? "200px" : "0px" }}
+          >
+            {!collapsed && ( // Only hide these buttons when collapsed
+              <div className="pl-10">
+                <Button
+                  variant="ghost"
+                  className={`w-full justify-start text-black ${
+                    currentView === "reports" ? "bg-gray-200" : ""
+                  }`}
+                  onClick={() => setCurrentView("reports")}
+                >
+                  Consultation Reports
+                </Button>
+                <Button
+                  variant="ghost"
+                  className={`w-full justify-start text-black ${
+                    currentView === "facultyreports" ? "bg-gray-200" : ""
+                  }`}
+                  onClick={() => setCurrentView("facultyreports")}
+                >
+                  Facultyreports
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
         <Button
           variant="ghost"
           className={`w-full justify-start text-black ${
-            currentView === "reports" ? "bg-gray-200" : ""
+            currentView === "Activitylogs" ? "bg-gray-200" : ""
           }`}
-          onClick={() => setCurrentView("reports")}
+          onClick={() => setCurrentView("Activitylogs")}
         >
-          <TbChartLine
+          <TbWaveSawTool
             className="mr-1"
-            style={{ height: "28px", width: "35px", color: "#6e7a36ff" }}
+            style={{ height: "28px", width: "35px", color: "#6e7a36" }}
           />
-          {!collapsed && <span className="pr-8 font-semibold">Reports</span>}
+          {!collapsed && (
+            <span className="pr-8 font-semibold">Activity logs</span>
+          )}
         </Button>
 
         <Button
@@ -178,10 +205,6 @@ const AdminSidebar = ({ collapsed, setCurrentView, currentView }) => {
           />
           {!collapsed && <span className="pr-8 font-semibold">Settings</span>}
         </Button>
-
-
-
-        
       </nav>
     </aside>
   );

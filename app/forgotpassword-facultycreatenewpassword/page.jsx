@@ -35,7 +35,7 @@ export default function ForgotPasswordFacultyCreateNewPassword() {
 
     try {
       const response = await axios.post(
-        `http://localhost/fchms/app/api_fchms/useraccounts/verifyfaculty/verifypasswordchange-faculty.php`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/verifyfaculty/verifypasswordchange-faculty.php`,
         {
           email, // ✅ based on stored email
           old_password: oldPassword,

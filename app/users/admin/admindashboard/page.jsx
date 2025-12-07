@@ -36,8 +36,9 @@ ChartJS.register(
   Legend,
   PointElement
 );
-
-import { Line } from "react-chartjs-2";
+import { PiBellRingingFill } from "react-icons/pi";
+import FacultyReportsManagement from "./components/facultyreports";
+import ActivityManagement from "./components/activitylogs";
 import StudentrequestManagement from "./components/studentrequest";
 import ConsultationManagement from "./components/consultation";
 import SettingsManagement from "./components/settings";
@@ -66,7 +67,7 @@ import {
 import AdminLayout from "../layouts/adminlayout";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { TbUser, TbFilter, TbArrowDown, TbArrowRight } from "react-icons/tb";
+import { TbUser, TbArrowRight } from "react-icons/tb";
 
 const AdminDashboard = () => {
   const [loggedInUserId, setLoggedInUserId] = useState(null);
@@ -196,7 +197,8 @@ const AdminDashboard = () => {
   const fetchAvailabilityWithNotify = async (userId, isInitial = false) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-availability/fetch-availability.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-availability/fetch-availability.php`,
         { params: { user_id: userId } }
       );
 
@@ -272,7 +274,8 @@ const AdminDashboard = () => {
   const fetchbookingstudentWithNotify = async (UserID, isInitial = false) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
         { params: { user_id: UserID } }
       );
 
@@ -333,7 +336,8 @@ const AdminDashboard = () => {
   const fetchConsultationWithNotify = async (UserID, isInitial = false) => {
     try {
       const response = await axios.get(
-        `http://localhost/fchms/app/api_fchms/adminside/admin-consultation/fetch-consultation.php`,
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/fetch-consultation.php`,
         { params: { user_id: UserID } }
       );
 
@@ -630,20 +634,28 @@ const AdminDashboard = () => {
                   </div>
                 </motion.div>
               </div>
-
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="bg-white p-4 rounded-lg shadow-md h-[700px] flex flex-col" // ✅ fixed height
+                className="bg-white p-4 rounded-lg shadow-md h-[700px] flex flex-col"
               >
                 {/* Header */}
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
-                    <TbUser className="text-green-800 w-8 h-8 !w-8 !h-8" />
-                    <h2 className="text-l font-bold text-black ">
+                    <h2 className="text-l font-bold text-black">
                       Student Requests
                     </h2>
+
+                    {/* Bell with count */}
+                    <div className="relative">
+                      <PiBellRingingFill className="text-green-900 w-7 h-7 cursor-pointer" />
+                      {fetchbooking.length > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-600 text-white text-sm font-bold rounded-full px-2 py-0.10">
+                          {fetchbooking.length}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -719,44 +731,46 @@ const AdminDashboard = () => {
                   )}
                 </div>
 
-                {/* Footer fixed at bottom */}
-                <div className="mt-3 flex items-center justify-between ">
-                  <span className="text-sm text-green-900 font-semibold ">
+                {/* Pagination + Footer */}
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-sm text-green-900 font-semibold">
                     Showing {indexOfFirstItem + 1} to{" "}
                     {Math.min(indexOfLastItem, fetchbooking.length)} of{" "}
                     {fetchbooking.length} entries
                   </span>
 
-                  <Pagination>
-                    <PaginationContent className="flex items-center pl-62">
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={goToPreviousPage}
-                          disabled={currentPage === 1}
-                        />
-                      </PaginationItem>
-                      {Array.from({ length: totalPages }, (_, index) => (
-                        <PaginationItem key={index}>
-                          <PaginationLink
-                            onClick={() => goToPage(index + 1)}
-                            className={
-                              currentPage === index + 1
-                                ? "bg-green-900 text-white"
-                                : ""
-                            }
-                          >
-                            {index + 1}
-                          </PaginationLink>
+                  <div className="flex">
+                    <Pagination>
+                      <PaginationContent className="flex">
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={goToPreviousPage}
+                            disabled={currentPage === 1}
+                          />
                         </PaginationItem>
-                      ))}
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={goToNextPage}
-                          disabled={currentPage === totalPages}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                        {Array.from({ length: totalPages }, (_, index) => (
+                          <PaginationItem key={index}>
+                            <PaginationLink
+                              onClick={() => goToPage(index + 1)}
+                              className={
+                                currentPage === index + 1
+                                  ? "bg-green-900 text-white"
+                                  : ""
+                              }
+                            >
+                              {index + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={goToNextPage}
+                            disabled={currentPage === totalPages}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
                 </div>
               </motion.div>
             </div>
@@ -778,9 +792,9 @@ const AdminDashboard = () => {
         )}
 
         {currentView === "faculty" && <FacultyManagement />}
-        {/* {currentView === "subjects" && <SubjectlistManagement />} */}
+        {currentView === "facultyreports" && <FacultyReportsManagement />}
         {currentView === "studentrequest" && <StudentrequestManagement />}
-        {/* {currentView === "auditlogs" && <AuditManagement />} */}
+        {currentView === "Activitylogs" && <ActivityManagement />}
         {currentView === "availability" && <AvailabilityManagement />}
         {currentView === "consultation" && <ConsultationManagement />}
         {/* {currentView === "departments" && <DepartmentManagement />} */}
