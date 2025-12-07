@@ -1,7 +1,9 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { AiOutlineArrowLeft } from "react-icons/ai";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
@@ -11,7 +13,7 @@ export default function ForgotPasswordFacultyCreateNewPassword() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [email, setEmail] = useState("");
-  const navigate = useNavigate();
+  const router = useRouter();
 
   useEffect(() => {
     const storedEmail = localStorage.getItem("facultyEmail");
@@ -47,7 +49,7 @@ export default function ForgotPasswordFacultyCreateNewPassword() {
         toast.success("Password updated successfully! Redirecting...");
         localStorage.removeItem("facultyEmail");
         setTimeout(() => {
-          navigate("/loginform");
+          router.push("/loginpage");
         }, 2000);
       } else {
         toast.error(response.data.message || "Failed to update password.");

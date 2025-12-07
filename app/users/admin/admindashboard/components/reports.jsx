@@ -7,7 +7,7 @@ import {
 } from "react-icons/fa";
 import axios from "axios";
 import { motion } from "framer-motion";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect , useRef } from "react";
 import CryptoJS from "crypto-js";
 import { Bar } from "react-chartjs-2";
 import DatePicker from "react-datepicker"; // ✅ install react-datepicker
@@ -51,31 +51,33 @@ const ReportManagement = () => {
   const notifiedConsultationIdsRef = useRef([]);
   const toastShownConsultationRef = useRef(false);
 
-   const decryptUserId = () => {
-   const encryptedUserId = sessionStorage.getItem("user_id");
- 
-     if (encryptedUserId) {
-       try {
-         const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-         let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
- 
-         // 🔹 Remove wrapping quotes if any
-         decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
- 
-         // 🔹 Cast to integer
-         const numericId = parseInt(decryptedUserId, 10);
- 
-         if (!isNaN(numericId)) {
-           setLoggedInUserId(numericId);
-         } else {
-           console.error("Invalid decrypted student ID:", decryptedUserId);
-         }
-       } catch (error) {
-         console.error("Error decrypting user ID:", error);
-       }
-     }
-   };
- 
+
+  
+    const decryptUserId = () => {
+    const encryptedUserId = sessionStorage.getItem("user_id");
+  
+      if (encryptedUserId) {
+        try {
+          const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
+          let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+  
+          // 🔹 Remove wrapping quotes if any
+          decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
+  
+          // 🔹 Cast to integer
+          const numericId = parseInt(decryptedUserId, 10);
+  
+          if (!isNaN(numericId)) {
+            setLoggedInUserId(numericId);
+          } else {
+            console.error("Invalid decrypted student ID:", decryptedUserId);
+          }
+        } catch (error) {
+          console.error("Error decrypting user ID:", error);
+        }
+      }
+    };
+  
 
   useEffect(() => {
     decryptUserId();
@@ -88,22 +90,25 @@ const ReportManagement = () => {
       }
       let isInitial = true;
 
-      fetchConsultationWithNotify(isInitial);
+      fetchConsultationWithNotify(loggedInUserId, isInitial);
 
       isInitial = false;
 
       const interval = setInterval(() => {
-        fetchConsultationWithNotify(false);
+        fetchConsultationWithNotify(loggedInUserId, false);
       }, 5000);
 
       return () => clearInterval(interval);
     }
   }, [loggedInUserId]);
 
-  const fetchConsultationWithNotify = async (isInitial = false) => {
+
+const fetchConsultationWithNotify = async (UserID, isInitial = false) => {
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/fetch-allconsultation.php`
+        `
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/fetch-consultation.php`,
+        { params: { user_id: UserID } }
       );
 
       if (response.data.success) {
@@ -170,37 +175,33 @@ const ReportManagement = () => {
     if (!ConsultationFetch || ConsultationFetch.length === 0) {
       return [];
     }
-    
+
+    // If either date is not set, do not filter by date
     if (!startDate || !endDate) {
       return ConsultationFetch;
     }
-    
+
     return ConsultationFetch.filter((c) => {
-      if (!c.booking_date) return true; // Include if no date
-      
-      try {
-        const consultDate = new Date(c.booking_date);
-        if (isNaN(consultDate.getTime())) return true; // Include if invalid date
-        
-        // Set time to start/end of day for accurate comparison
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        
-        consultDate.setHours(0, 0, 0, 0);
-        
-        return consultDate >= start && consultDate <= end;
-      } catch (error) {
-        console.error("Error parsing date:", c.booking_date, error);
-        return true; // Include if error parsing
-      }
+      if (!c.schedulebookdate) return true; // keep rows with no date
+
+      const consultDate = new Date(c.schedulebookdate);
+      if (isNaN(consultDate.getTime())) return true;
+
+      // Set time to start/end of day for accurate comparison
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+
+      consultDate.setHours(0, 0, 0, 0);
+
+      return consultDate >= start && consultDate <= end;
     });
   };
 
   const filteredConsultations = filterData();
 
-  // ✅ Group by subject (filter out null/undefined subjects)
+  // ✅ Group by subject
   const subjects = [
     ...new Set(
       filteredConsultations
@@ -213,13 +214,13 @@ const ReportManagement = () => {
       filteredConsultations.filter((c) => c.subject_name === subject).length
   );
 
-  // ✅ Chart Data - ensure proper structure
+  // ✅ Chart Data
   const barData = {
-    labels: subjects && subjects.length > 0 ? subjects : ["No Data"],
+    labels: subjects,
     datasets: [
       {
         label: "Consultations",
-        data: subjectCounts && subjectCounts.length > 0 ? subjectCounts : [0],
+        data: subjectCounts,
         backgroundColor: "rgba(165, 160, 177, 1)",
         borderRadius: 2,
       },
@@ -229,33 +230,32 @@ const ReportManagement = () => {
   const barOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { 
-      legend: { display: false }, 
-      title: { display: false } 
-    },
+    plugins: { legend: { display: false }, title: { display: false } },
     scales: {
       x: {
-        barPercentage: 0.3,
+        barPercentage: 0.3, // thinner bars (lower = thinner)
         categoryPercentage: 0.5,
       },
-      y: { 
-        beginAtZero: true, 
-        ticks: { stepSize: 1 } 
+      y: { beginAtZero: true, ticks: { stepSize: 1 } },
+    },
+    datasets: {
+      bar: {
+        maxBarThickness: 100, // ✅ maximum width per bar
       },
     },
   };
 
-  // ✅ Counts - ensure proper counting
-  const totalConsultations = filteredConsultations ? filteredConsultations.length : 0;
-  const scheduledCount = filteredConsultations 
-    ? filteredConsultations.filter((c) => c.approval_name === "Scheduled" || c.approval_name === "scheduled").length 
-    : 0;
-  const completedCount = filteredConsultations 
-    ? filteredConsultations.filter((c) => c.approval_name === "Completed" || c.approval_name === "completed").length 
-    : 0;
-  const cancelledCount = filteredConsultations 
-    ? filteredConsultations.filter((c) => c.approval_name === "Cancelled" || c.approval_name === "cancelled").length 
-    : 0;
+  // ✅ Counts
+  const totalConsultations = filteredConsultations.length;
+  const scheduledCount = filteredConsultations.filter(
+    (c) => c.approval_name === "Scheduled"
+  ).length;
+  const completedCount = filteredConsultations.filter(
+    (c) => c.approval_name === "Completed"
+  ).length;
+  const cancelledCount = filteredConsultations.filter(
+    (c) => c.approval_name === "Cancelled"
+  ).length;
 
 const generatePDF = () => {
   const doc = new jsPDF("p", "mm", "a4");
@@ -315,15 +315,15 @@ const generatePDF = () => {
   let tableRows = [];
   if (filteredConsultations.length > 0) {
     tableRows = filteredConsultations.map((item) => [
-      item.student_name || "N/A",
-      item.subject_name || "N/A",
-      item.purpose || "N/A",
-      item.booking_date ? new Date(item.booking_date).toLocaleDateString() : "N/A",
-      item.time_range || "N/A",
-      item.approval_name || "N/A",
+      item.student_name,
+      item.subject_name,
+      item.purpose,
+      item.schedulebookdate,
+      item.timeranges,
+      item.approval_name,
     ]);
   } else {
-    tableRows = [["No data available", "", "", "", "", ""]];
+    tableRows = [["No data available", "", "", "", ""]];
   }
 
   // --- RENDER TABLE ---
@@ -346,15 +346,15 @@ const generatePDF = () => {
       cellPadding: 3,
       fontSize: 10,
     },
-      didParseCell: (data) => {
-        if (
-          filteredConsultations.length === 0 &&
-          data.row.index === 0 &&
-          data.column.index === 0
-        ) {
-          data.cell.colSpan = 6;
-        }
-      },
+    didParseCell: (data) => {
+      if (
+        filteredConsultations.length === 0 &&
+        data.row.index === 0 &&
+        data.column.index === 0
+      ) {
+        data.cell.colSpan = 5;
+      }
+    },
   });
 
   // --- TOTAL STUDENTS RENDERED ---
@@ -413,8 +413,6 @@ const generatePDF = () => {
 };
 
 
-
-
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -422,18 +420,11 @@ const generatePDF = () => {
       transition={{ duration: 0.5 }}
     >
       <div className="bg-white p-6 shadow-md">
-        <h1 className="text-l font-bold mb-4 text-green-800  mt-3 flex items-center gap-2">
-          <TbWaveSawTool className="text-xl w-6 h-6" /> Consultation Reports
+        <h1 className="text-l font-bold mb-4 text-green-800 pb-5 mt-3 flex items-center gap-2">
+          <TbWaveSawTool className="text-xl w-6 h-6" /> Reports
         </h1>
-          <p className="text-gray-600 text-sm mb-6">
-          This section provides a quick overview of consultation of all activities between faculty and student engagement.The
-          summary cards highlight the total number of consultations along with
-          their current status — completed, scheduled, and cancelled. Below, the
-          bar chart presents a breakdown of consultations per subject, helping
-          faculty analyze the trends and identify which subjects require
-          more attention.
-        </p>
-     
+
+        {/* Action buttons */}
         <div className="flex items-center gap-4 pt-6 mb-6">
           <button
             onClick={() => generatePDF()}
@@ -527,14 +518,8 @@ const generatePDF = () => {
           <h2 className="text-md font-bold text-green-800 mb-4">
             Consultation per Subject
           </h2>
-          <div className="h-[400px] w-full flex items-center justify-center">
-            {filteredConsultations && filteredConsultations.length > 0 && subjects.length > 0 ? (
-              <Bar data={barData} options={barOptions} />
-            ) : (
-              <p className="text-gray-500 text-center">
-                No consultation data available for the selected date range.
-              </p>
-            )}
+          <div className="h-[400px] w-full">
+            <Bar data={barData} options={barOptions} />
           </div>
         </div>
       </div>

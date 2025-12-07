@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import Image from "next/image";
 import CryptoJS from "crypto-js";
@@ -24,7 +24,7 @@ export default function AdminLogin() {
   const [captchaInput, setCaptchaInput] = useState("");
   const captchaCanvasRef = useRef(null);
 
-  const navigate = useNavigate();
+  const router = useRouter();
   const [isLocked, setIsLocked] = useState(false);
   const [lockoutTime, setLockoutTime] = useState(0);
 
@@ -89,7 +89,7 @@ export default function AdminLogin() {
       const response = await axios.post("http://localhost/fchms/app/api_fchms/loginphp/loginform.php", { email, password });
       if (response.data.success) {
         toast.success("Login Successfully!");
-        setTimeout(() => navigate("/admin-dashboard"), 1500);
+        setTimeout(() => router.push("/admin-dashboard"), 1500);
       } else {
         toast.error(response.data.message || "Invalid login credentials.");
       }

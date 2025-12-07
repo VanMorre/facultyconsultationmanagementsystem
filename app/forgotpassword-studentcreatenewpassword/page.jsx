@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Image from "next/image";
@@ -44,7 +46,7 @@ export default function ForgotPasswordStudentCreateNewPassword() {
         toast.success("Password updated successfully! Redirecting...");
         localStorage.removeItem("studentEmail");
         setTimeout(() => {
-          window.location.href = "/loginform";
+          window.location.href = "/loginpage";
         }, 2000);
       } else {
         toast.error(response.data.message || "Failed to update password.");

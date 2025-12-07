@@ -1,7 +1,9 @@
-import { useNavigate } from "react-router-dom";
+"use client";
+
+import { useRouter } from "next/navigation";
 
 const useLogout = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const logout = () => {
     sessionStorage.removeItem("isAuthenticated");
@@ -9,7 +11,7 @@ const useLogout = () => {
     sessionStorage.removeItem("user_id");
     sessionStorage.removeItem("username");
     sessionStorage.clear();
-    navigate("/loginpage"); 
+    router.push("/loginpage"); 
   };
 
   return logout;

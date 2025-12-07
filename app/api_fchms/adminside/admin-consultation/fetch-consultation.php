@@ -31,6 +31,7 @@ try {
             b.purpose,
             b.booking_date,
             COALESCE(CONCAT(tr.start_time, ' - ', tr.end_time), '') AS time_range,
+            COALESCE(CONCAT(tr.start_time, ' - ', tr.end_time), '') AS timeranges,
             u.fullname AS created_by,
             s.student_id,
             s.student_name,

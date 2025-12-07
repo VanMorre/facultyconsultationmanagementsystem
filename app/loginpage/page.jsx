@@ -9,7 +9,7 @@ import { AiOutlineMail, AiOutlineLock } from "react-icons/ai";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import CryptoJS from "crypto-js";
 import { FiUpload } from "react-icons/fi";
 import { LuLogIn } from "react-icons/lu";
@@ -37,7 +37,7 @@ export default function AdminLogin() {
   const [captchaText, setCaptchaText] = useState("");
   const [captchaInput, setCaptchaInput] = useState("");
   const captchaCanvasRef = useRef(null);
-  const navigate = useNavigate();
+  const router = useRouter();
   const [isLocked, setIsLocked] = useState(false);
   const [lockoutTime, setLockoutTime] = useState(0);
   const [activeRole, setActiveRole] = useState("faculty"); // faculty | student
@@ -151,17 +151,17 @@ export default function AdminLogin() {
     if (isAuthenticated && userRole) {
       switch (userRole) {
         case "admin":
-          navigate("/admin-dashboard");
+          router.push("/admin-dashboard");
           break;
         case "teacher":
-          navigate("/teacher-dashboard");
+          router.push("/teacher-dashboard");
           break;
         case "student":
-          navigate("/student-dashboard");
+          router.push("/student-dashboard");
           break;
         default:
           sessionStorage.clear();
-          navigate("/");
+          router.push("/");
       }
     }
   }, []);
@@ -222,15 +222,15 @@ export default function AdminLogin() {
         setTimeout(() => {
           switch (role_name.toLowerCase()) {
             case "admin":
-              navigate("/admin-dashboard");
+              router.push("/admin-dashboard");
               break;
             case "teacher":
-              navigate("/teacher-dashboard");
+              router.push("/teacher-dashboard");
               break;
             default:
               toast.error("Unauthorized role!");
               sessionStorage.clear();
-              navigate("/");
+              router.push("/");
           }
         }, 3000);
       } else {
@@ -311,12 +311,12 @@ export default function AdminLogin() {
         setTimeout(() => {
           switch (role_name.toLowerCase()) {
             case "student":
-              navigate("/student-dashboard");
+              router.push("/student-dashboard");
               break;
             default:
               toast.error("Unauthorized role!");
               sessionStorage.clear();
-              navigate("/");
+              router.push("/");
           }
         }, 2000);
       } else {
@@ -709,9 +709,9 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.
                   className="text-sm text-black-600 p-0"
                   onClick={() => {
                     if (activeRole === "faculty") {
-                      navigate("/forgotpassword-facultyemailform");
+                      router.push("/forgotpassword-facultyemailform");
                     } else {
-                      navigate("/forgotpassword-studentemailform");
+                      router.push("/forgotpassword-studentemailform");
                     }
                   }}
                 >

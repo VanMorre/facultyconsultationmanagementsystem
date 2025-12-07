@@ -1,14 +1,16 @@
+"use client";
+
 import { useState } from "react";
 import Image from "next/image";
 import { AiOutlineArrowLeft } from "react-icons/ai";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function ForgotPasswordStudentEmailForm() {
   const [email, setEmail] = useState("");
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const handleVerifyEmail = async () => {
     if (!email) {
@@ -26,7 +28,7 @@ export default function ForgotPasswordStudentEmailForm() {
         toast.success("Email verified! Redirecting...");
         localStorage.setItem("studentEmail", email); // ✅ Save email
         setTimeout(() => {
-          navigate("/forgotpassword-studentcreatenewpassword");
+          router.push("/forgotpassword-studentcreatenewpassword");
         }, 1500);
       } else {
         toast.error(response.data.message || "Student email not found.");
@@ -93,7 +95,7 @@ export default function ForgotPasswordStudentEmailForm() {
           </button>
 
           <p
-            onClick={() => navigate("/loginpage")}
+            onClick={() => router.push("/loginpage")}
             className="mt-4 md:mt-6 flex items-center justify-center gap-2 text-green-800 font-medium cursor-pointer hover:underline text-sm md:text-base"
           >
             <AiOutlineArrowLeft size={8} className="md:size-10" /> Back to Login

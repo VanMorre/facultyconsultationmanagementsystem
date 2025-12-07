@@ -1,4 +1,7 @@
-import { Navigate } from "react-router-dom";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import CryptoJS from "crypto-js";
 
 const SECRET_KEY = "my_secret_key_123456"; // Change this to a secure key
@@ -16,19 +19,47 @@ const decryptData = (data) => {
 };
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  // Fetch and decrypt session storage values
-  const encryptedRole = sessionStorage.getItem("role");
-  const encryptedAuth = sessionStorage.getItem("isAuthenticated");
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
 
-  const userRole = decryptData(encryptedRole);
-  const isAuthenticated = decryptData(encryptedAuth);
+  useEffect(() => {
+    // Only run on client side
+    if (typeof window === "undefined") return;
 
-  console.log("Decrypted Role:", userRole);
-  console.log("Decrypted Authenticated:", isAuthenticated);
+    // Fetch and decrypt session storage values
+    const encryptedRole = sessionStorage.getItem("role");
+    const encryptedAuth = sessionStorage.getItem("isAuthenticated");
 
-  // Redirect unauthorized users to login
-  if (!isAuthenticated || !userRole || !allowedRoles.includes(userRole)) {
-    return <Navigate to="/" replace />;
+    const userRole = decryptData(encryptedRole);
+    const isAuthenticated = decryptData(encryptedAuth);
+
+    console.log("Decrypted Role:", userRole);
+    console.log("Decrypted Authenticated:", isAuthenticated);
+
+    // Check authorization
+    const authorized = 
+      isAuthenticated && 
+      userRole && 
+      allowedRoles.includes(userRole);
+
+    setIsAuthorized(authorized);
+    setIsChecking(false);
+
+    // Redirect unauthorized users to login
+    if (!authorized) {
+      router.replace("/loginpage");
+    }
+  }, [router, allowedRoles]);
+
+  // Show nothing while checking (prevents flash of content)
+  if (isChecking) {
+    return null;
+  }
+
+  // Don't render children if not authorized
+  if (!isAuthorized) {
+    return null;
   }
 
   return children;
