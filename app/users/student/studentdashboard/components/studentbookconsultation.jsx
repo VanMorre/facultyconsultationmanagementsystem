@@ -744,6 +744,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
                     className="w-full border border-black text-black"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
+                    required
                   />
                 </div>
 
@@ -756,6 +757,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
                     placeholder="Enter notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
+                    required
                   />
                 </div>
 
