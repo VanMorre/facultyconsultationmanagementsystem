@@ -14,8 +14,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect, useRef } from "react";
 import CryptoJS from "crypto-js";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 const StudentrequestManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
@@ -149,6 +148,37 @@ const StudentrequestManagement = () => {
     return `${year}-${month}-${day}`;
   };
 
+  const formatTimeTo12Hour = (timeString) => {
+    if (!timeString) return "";
+    
+    // Handle time range format like "13:00:00 - 14:00:00"
+    if (timeString.includes(" - ")) {
+      const [startTime, endTime] = timeString.split(" - ");
+      return `${convertTo12Hour(startTime)} - ${convertTo12Hour(endTime)}`;
+    }
+    
+    // Handle single time format
+    return convertTo12Hour(timeString);
+  };
+
+  const convertTo12Hour = (time24) => {
+    if (!time24) return "";
+    
+    // Extract hours and minutes from "HH:MM:SS" or "HH:MM" format
+    const timeParts = time24.split(":");
+    if (timeParts.length < 2) return time24;
+    
+    let hours = parseInt(timeParts[0], 10);
+    const minutes = timeParts[1];
+    
+    if (isNaN(hours)) return time24;
+    
+    const period = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // Convert to 12-hour format (0 becomes 12)
+    
+    return `${hours}:${minutes} ${period}`;
+  };
+
   const isToday = (date) => {
     const today = getToday();
     return (
@@ -160,7 +190,32 @@ const StudentrequestManagement = () => {
 
   const getBookingsForDate = (date) => {
     const dateStr = formatDate(date);
-    return fetchbooking.filter((booking) => booking.booking_date === dateStr);
+    // Normalize booking_date to YYYY-MM-DD format (extract date part if it includes time)
+    return fetchbooking.filter((booking) => {
+      if (!booking.booking_date) return false;
+      
+      // Parse the booking_date string to handle timezone issues
+      let bookingDateStr;
+      if (typeof booking.booking_date === 'string') {
+        // Extract date part from string (handles formats like "2025-12-29 00:00:00" or "2025-12-29T00:00:00Z")
+        const datePart = booking.booking_date.split(' ')[0].split('T')[0];
+        
+        // Check if datePart is in YYYY-MM-DD format
+        if (datePart.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          // Use the date part directly without timezone conversion to preserve the original date
+          bookingDateStr = datePart;
+        } else {
+          // Fallback: create a date object and format it
+          const bookingDate = new Date(booking.booking_date);
+          bookingDateStr = formatDate(bookingDate);
+        }
+      } else {
+        // If it's already a Date object, format it directly
+        bookingDateStr = formatDate(booking.booking_date);
+      }
+      
+      return bookingDateStr === dateStr;
+    });
   };
 
   const handlePrevMonth = () => {
@@ -361,6 +416,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
         }
         
         setOpenViewDialog(false);
+        setOpenDateDialog(false);
         setDiscussion("");
         setRecommendation("");
         setSelectedBooking(null);
@@ -482,12 +538,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
       transition={{ duration: 0.5 }}
     >
       <>
-        <ToastContainer
-          position="top-right"
-          autoClose={1000}
-          theme="light"
-          transition={Bounce}
-        />
 
         <div className="bg-white p-6 shadow-md">
           <div className="flex items-center justify-between mb-4">
@@ -615,7 +665,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
             <DialogContent className="sm:max-w-6xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-green-800 text-xl font-semibold">
-                  Bookings for {selectedDate ? formatDate(selectedDate) : ""}
+                Consultations for {selectedDate ? formatDate(selectedDate) : ""}
                 </DialogTitle>
               </DialogHeader>
 
@@ -674,11 +724,18 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
                         ? allBookings.filter((b) => b.approval_name !== "Completed")
                         : allBookings;
 
+                    // Sort by booking_id descending (newest first)
+                    const sortedBookings = [...filteredBookings].sort((a, b) => {
+                      const idA = parseInt(a.booking_id) || 0;
+                      const idB = parseInt(b.booking_id) || 0;
+                      return idB - idA; // Descending order (newest first)
+                    });
+
                     // Pagination
-                    const dialogTotalPages = Math.ceil(filteredBookings.length / dialogItemsPerPage);
+                    const dialogTotalPages = Math.ceil(sortedBookings.length / dialogItemsPerPage);
                     const dialogIndexOfLastItem = dialogCurrentPage * dialogItemsPerPage;
                     const dialogIndexOfFirstItem = dialogIndexOfLastItem - dialogItemsPerPage;
-                    const displayBookings = filteredBookings.slice(dialogIndexOfFirstItem, dialogIndexOfLastItem);
+                    const displayBookings = sortedBookings.slice(dialogIndexOfFirstItem, dialogIndexOfLastItem);
 
                     return (
                       <>
@@ -729,7 +786,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
                                     {bks.student_name}
                                   </td>
                                   <td className="border px-4 py-2 text-center">
-                                    {bks.time_range}
+                                    {formatTimeTo12Hour(bks.time_range)}
                                   </td>
                                   <td className="border px-4 py-2 text-center">
                                     {bks.subject_name}
@@ -817,10 +874,10 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
                       </div>
                       
                       {/* Pagination */}
-                      {filteredBookings.length > dialogItemsPerPage && (
+                      {sortedBookings.length > dialogItemsPerPage && (
                         <div className="flex items-center justify-between mt-4 pt-4 border-t">
                           <span className="text-sm text-gray-700">
-                            Showing {dialogIndexOfFirstItem + 1} to {Math.min(dialogIndexOfLastItem, filteredBookings.length)} of {filteredBookings.length} entries
+                            Showing {dialogIndexOfFirstItem + 1} to {Math.min(dialogIndexOfLastItem, sortedBookings.length)} of {sortedBookings.length} entries
                           </span>
                           <div className="flex gap-2">
                             <button
@@ -1000,7 +1057,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
                       {selectedBooking.time_range && (
                         <p className="text-sm">
                           <span className="font-medium">Time:</span>{" "}
-                          {selectedBooking.time_range}
+                          {formatTimeTo12Hour(selectedBooking.time_range)}
                         </p>
                       )}
                       {selectedBooking.faculty_name && (

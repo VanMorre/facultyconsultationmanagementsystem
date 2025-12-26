@@ -10,7 +10,6 @@ $data = json_decode(file_get_contents("php://input"), true);
 
 if (
     !isset($data['availabilityfaculty_id']) || empty($data['availabilityfaculty_id']) ||
-    !isset($data['recurrence_id']) || empty($data['recurrence_id']) ||
     !isset($data['availability_id']) || empty($data['availability_id']) ||
     !isset($data['timerange_id']) || empty($data['timerange_id']) ||
     !isset($data['user_id']) || empty($data['user_id']) ||
@@ -29,8 +28,7 @@ try {
 
     // Update availability
     $query = "UPDATE tbl_setavailabilityfaculty 
-              SET recurrence_id = :recurrence_id,
-                  availability_id = :availability_id,
+              SET availability_id = :availability_id,
                   timerange_id = :timerange_id,
                   user_id = :user_id,
                   availableslotstatus_id = :availableslotstatus_id
@@ -38,7 +36,6 @@ try {
     $stmt = $conn->prepare($query);
 
     $stmt->bindParam(':id', $data['availabilityfaculty_id'], PDO::PARAM_INT);
-    $stmt->bindParam(':recurrence_id', $data['recurrence_id'], PDO::PARAM_INT);
     $stmt->bindParam(':availability_id', $data['availability_id'], PDO::PARAM_INT);
     $stmt->bindParam(':timerange_id', $data['timerange_id'], PDO::PARAM_INT);
     $stmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
@@ -51,7 +48,7 @@ try {
         $logStmt = $conn->prepare($logQuery);
 
         $activityType = "Availability";
-        $action = "Updated faculty availability (ID: {$data['availabilityfaculty_id']}, Recurrence: {$data['recurrence_id']}, Availability: {$data['availability_id']}, TimeRange: {$data['timerange_id']}, SlotStatus: {$data['availableslotstatus_id']})";
+        $action = "Updated faculty availability (ID: {$data['availabilityfaculty_id']}, Availability: {$data['availability_id']}, TimeRange: {$data['timerange_id']}, SlotStatus: {$data['availableslotstatus_id']})";
 
         $logStmt->bindParam(':user_id', $data['user_id'], PDO::PARAM_INT);
         $logStmt->bindParam(':activity_type', $activityType, PDO::PARAM_STR);

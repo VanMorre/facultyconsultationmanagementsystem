@@ -9,7 +9,6 @@ const FacultyAvailabilitiesManagement = dynamic(() => import("./components/facul
 const FacultyReportsManagement = dynamic(() => import("./components/facultyreports"), { ssr: false });
 const ActivityManagement = dynamic(() => import("./components/activitylogs"), { ssr: false });
 const StudentrequestManagement = dynamic(() => import("./components/studentrequest"), { ssr: false });
-const ConsultationManagement = dynamic(() => import("./backups/consultation"), { ssr: false });
 const SettingsManagement = dynamic(() => import("./components/settings"), { ssr: false });
 const FacultyManagement = dynamic(() => import("./components/faculty"), { ssr: false });
 const AvailabilityManagement = dynamic(() => import("./components/availability"), { ssr: false });
@@ -33,7 +32,6 @@ import {
 } from "@/components/ui/pagination";
 
 import AdminLayout from "../layouts/adminlayout";
-import { toast } from "react-toastify";
 import { TbUser, TbArrowRight } from "react-icons/tb";
 
 const AdminDashboard = () => {
@@ -242,6 +240,37 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
       console.error("Error fetching faculty availability:", error);
       setFetchAvailability([]);
     }
+  };
+
+  const formatTimeTo12Hour = (timeString) => {
+    if (!timeString) return "";
+    
+    // Handle time range format like "13:00:00 - 14:00:00"
+    if (timeString.includes(" - ")) {
+      const [startTime, endTime] = timeString.split(" - ");
+      return `${convertTo12Hour(startTime)} - ${convertTo12Hour(endTime)}`;
+    }
+    
+    // Handle single time format
+    return convertTo12Hour(timeString);
+  };
+
+  const convertTo12Hour = (time24) => {
+    if (!time24) return "";
+    
+    // Extract hours and minutes from "HH:MM:SS" or "HH:MM" format
+    const timeParts = time24.split(":");
+    if (timeParts.length < 2) return time24;
+    
+    let hours = parseInt(timeParts[0], 10);
+    const minutes = timeParts[1];
+    
+    if (isNaN(hours)) return time24;
+    
+    const period = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // Convert to 12-hour format (0 becomes 12)
+    
+    return `${hours}:${minutes} ${period}`;
   };
 
   const days = [
@@ -581,7 +610,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-cons
                                   key={slot.availabilityfaculty_id}
                                   className="bg-green-900 text-white text-xs px-3 py-1 rounded-md mt-2"
                                 >
-                                  {slot.time_range}
+                                  {formatTimeTo12Hour(slot.time_range)}
                                 </div>
                               ))
                             ) : (
@@ -606,7 +635,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-cons
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <h2 className="text-l font-bold text-black">
-                      Student Requests
+                      Consultations
                     </h2>
 
                     {/* Bell with count */}
@@ -747,7 +776,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-cons
         {currentView === "studentrequest" && <StudentrequestManagement />}
         {currentView === "Activitylogs" && <ActivityManagement />}
         {currentView === "availability" && <AvailabilityManagement />}
-        {currentView === "consultation" && <ConsultationManagement />}
         {/* {currentView === "departments" && <DepartmentManagement />} */}
         {currentView === "reports" && <ReportManagement />}
         {currentView === "Settings" && <SettingsManagement />}

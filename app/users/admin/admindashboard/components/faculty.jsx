@@ -28,8 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
@@ -49,6 +48,10 @@ const FacultyManagement = () => {
   const [userrole, setuserRole] = useState("");
   const [userstatus, setuserStatus] = useState("");
   const [passwordStrength, setPasswordStrength] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [editEmailError, setEditEmailError] = useState("");
+  const [contactError, setContactError] = useState("");
+  const [editContactError, setEditContactError] = useState("");
 
   const [statusadminOptions, setStatusadminOptions] = useState([]);
   const [roleadminOptions, setroleadminOptions] = useState([]);
@@ -178,8 +181,67 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/status/fetch-status.
   };
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  const validateEmail = (email) => {
+    if (!email) {
+      setEmailError("Email is required.");
+      return false;
+    }
+    if (!email.toLowerCase().endsWith("@phinmaed.com")) {
+      setEmailError("Email must end with @phinmaed.com");
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError("Please enter a valid email format.");
+      return false;
+    }
+    setEmailError("");
+    return true;
+  };
+
+  const validateContact = (contact) => {
+    if (!contact) {
+      setContactError("");
+      return true; // Contact is optional, so empty is valid
+    }
+    // Remove any non-digit characters for validation
+    const digitsOnly = contact.replace(/\D/g, "");
+    if (digitsOnly.length > 11) {
+      setContactError("Contact number must not exceed 11 digits.");
+      return false;
+    }
+    setContactError("");
+    return true;
+  };
+
+  const validateEditContact = (contact) => {
+    if (!contact) {
+      setEditContactError("");
+      return true; // Contact is optional, so empty is valid
+    }
+    // Remove any non-digit characters for validation
+    const digitsOnly = contact.replace(/\D/g, "");
+    if (digitsOnly.length > 11) {
+      setEditContactError("Contact number must not exceed 11 digits.");
+      return false;
+    }
+    setEditContactError("");
+    return true;
+  };
+
   const handleUsersSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate email
+    if (!validateEmail(useremail)) {
+      return;
+    }
+
+    // Validate contact number
+    if (!validateContact(usercontact)) {
+      return;
+    }
 
     const formData = new FormData();
     formData.append("usersname", usersname);
@@ -226,6 +288,9 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/add-acc
         setuserStatus("");
         setuserRole("");
         setuserfullname("");
+        setEmailError("");
+        setPasswordStrength("");
+        setContactError("");
         await fetchuseraccounts_info();
         setDialogOpen(false);
       } else {
@@ -302,6 +367,8 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/view-ac
         const data = response.data.data;
         setUserData(data); // data includes all correct fields
         setOriginalUserData(data);
+        setEditEmailError("");
+        setEditContactError("");
         setEditDialogOpen(true);
       } else {
         toast.error("User not found");
@@ -344,11 +411,29 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/view-ac
       return;
     }
 
-    const isEmailValid = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!isEmailValid(email)) {
-      toast.error("Invalid email format.");
+    // Validate contact number
+    if (!validateEditContact(contact)) {
       return;
     }
+
+    // Validate email format
+    if (!email || !email.trim()) {
+      toast.error("Email is required.");
+      setEditEmailError("Email is required.");
+      return;
+    }
+    if (!email.toLowerCase().endsWith("@phinmaed.com")) {
+      toast.error("Email must end with @phinmaed.com");
+      setEditEmailError("Email must end with @phinmaed.com");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email format.");
+      setEditEmailError("Please enter a valid email format.");
+      return;
+    }
+    setEditEmailError("");
 
     try {
       const formData = new FormData();
@@ -382,6 +467,8 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/edit-ac
         setEditDialogOpen(false);
         setEditImage(null);
         setEditImagePreview(null);
+        setEditContactError("");
+        setEditEmailError("");
         await fetchuseraccounts_info();
       } else {
         toast.error(`Update failed: ${data.message}`);
@@ -399,20 +486,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/edit-ac
       transition={{ duration: 0.5 }}
     >
       <>
-        <ToastContainer
-          position="top-right"
-          autoClose={1000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-          transition={Bounce}
-        />
-
         <div className="bg-white p-6  shadow-md">
           <h1 className="text-m font-bold mb-4 text-green-800 mt-3">
             Faculty Accounts
@@ -475,75 +548,136 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/edit-ac
                   Add Faculty
                 </button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[900px]">
+              <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add Users</DialogTitle>
-                  <DialogDescription>
+                  <DialogTitle className="text-xl font-semibold text-gray-800">Add Users</DialogTitle>
+                  <DialogDescription className="text-gray-600">
                     Fill in the user's details below and click save to add them.
                   </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleUsersSubmit}>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid items-center gap-4">
-                      <div className="col-span-1">
-                        <div
-                          className="border-2 border-dashed border-black rounded-lg w-58 h-58 flex items-center justify-center cursor-pointer hover:border-gray-600 relative overflow-hidden"
-                          onClick={() =>
-                            document.getElementById("userImage").click()
-                          }
-                        >
-                          {imagePreview ? (
-                            <img
-                              src={imagePreview}
-                              alt="User Preview"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <p className="text-black text-l text-center">
-                              Click to upload
-                            </p>
-                          )}
-                          <Input
-                            id="userImage"
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files[0];
-                              if (file) {
-                                setuserImage(file);
-                                const reader = new FileReader();
-                                reader.onload = (e) => {
-                                  setImagePreview(e.target.result);
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
+                  <div className="grid gap-6 py-4">
+                    {/* Profile Picture Upload */}
+                    <div className="flex justify-center">
+                      <div
+                        className="border-2 border-dashed border-gray-300 rounded-lg w-32 h-32 flex items-center justify-center cursor-pointer hover:border-green-600 hover:bg-gray-50 transition-colors relative overflow-hidden"
+                        onClick={() =>
+                          document.getElementById("userImage").click()
+                        }
+                      >
+                        {imagePreview ? (
+                          <img
+                            src={imagePreview}
+                            alt="User Preview"
+                            className="w-full h-full object-cover"
                           />
-                        </div>
+                        ) : (
+                          <div className="text-center p-4">
+                            <svg
+                              className="mx-auto h-8 w-8 text-gray-400"
+                              stroke="currentColor"
+                              fill="none"
+                              viewBox="0 0 48 48"
+                            >
+                              <path
+                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                strokeWidth={2}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            <p className="text-sm text-gray-500 mt-2">Click to upload</p>
+                          </div>
+                        )}
+                        <Input
+                          id="userImage"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              setuserImage(file);
+                              const reader = new FileReader();
+                              reader.onload = (e) => {
+                                setImagePreview(e.target.result);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
                       </div>
+                    </div>
 
-                      <div className="col-span-1">
-                        <Label htmlFor="name" className="text-left mb-2">
-                          Username:
+                    {/* Form Fields Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="username" className="text-left mb-2 block text-sm font-medium text-gray-700">
+                          Username: <span className="text-red-500">*</span>
                         </Label>
                         <Input
-                          id="name"
+                          id="username"
                           type="text"
-                          className="w-full"
+                          className="w-full border-gray-300 focus:border-green-600 focus:ring-green-600"
                           value={usersname}
                           onChange={(e) => setusersname(e.target.value)}
+                          required
+                          placeholder="Enter username"
                         />
                       </div>
 
-                      <div className="col-span-1">
-                        <Label htmlFor="password" className="text-left mb-2">
-                          Password:
+                      <div>
+                        <Label htmlFor="fullname" className="text-left mb-2 block text-sm font-medium text-gray-700">
+                          Fullname: <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="fullname"
+                          className="w-full border-gray-300 focus:border-green-600 focus:ring-green-600"
+                          type="text"
+                          value={userfullname}
+                          onChange={(e) => setuserfullname(e.target.value)}
+                          required
+                          placeholder="Enter full name"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="email" className="text-left mb-2 block text-sm font-medium text-gray-700">
+                          Email: <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="email"
+                          className={`w-full border-gray-300 focus:border-green-600 focus:ring-green-600 ${
+                            emailError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
+                          }`}
+                          type="email"
+                          value={useremail}
+                          onChange={(e) => {
+                            setuseremail(e.target.value);
+                            if (emailError) {
+                              validateEmail(e.target.value);
+                            }
+                          }}
+                          onBlur={(e) => validateEmail(e.target.value)}
+                          required
+                          placeholder="example@phinmaed.com"
+                        />
+                        {emailError && (
+                          <p className="text-sm text-red-500 mt-1">{emailError}</p>
+                        )}
+                        {!emailError && useremail && (
+                          <p className="text-xs text-gray-500 mt-1">Email must end with @phinmaed.com</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="password" className="text-left mb-2 block text-sm font-medium text-gray-700">
+                          Password: <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           id="password"
-                          className="w-full"
+                          className="w-full border-gray-300 focus:border-green-600 focus:ring-green-600"
                           type="password"
                           value={userpasswords}
                           onChange={(e) => {
@@ -553,103 +687,103 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/edit-ac
                               checkPasswordStrength(password)
                             );
                           }}
-                        />
-                        <p
-                          className={`text-sm mt-1 ${
-                            passwordStrength === "Weak"
-                              ? "text-red-500"
-                              : passwordStrength === "Moderate"
-                              ? "text-yellow-500"
-                              : passwordStrength === "Strong"
-                              ? "text-green-500"
-                              : "text-blue-500"
-                          }`}
-                        >
-                          {passwordStrength
-                            ? `Password Strength: ${passwordStrength}`
-                            : ""}
-                        </p>
-                      </div>
-
-                      <div className="col-span-1">
-                        <Label htmlFor="email" className="text-left mb-2">
-                          Email:
-                        </Label>
-                        <Input
-                          id="email"
-                          className="w-full"
-                          type="text"
-                          value={useremail}
-                          onChange={(e) => setuseremail(e.target.value)}
                           required
+                          placeholder="Enter password"
                         />
+                        {passwordStrength && (
+                          <p
+                            className={`text-sm mt-1 font-medium ${
+                              passwordStrength === "Weak"
+                                ? "text-red-500"
+                                : passwordStrength === "Moderate"
+                                ? "text-yellow-500"
+                                : passwordStrength === "Strong"
+                                ? "text-green-500"
+                                : "text-blue-500"
+                            }`}
+                          >
+                            Password Strength: {passwordStrength}
+                          </p>
+                        )}
                       </div>
 
-                      <div className="col-span-1">
-                        <Label htmlFor="email" className="text-left mb-2">
-                          Fullname:
-                        </Label>
-                        <Input
-                          id="email"
-                          className="w-full"
-                          type="text"
-                          value={userfullname}
-                          onChange={(e) => setuserfullname(e.target.value)}
-                          required
-                        />
-                      </div>
-
-                      <div className="col-span-1">
-                        <Label htmlFor="address" className="text-left mb-2">
+                      <div>
+                        <Label htmlFor="address" className="text-left mb-2 block text-sm font-medium text-gray-700">
                           Address:
                         </Label>
                         <Input
                           id="address"
-                          className="w-full"
+                          className="w-full border-gray-300 focus:border-green-600 focus:ring-green-600"
                           type="text"
                           value={useraddress}
                           onChange={(e) => setuseraddress(e.target.value)}
+                          placeholder="Enter address"
                         />
                       </div>
 
-                      <div className="col-span-1">
-                        <Label htmlFor="age" className="text-left mb-2">
+                      <div>
+                        <Label htmlFor="age" className="text-left mb-2 block text-sm font-medium text-gray-700">
                           Age:
                         </Label>
                         <Input
                           id="age"
-                          className="w-full"
+                          className="w-full border-gray-300 focus:border-green-600 focus:ring-green-600"
                           type="number"
+                          min="1"
+                          max="120"
                           value={userage}
                           onChange={(e) => setuserage(e.target.value)}
+                          placeholder="Enter age"
                         />
                       </div>
 
-                      <div className="col-span-1">
+                      <div>
                         <Label
                           htmlFor="contactnumber"
-                          className="text-left mb-2"
+                          className="text-left mb-2 block text-sm font-medium text-gray-700"
                         >
-                          Contact Number
+                          Contact Number:
                         </Label>
                         <Input
                           id="contactnumber"
-                          className="w-full"
-                          type="number"
+                          className={`w-full border-gray-300 focus:border-green-600 focus:ring-green-600 ${
+                            contactError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
+                          }`}
+                          type="tel"
                           value={usercontact}
-                          onChange={(e) => setusercontact(e.target.value)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Allow only digits and limit to 11 digits
+                            const digitsOnly = value.replace(/\D/g, "");
+                            if (digitsOnly.length <= 11) {
+                              setusercontact(digitsOnly);
+                              if (contactError) {
+                                validateContact(digitsOnly);
+                              }
+                            }
+                          }}
+                          onBlur={(e) => validateContact(e.target.value)}
+                          maxLength={11}
+                          placeholder="Enter contact number (max 11 digits)"
                         />
+                        {contactError && (
+                          <p className="text-sm text-red-500 mt-1">{contactError}</p>
+                        )}
+                        {!contactError && usercontact && (
+                          <p className="text-xs text-gray-500 mt-1">Maximum 11 digits allowed</p>
+                        )}
                       </div>
 
-                      <div className="col-span-1">
-                        <Label htmlFor="role" className="text-left mb-2">
-                          Role:
+                      <div>
+                        <Label htmlFor="role" className="text-left mb-2 block text-sm font-medium text-gray-700">
+                          Role: <span className="text-red-500">*</span>
                         </Label>
                         <select
                           id="role"
-                          className="w-full border rounded px-2 py-1"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-green-600 text-gray-700"
                           value={userrole}
                           onChange={(e) => setuserRole(e.target.value)}
+                          required
                         >
                           <option value="">Select Role</option>
                           {roleadminOptions.map((roless) => (
@@ -662,8 +796,26 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/edit-ac
                     </div>
                   </div>
 
-                  <DialogFooter className="mt-4">
-                    <Button type="submit">Add User</Button>
+                  <DialogFooter className="mt-6 border-t pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setDialogOpen(false);
+                        setEmailError("");
+                        setPasswordStrength("");
+                        setContactError("");
+                      }}
+                      className="mr-2"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit"
+                      className="bg-green-800 hover:bg-green-900 text-white"
+                    >
+                      Add User
+                    </Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -933,7 +1085,16 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/edit-ac
             </DialogContent>
           </Dialog>
 
-          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <Dialog 
+            open={editDialogOpen} 
+            onOpenChange={(open) => {
+              setEditDialogOpen(open);
+              if (!open) {
+                setEditContactError("");
+                setEditEmailError("");
+              }
+            }}
+          >
             <DialogContent className="sm:max-w-[600px] p-6 rounded-xl border shadow-md">
               <DialogHeader>
                 <DialogTitle className="text-lg font-bold text-red-800">
@@ -1008,14 +1169,33 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/edit-ac
                   </Label>
                   <Input
                     value={UserData.contact}
-                    onChange={(e) =>
-                      setUserData({
-                        ...UserData,
-                        contact: e.target.value,
-                      })
-                    }
-                    className="bg-white border border-gray-300 rounded-lg px-4 py-2"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow only digits and limit to 11 digits
+                      const digitsOnly = value.replace(/\D/g, "");
+                      if (digitsOnly.length <= 11) {
+                        setUserData({
+                          ...UserData,
+                          contact: digitsOnly,
+                        });
+                        if (editContactError) {
+                          validateEditContact(digitsOnly);
+                        }
+                      }
+                    }}
+                    onBlur={(e) => validateEditContact(e.target.value)}
+                    maxLength={11}
+                    className={`bg-white border rounded-lg px-4 py-2 ${
+                      editContactError ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Enter contact number (max 11 digits)"
                   />
+                  {editContactError && (
+                    <p className="text-sm text-red-500 mt-1">{editContactError}</p>
+                  )}
+                  {!editContactError && UserData.contact && (
+                    <p className="text-xs text-gray-500 mt-1">Maximum 11 digits allowed</p>
+                  )}
                 </div>
 
                 {/* Address */}
@@ -1053,18 +1233,44 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/edit-ac
 
                 <div className="flex flex-col">
                   <Label className="text-sm font-semibold text-black mb-1">
-                    Email
+                    Email <span className="text-red-500">*</span>
                   </Label>
                   <Input
+                    type="email"
                     value={UserData.email}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setUserData({
                         ...UserData,
                         email: e.target.value,
-                      })
-                    }
-                    className="bg-white border border-gray-300 rounded-lg px-4 py-2"
+                      });
+                      if (editEmailError) {
+                        const email = e.target.value;
+                        if (!email.toLowerCase().endsWith("@phinmaed.com")) {
+                          setEditEmailError("Email must end with @phinmaed.com");
+                        } else {
+                          setEditEmailError("");
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const email = e.target.value;
+                      if (email && !email.toLowerCase().endsWith("@phinmaed.com")) {
+                        setEditEmailError("Email must end with @phinmaed.com");
+                      } else {
+                        setEditEmailError("");
+                      }
+                    }}
+                    className={`bg-white border rounded-lg px-4 py-2 ${
+                      editEmailError ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="example@phinmaed.com"
                   />
+                  {editEmailError && (
+                    <p className="text-sm text-red-500 mt-1">{editEmailError}</p>
+                  )}
+                  {!editEmailError && UserData.email && (
+                    <p className="text-xs text-gray-500 mt-1">Email must end with @phinmaed.com</p>
+                  )}
                 </div>
 
                 <div className="flex flex-col">

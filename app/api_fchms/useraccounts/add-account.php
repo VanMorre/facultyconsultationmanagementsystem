@@ -29,16 +29,15 @@ try {
     $userstatus = 1;
     
     // Check for existing records
-    $checkQuery = "SELECT username, email, fullname, contact, address FROM tbl_users 
+    $checkQuery = "SELECT username, email, fullname, contact FROM tbl_users 
                    WHERE username = :usersname OR email = :useremail OR fullname = :userfullname 
-                         OR contact = :usercontact OR address = :useraddress";
+                         OR contact = :usercontact";
 
     $stmt = $conn->prepare($checkQuery);
     $stmt->bindParam(':usersname', $usersname, PDO::PARAM_STR);
     $stmt->bindParam(':useremail', $useremail, PDO::PARAM_STR);
     $stmt->bindParam(':userfullname', $userfullname, PDO::PARAM_STR);
     $stmt->bindParam(':usercontact', $usercontact, PDO::PARAM_STR);
-    $stmt->bindParam(':useraddress', $useraddress, PDO::PARAM_STR);
     $stmt->execute();
 
     if ($stmt->rowCount() > 0) {
@@ -48,7 +47,6 @@ try {
         if ($existing['email'] === $useremail) $message .= "Email, ";
         if ($existing['fullname'] === $userfullname) $message .= "Full Name, ";
         if ($existing['contact'] === $usercontact) $message .= "Contact, ";
-        if ($existing['address'] === $useraddress) $message .= "Address, ";
 
         echo json_encode(["success" => false, "message" => rtrim($message, ", ") . "."]);
         exit;

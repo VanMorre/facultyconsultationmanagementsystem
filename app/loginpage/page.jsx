@@ -55,6 +55,7 @@ export default function AdminLogin() {
   const [photo, setPhoto] = useState(null);
   const [passwordError, setPasswordError] = useState("");
   const [passwordStrength, setPasswordStrength] = useState("");
+  const [emailError, setEmailError] = useState("");
   const DEFAULT_ROLE_STATUS_ID = 3;
   const [studentDialogOpen, setStudentDialogOpen] = useState(false);
 
@@ -360,6 +361,24 @@ export default function AdminLogin() {
     };
   }, []);
 
+  // Email validation (used on submit)
+  const validateEmail = (email) => {
+    if (!email) return "Email is required.";
+    
+    // Check if email ends with @phinmaed.com
+    if (!email.toLowerCase().endsWith("@phinmaed.com")) {
+      return "Email must be a valid @phinmaed.com email address.";
+    }
+    
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return "Please enter a valid email address.";
+    }
+    
+    return "";
+  };
+
   // Password validation (used on submit)
   const validatePassword = (password) => {
     if (!password) return "Password is required.";
@@ -391,6 +410,15 @@ export default function AdminLogin() {
 
   const handleStudentSubmit = async (e) => {
     e.preventDefault();
+
+    // ✅ Validate email before submit
+    const emailValidationError = validateEmail(student_email);
+    if (emailValidationError) {
+      setEmailError(emailValidationError);
+      return;
+    } else {
+      setEmailError("");
+    }
 
     // ✅ Validate password before submit
     const error = validatePassword(student_password);
@@ -438,6 +466,8 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/add-stud
         setContact("");
         setselectedcourse("");
         setselectedyearlevel("");
+        setEmailError("");
+        setPasswordError("");
 
         // ✅ Close dialog
         setStudentDialogOpen(false);
@@ -648,19 +678,19 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.
 
               {/* CAPTCHA */}
               <motion.div className="mt-8">
-                <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-1.5 sm:gap-3 mb-6">
                   <canvas
                     ref={captchaCanvasRef}
                     width="280"
                     height="70"
-                    className="border border-black bg-white shadow-xl"
+                    className="border border-black bg-white shadow-xl w-[280px] h-[70px]"
                   />
                   <button
                     type="button"
                     onClick={generateCaptcha}
-                    className="p-3 bg-green-800 hover:bg-green-900 text-white rounded-md shadow-xl"
+                    className="p-2 sm:p-3 bg-green-800 hover:bg-green-900 text-white rounded-md shadow-xl flex-shrink-0 -ml-0.5 sm:ml-0"
                   >
-                    <FiRefreshCcw size={20} />
+                    <FiRefreshCcw size={18} className="sm:w-5 sm:h-5" />
                   </button>
                 </div>
                 <motion.input
@@ -840,11 +870,20 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.
                         <Input
                           id="studentEmail"
                           type="email"
-                          placeholder="Enter student email"
+                          placeholder="Enter student email (@phinmaed.com)"
                           className="mt-2"
                           value={student_email}
-                          onChange={(e) => setStudent_Email(e.target.value)}
+                          onChange={(e) => {
+                            setStudent_Email(e.target.value);
+                            // Clear error when user starts typing
+                            if (emailError) setEmailError("");
+                          }}
                         />
+                        {emailError && (
+                          <p className="text-red-600 text-sm mt-1">
+                            {emailError}
+                          </p>
+                        )}
                       </div>
 
                       {/* Password */}

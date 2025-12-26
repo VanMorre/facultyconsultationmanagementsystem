@@ -19,8 +19,6 @@ import { FaClipboardList, FaUser, FaCalendarAlt, FaClock, FaFileAlt, FaChartLine
 import { HiCheckCircle, HiXCircle, HiClock } from "react-icons/hi";
 import { MdPending, MdTrendingUp } from "react-icons/md";
 import { BsBarChartFill } from "react-icons/bs";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import {
   Pagination,
   PaginationContent,
@@ -39,6 +37,9 @@ const StudentDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const bookingStatusRef = useRef({});
+
+  const notifiedBookingIdsRef = useRef([]);
+  const toastShownBookingRef = useRef(false);
 
   const SECRET_KEY = "my_secret_key_123456";
   const decryptCacheRef = useRef(new Map());
@@ -80,16 +81,30 @@ const StudentDashboard = () => {
   useEffect(() => {
     if (!loggedInUserId) return;
 
-    let isInitial = true;
+    // Load session-stored notified IDs (fast synchronous operation)
+    const storedBooking = sessionStorage.getItem("notified_booking_ids");
+    if (storedBooking) {
+      try {
+        notifiedBookingIdsRef.current = JSON.parse(storedBooking);
+      } catch (e) {
+        notifiedBookingIdsRef.current = [];
+      }
+    }
 
-    fetchbookingstudent(loggedInUserId, isInitial);
-    isInitial = false;
+    // Defer initial API calls to allow page to render first
+    const initialFetchTimeout = setTimeout(() => {
+      fetchbookingstudent(loggedInUserId, true);
+    }, 100);
 
+    // Poll every 5 seconds (start after initial fetch)
     const interval = setInterval(() => {
       fetchbookingstudent(loggedInUserId, false);
     }, 5000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialFetchTimeout);
+      clearInterval(interval);
+    };
   }, [loggedInUserId]);
 
   const fetchbookingstudent = async (StudentID, isInitial = false) => {
@@ -97,49 +112,52 @@ const StudentDashboard = () => {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
         {
-          params: { student_id: StudentID }, // ✅ send student_id
+          params: { student_id: StudentID },
         }
       );
 
       if (response.data.success) {
         const newBookings = response.data.data;
 
-        // ✅ Detect status changes (Approved / Disapproved)
-        newBookings.forEach((booking) => {
-          const { booking_id, approval_name } = booking;
-          const prevStatus = bookingStatusRef.current[booking_id];
+        // Extract unique booking IDs
+        const currentIds = newBookings.map((item) => item.booking_id);
 
-          // Only notify if status changed AND not the first fetch
-          if (!isInitial && prevStatus && prevStatus !== approval_name) {
-            if (approval_name === "Approve") {
-              toast.success(
-                `Your booking #${booking_id} has been Approved ✅`,
-                {
-                  toastId: `booking-${booking_id}-approved`,
-                  position: "top-right",
-                  autoClose: 3000,
-                }
-              );
-            } else if (approval_name === "Disapprove") {
-              toast.error(`Your booking #${booking_id} was Disapproved ❌`, {
-                toastId: `booking-${booking_id}-disapproved`,
-                position: "top-right",
-                autoClose: 3000,
-              });
-            }
-          }
+        // Find IDs that are new compared to stored ones
+        const newIds = currentIds.filter(
+          (id) => !notifiedBookingIdsRef.current.includes(id)
+        );
 
-          // Update status reference
-          bookingStatusRef.current[booking_id] = approval_name;
-        });
+        // 🚫 Removed toast, but still handle ID tracking
+        if (!isInitial && newIds.length > 0 && !toastShownBookingRef.current) {
+          toastShownBookingRef.current = true;
 
-        // ✅ On first fetch, just set statuses without showing toasts
+          // ✅ Save notified IDs
+          notifiedBookingIdsRef.current = [
+            ...notifiedBookingIdsRef.current,
+            ...newIds,
+          ];
+
+          sessionStorage.setItem(
+            "notified_booking_ids",
+            JSON.stringify(notifiedBookingIdsRef.current)
+          );
+
+          // Reset lock after delay
+          setTimeout(() => {
+            toastShownBookingRef.current = false;
+          }, 5000);
+        }
+
+        // ✅ On initial fetch, just mark IDs without showing anything
         if (isInitial) {
-          const initialStatus = {};
-          newBookings.forEach((booking) => {
-            initialStatus[booking.booking_id] = booking.approval_name;
-          });
-          bookingStatusRef.current = initialStatus;
+          notifiedBookingIdsRef.current = [
+            ...notifiedBookingIdsRef.current,
+            ...currentIds,
+          ];
+          sessionStorage.setItem(
+            "notified_booking_ids",
+            JSON.stringify(notifiedBookingIdsRef.current)
+          );
         }
 
         setfetchbooking(newBookings);
@@ -288,14 +306,8 @@ const StudentDashboard = () => {
         variants={containerVariants}
         className={`transition-opacity duration-300 ${
           fadeTransition ? "opacity-0" : "opacity-100"
-        }`}
+        }        `}
       >
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          theme="light"
-          transition={Bounce}
-        />
         {currentView === "dashboard" && (
           <>
             {/* ✅ Card Section */}

@@ -23,8 +23,7 @@ import {
   FiBook,
   FiLayers,
 } from "react-icons/fi";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 const SettingsManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
@@ -351,13 +350,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/yearlevel/fetch-year
     transition={{ duration: 0.5 }}
   >
     <>
-      <ToastContainer
-        position="top-right"
-        autoClose={1000}
-        theme="light"
-        transition={Bounce}
-      />
-
       <div className="bg-white p-4 md:p-6 shadow-md rounded-lg">
         <h1 className="text-lg md:text-xl font-bold mb-4 border-b-2 border-gray-500 pb-3 md:pb-5 mt-2 md:mt-3">
           Student Profile

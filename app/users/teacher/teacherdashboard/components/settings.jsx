@@ -23,8 +23,7 @@ import {
   FiCalendar,
   FiPhone,
 } from "react-icons/fi";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 const SettingsManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
   const [userId, setUserId] = useState(null);
@@ -379,20 +378,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/changep
       transition={{ duration: 0.5 }}
     >
       <>
-        <ToastContainer
-          position="top-right"
-          autoClose={1000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-          transition={Bounce}
-        />
-
         <div className="bg-white p-6  shadow-md">
            <h1 className="text-1xl font-bold mb-4 text-green-800  mt-3">
             Profile Information

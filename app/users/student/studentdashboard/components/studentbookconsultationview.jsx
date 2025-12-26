@@ -27,8 +27,7 @@ import {
 import { HiXCircle } from "react-icons/hi";
 import { MdEmail } from "react-icons/md";
 
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect, useRef } from "react";
@@ -275,13 +274,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
       transition={{ duration: 0.5 }}
     >
       <>
-        <ToastContainer
-          position="top-right"
-          autoClose={1000}
-          theme="light"
-          transition={Bounce}
-        />
-
         <div className="bg-white p-6 shadow-md">
           <h1 className="text-l font-bold mb-2 text-green-800 pb-5 mt-3 flex items-center gap-2">
             <TbHistory className="text-xl w-6 h-6 !w-6 !h-6" />
@@ -439,7 +431,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
                         <td className="border px-6 py-3 text-center text-sm font-semibold">
                           <span
                             className={`inline-block px-3 py-1 text-sm font-semibold rounded-md ${
-                              bks.approval_name === "Approve"
+                              bks.approval_name === "Completed"
                                 ? "bg-green-900 text-white"
                                 : bks.approval_name === "Pending"
                                 ? "bg-gray-200 text-black"

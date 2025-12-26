@@ -3,8 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import React, { useState, useEffect, useRef } from "react";
 import CryptoJS from "crypto-js";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import {
   Dialog,
   DialogContent,
@@ -57,7 +56,6 @@ const BookConsultationManagement = () => {
   const DEFAULT_APPROVAL_STATUS_ID = 5;
 
   const notifiedAvailabilityIdsRef = useRef([]);
-  const toastShownAvailabilityRef = useRef(false);
   const currentMonthRef = useRef(null);
   const currentYearRef = useRef(null);
 
@@ -252,9 +250,44 @@ const BookConsultationManagement = () => {
     "December",
   ];
 
+  const formatTimeTo12Hour = (timeString) => {
+    if (!timeString) return "";
+    
+    // Handle time range format like "13:00:00 - 14:00:00"
+    if (timeString.includes(" - ")) {
+      const [startTime, endTime] = timeString.split(" - ");
+      return `${convertTo12Hour(startTime)} - ${convertTo12Hour(endTime)}`;
+    }
+    
+    // Handle single time format
+    return convertTo12Hour(timeString);
+  };
+
+  const convertTo12Hour = (time24) => {
+    if (!time24) return "";
+    
+    // Extract hours and minutes from "HH:MM:SS" or "HH:MM" format
+    const timeParts = time24.split(":");
+    if (timeParts.length < 2) return time24;
+    
+    let hours = parseInt(timeParts[0], 10);
+    const minutes = timeParts[1];
+    
+    if (isNaN(hours)) return time24;
+    
+    const period = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // Convert to 12-hour format (0 becomes 12)
+    
+    return `${hours}:${minutes} ${period}`;
+  };
+
   const getFacultyForDate = (date) => {
     const dayName = date.toLocaleString("en-US", { weekday: "long" });
-    return AvailabilityFetch.filter((a) => a.availability_name === dayName);
+    // Case-insensitive matching to handle any case variations
+    return AvailabilityFetch.filter((a) => 
+      a.availability_name && 
+      a.availability_name.toLowerCase() === dayName.toLowerCase()
+    );
   };
 
   // Check if a date is in the past (before today) - works for any past year, month, or day
@@ -284,6 +317,16 @@ const BookConsultationManagement = () => {
     );
   };
 
+  const formatDate = (date) => {
+    if (!date) return null;
+    // Use local date methods to avoid timezone conversion issues
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const openDateDialog = (day) => {
     // Prevent opening dialog for ANY past date (any past year, month, or day)
     if (isPastDate(day)) {
@@ -292,7 +335,8 @@ const BookConsultationManagement = () => {
     }
 
     const dayName = day.toLocaleString("en-US", { weekday: "long" });
-    setSelectedDate(day.toDateString());
+    // Store date in YYYY-MM-DD format to avoid timezone conversion issues
+    setSelectedDate(formatDate(day));
     setSelectedDayName(dayName);
     setSelectedFaculty("");
     setSelectedTimerange("");
@@ -319,21 +363,9 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/allavailabilityfacul
           (id) => !notifiedAvailabilityIdsRef.current.includes(id)
         );
 
-        // 🔔 Show toast only on subsequent fetch (not on initial load)
-        if (
-          !isInitial &&
-          newIds.length > 0 &&
-          !toastShownAvailabilityRef.current
-        ) {
-          toastShownAvailabilityRef.current = true;
-
-          toast.info(`${newIds.length} new faculty availability record(s)`, {
-            toastId: "new-availability-toast", // prevents stacking
-            position: "top-right",
-            autoClose: 2000,
-          });
-
-          // ✅ Save notified IDs
+        // ✅ Track new IDs without showing toast
+        if (!isInitial && newIds.length > 0) {
+          // Save notified IDs
           notifiedAvailabilityIdsRef.current = [
             ...notifiedAvailabilityIdsRef.current,
             ...newIds,
@@ -343,14 +375,9 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/allavailabilityfacul
             "notified_availability_ids",
             JSON.stringify(notifiedAvailabilityIdsRef.current)
           );
-
-          // Reset lock after delay
-          setTimeout(() => {
-            toastShownAvailabilityRef.current = false;
-          }, 5000);
         }
 
-        // ✅ On initial fetch, just mark IDs without showing a toast
+        // ✅ On initial fetch, just mark IDs
         if (isInitial) {
           notifiedAvailabilityIdsRef.current = [
             ...notifiedAvailabilityIdsRef.current,
@@ -386,11 +413,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/allavailabilityfacul
       f.availability_name === selectedDayName
   );
 
-  const formatDate = (date) => {
-    if (!date) return null;
-    return new Date(date).toISOString().split("T")[0]; // YYYY-MM-DD
-  };
-
   const handleSubmit = async () => {
     if (!selectedFaculty || !selectedTimerange || !subject) {
       toast.error(
@@ -400,7 +422,9 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/allavailabilityfacul
     }
 
     // Validate selected date is not in the past (any past year, month, or day)
-    const selectedDateObj = new Date(selectedDate);
+    // Parse YYYY-MM-DD string to Date object for validation
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const selectedDateObj = new Date(year, month - 1, day);
     if (isPastDate(selectedDateObj)) {
       toast.error("Cannot book consultations for past dates. You can only book consultations from today onwards.");
       return;
@@ -415,7 +439,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/allavailabilityfacul
         timerange_id: Number(parsedTime.timerange_id), // ✅ exact time slot
         subject,
         notes,
-        consultation_date: formatDate(selectedDate),
+        consultation_date: selectedDate, // Already in YYYY-MM-DD format
         approval_id: DEFAULT_APPROVAL_STATUS_ID,
       };
 
@@ -426,7 +450,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
       );
 
       if (response.data.success) {
-        toast.success("Consultation booked successfully!");
+        toast.success("Consultation booked successfully!", { autoClose: 1000 });
         setOpenDialog(false);
 
         setSelectedFaculty("");
@@ -449,13 +473,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
       transition={{ duration: 0.5 }}
     >
       <>
-        <ToastContainer
-          position="top-right"
-          autoClose={1000}
-          theme="light"
-          transition={Bounce}
-        />
-
+        
         <div className="bg-white p-4 sm:p-6 shadow-md">
           {/* Title */}
           <h1 className="text-base sm:text-lg md:text-xl font-bold mb-3 sm:mb-4 text-green-800 mt-2 sm:mt-3 flex items-center gap-2">
@@ -603,7 +621,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
                       >
                         <p>
                           <span className="font-semibold">Time range:</span>{" "}
-                          {a.time_range}
+                          {formatTimeTo12Hour(a.time_range)}
                         </p>
                       </div>
                     ))}
@@ -704,7 +722,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
 
                           return (
                             <SelectItem key={idx} value={value}>
-                              {time.time_range}
+                              {formatTimeTo12Hour(time.time_range)}
                             </SelectItem>
                           );
                         })
@@ -731,7 +749,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
 
                 {/* Notes */}
                 <div>
-                  <Label className="pb-2 sm:pb-4">Notes</Label>
+                  <Label className="pb-2 sm:pb-4">Purpose</Label>
                   <textarea
                     className="w-full border border-black rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-green-700"
                     rows="3"

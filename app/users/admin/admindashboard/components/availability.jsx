@@ -44,8 +44,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect } from "react";
 import CryptoJS from "crypto-js";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 const AvailabilityManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
@@ -53,8 +52,6 @@ const AvailabilityManagement = () => {
   const [selectedAvailabilityday, setSelectedAvailabilityday] = useState("");
   const [TimerangeFetch, setTimerangeFetch] = useState([]);
   const [selectedTimerange, setSelectedTimerange] = useState("");
-  const [RecurrenceFetch, setRecurrenceFetch] = useState([]);
-  const [selectedRecurrence, setSelectedRecurrence] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
   const [AvailabilityFetch, setFetchAvailability] = useState([]);
 
@@ -99,7 +96,6 @@ const AvailabilityManagement = () => {
   useEffect(() => {
     decryptUserId();
     fetchavailstatus();
-    fetchrecurrence();
     fetchavailabilityday();
     fetchtimerange();
 
@@ -179,9 +175,6 @@ const AvailabilityManagement = () => {
         String(finv.availabilityfaculty_id)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
-        String(finv.recurrence_name)
-          .toLowerCase()
-          .includes(searchText.toLowerCase()) ||
         String(finv.availability_name)
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
@@ -223,6 +216,37 @@ const AvailabilityManagement = () => {
     setCurrentPage(pageNumber);
   };
 
+  const formatTimeTo12Hour = (timeString) => {
+    if (!timeString) return "";
+    
+    // Handle time range format like "13:00:00 - 14:00:00"
+    if (timeString.includes(" - ")) {
+      const [startTime, endTime] = timeString.split(" - ");
+      return `${convertTo12Hour(startTime)} - ${convertTo12Hour(endTime)}`;
+    }
+    
+    // Handle single time format
+    return convertTo12Hour(timeString);
+  };
+
+  const convertTo12Hour = (time24) => {
+    if (!time24) return "";
+    
+    // Extract hours and minutes from "HH:MM:SS" or "HH:MM" format
+    const timeParts = time24.split(":");
+    if (timeParts.length < 2) return time24;
+    
+    let hours = parseInt(timeParts[0], 10);
+    const minutes = timeParts[1];
+    
+    if (isNaN(hours)) return time24;
+    
+    const period = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // Convert to 12-hour format (0 becomes 12)
+    
+    return `${hours}:${minutes} ${period}`;
+  };
+
   const onFilter = (status) => {
     setIsLoading(true);
     setTimeout(() => {
@@ -250,23 +274,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/status/fetch-status.
     }
   };
 
-  const fetchrecurrence = async () => {
-    try {
-      const response = await axios.get(
-        `
-${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/recurrence/fetch-recurrence.php`
-      );
-
-      if (response.data.success) {
-        setRecurrenceFetch(response.data.data);
-      } else {
-        console.log(response.data.message || "No recurrence found");
-        setRecurrenceFetch([]);
-      }
-    } catch (error) {
-      console.error("Error fetching recurrence:", error);
-    }
-  };
 
   const fetchtimerange = async () => {
     try {
@@ -309,10 +316,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/availabilityday/fetc
 
     // ✅ Validation
 
-    if (!selectedRecurrence) {
-      toast.error("Please select a recurrence.");
-      return;
-    }
     if (!selectedAvailabilityday) {
       toast.error("Please select a day.");
       return;
@@ -327,7 +330,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/availabilityday/fetc
         `
 ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-availability/add-availability.php`,
         {
-          recurrence_id: selectedRecurrence,
           availability_id: selectedAvailabilityday,
           timerange_id: selectedTimerange,
           availableslotstatus_id: DEFAULT_AVAILABLESLOT_STATUS_ID,
@@ -340,7 +342,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
 
         // ✅ clear form
 
-        setSelectedRecurrence("");
         setSelectedAvailabilityday("");
         setSelectedTimerange("");
 
@@ -387,7 +388,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
         const details = response.data.data;
 
         setEditId(details.availabilityfaculty_id);
-        setSelectedRecurrence(details.recurrence_id);
         setSelectedAvailabilityday(details.availability_id);
         setSelectedTimerange(details.timerange_id);
         setSelectedStatus(details.status_id);
@@ -405,10 +405,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
   const handleUpdate = async (e) => {
     e.preventDefault();
 
-    if (!selectedRecurrence) {
-      toast.error("Please select a recurrence.");
-      return;
-    }
     if (!selectedAvailabilityday) {
       toast.error("Please select a day.");
       return;
@@ -428,7 +424,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
 ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-availability/edit-availability.php`,
         {
           availabilityfaculty_id: editId,
-          recurrence_id: selectedRecurrence,
           availability_id: selectedAvailabilityday,
           timerange_id: selectedTimerange,
           availableslotstatus_id: selectedStatus,
@@ -445,13 +440,9 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
             item.availabilityfaculty_id === editId
               ? {
                   ...item,
-                  recurrence_id: selectedRecurrence,
                   availability_id: selectedAvailabilityday,
                   timerange_id: selectedTimerange,
                   status_id: selectedStatus,
-                  recurrence_name: RecurrenceFetch.find(
-                    (r) => r.recurrence_id == selectedRecurrence
-                  )?.recurrence_name,
                   availability_name: Availabilitydayfetch.find(
                     (a) => a.availability_id == selectedAvailabilityday
                   )?.availability_name,
@@ -471,7 +462,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
 
         // ✅ reset edit state
         setEditId(null);
-        setSelectedRecurrence("");
         setSelectedAvailabilityday("");
         setSelectedTimerange("");
         setSelectedStatus("");
@@ -524,31 +514,36 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
       if (response.data.success) {
         toast.success("Slot added successfully.");
 
-        setFetchAvailability((prev) => [
-          ...prev,
-          {
-            availabilityfaculty_id: response.data.new_id, // ✅ backend returns this
-            recurrence_id: selectedRecurrence,
-            availability_id: selectedAvailabilityday,
-            timerange_id: selectedTimerange,
-            status_id: selectedStatus,
-            recurrence_name: RecurrenceFetch.find(
-              (r) => r.recurrence_id == selectedRecurrence
-            )?.recurrence_name,
-            availability_name: Availabilitydayfetch.find(
-              (a) => a.availability_id == selectedAvailabilityday
-            )?.availability_name,
-            time_range: (() => {
-              const t = TimerangeFetch.find(
-                (tr) => tr.timerange_id == selectedTimerange
-              );
-              return t ? `${t.start_time} - ${t.end_time}` : "";
-            })(),
-            availableslot_status: StatusFetch.find(
-              (s) => s.status_id == selectedStatus
-            )?.status_name,
-          },
-        ]);
+        // Find the original slot to get its data
+        const originalSlot = AvailabilityFetch.find(
+          (slot) => slot.availabilityfaculty_id === availabilityfaculty_id
+        );
+
+        if (originalSlot) {
+          // Get the time range data
+          const timeRange = TimerangeFetch.find(
+            (tr) => tr.timerange_id == selectedTimerange
+          );
+
+          setFetchAvailability((prev) => [
+            ...prev,
+            {
+              availabilityfaculty_id: response.data.new_id,
+              availability_id: originalSlot.availability_id,
+              timerange_id: selectedTimerange,
+              status_id: originalSlot.status_id || originalSlot.availableslotstatus_id,
+              availability_name: originalSlot.availability_name,
+              time_range: timeRange ? `${timeRange.start_time} - ${timeRange.end_time}` : "",
+              availableslot_status: originalSlot.availableslot_status,
+            },
+          ]);
+        } else {
+          // If we can't find the original slot, refresh the list
+          await fetchAvailability(loggedInUserId);
+        }
+
+        // Reset the selected timerange
+        setSelectedTimerange("");
       } else {
         toast.error(response.data.message || "Failed to add slot.");
       }
@@ -565,13 +560,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
       transition={{ duration: 0.5 }}
     >
       <>
-        <ToastContainer
-          position="top-right"
-          autoClose={1000}
-          theme="light"
-          transition={Bounce}
-        />
-
         <div className="bg-white p-6  shadow-md">
           <h1 className="text-l font-bold  text-green-800 pb-5 mt-3 flex items-center gap-2">
             <TbClipboardList className="text-xl w-6 h-6 !w-6 !h-6" />
@@ -580,7 +568,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
 
           <p className="text-sm text-gray-600  mb-2">
             Below is a list of available consultation slots, including the day,
-            time range, recurrence, subject, and current status. You can review
+            time range, and current status. You can review
             and manage each slot using the actions provided.
           </p>
 
@@ -622,35 +610,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
                 </DialogHeader>
 
                 <div className="space-y-4 mt-2">
-                  <div>
-                    <Label htmlFor="subject" className="mb-2 mt-4">
-                      Recurrence
-                    </Label>
-
-                    <Select
-                      value={selectedRecurrence}
-                      onValueChange={(val) => setSelectedRecurrence(val)}
-                    >
-                      <SelectTrigger id="recurrence" className="w-full">
-                        <SelectValue placeholder="Select recurrence" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {RecurrenceFetch.length > 0 ? (
-                          RecurrenceFetch.map((recur) => (
-                            <SelectItem
-                              key={recur.recurrence_id}
-                              value={recur.recurrence_id}
-                            >
-                              {recur.recurrence_name}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem disabled>No recurrences Found</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   {/* Day Dropdown */}
                   <div>
                     <Label htmlFor="subject" className="mb-2 mt-4">
@@ -703,7 +662,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
                               key={time.timerange_id}
                               value={time.timerange_id}
                             >
-                              {time.start_time}
+                              {convertTo12Hour(time.start_time)}
                             </SelectItem>
                           ))
                         ) : (
@@ -764,10 +723,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Recurrence
-                </th>
-
-                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Status
                 </th>
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
@@ -814,10 +769,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
                       {availday.availability_name}
                     </td>
                     <td className="border px-6 py-2 text-center">
-                      {availday.time_range}
-                    </td>
-                    <td className="border px-6 py-2 text-center">
-                      {availday.recurrence_name}
+                      {formatTimeTo12Hour(availday.time_range)}
                     </td>
 
                     <td className="border px-6 py-3 text-center text-sm font-semibold">
@@ -894,29 +846,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
               </DialogHeader>
 
               <div className="space-y-4 mt-2">
-                {/* Recurrence Dropdown */}
-                <div>
-                  <Label className="mb-2">Recurrence</Label>
-                  <Select
-                    value={selectedRecurrence}
-                    onValueChange={(val) => setSelectedRecurrence(val)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select recurrence" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RecurrenceFetch.map((recur) => (
-                        <SelectItem
-                          key={recur.recurrence_id}
-                          value={recur.recurrence_id}
-                        >
-                          {recur.recurrence_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Day Dropdown */}
                 <div>
                   <Label className="mb-2">Day</Label>
@@ -956,7 +885,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
                           key={time.timerange_id}
                           value={time.timerange_id}
                         >
-                          {time.start_time} - {time.end_time}
+                          {formatTimeTo12Hour(`${time.start_time} - ${time.end_time}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1156,7 +1085,15 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
             </DialogContent>
           </Dialog>
 
-          <Dialog open={openAddSlotDialog} onOpenChange={setOpenAddSlotDialog}>
+          <Dialog 
+            open={openAddSlotDialog} 
+            onOpenChange={(open) => {
+              setOpenAddSlotDialog(open);
+              if (!open) {
+                setSelectedTimerange(""); // Reset timerange when dialog closes
+              }
+            }}
+          >
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Add New Slot</DialogTitle>
@@ -1181,7 +1118,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
                           key={tr.timerange_id}
                           value={tr.timerange_id}
                         >
-                          {tr.start_time} - {tr.end_time}
+                          {formatTimeTo12Hour(`${tr.start_time} - ${tr.end_time}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1192,7 +1129,10 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
               <DialogFooter>
                 <Button
                   variant="outline"
-                  onClick={() => setOpenAddSlotDialog(false)}
+                  onClick={() => {
+                    setOpenAddSlotDialog(false);
+                    setSelectedTimerange(""); // Reset timerange when canceling
+                  }}
                 >
                   Cancel
                 </Button>

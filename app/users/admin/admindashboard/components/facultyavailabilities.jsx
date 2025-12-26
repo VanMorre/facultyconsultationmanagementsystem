@@ -24,11 +24,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
-
+import { toast } from "react-toastify";
 import { motion } from "framer-motion";
 import React, { useState, useEffect, useRef } from "react";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import CryptoJS from "crypto-js";
 const FacultyAvailabilitiesManagement = () => {
   const [availabilities, setAvailabilities] = useState([]);
@@ -36,6 +34,8 @@ const FacultyAvailabilitiesManagement = () => {
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const notifiedLogIdsRef = useRef([]);
   const toastShownLogsRef = useRef(false);
+  const notifiedAvailabilityIdsRef = useRef([]);
+  const toastShownAvailabilityRef = useRef(false);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [studentList, setStudentList] = useState([]);
 
@@ -65,10 +65,36 @@ const FacultyAvailabilitiesManagement = () => {
   };
 
   useEffect(() => {
-    if (loggedInUserId) {
-      fetchAvailabilities();
-    }
     decryptUserId();
+  }, []);
+
+  useEffect(() => {
+    if (!loggedInUserId) return;
+
+    // Load session-stored notified IDs (fast synchronous operation)
+    const storedAvailability = sessionStorage.getItem("notified_faculty_availability_ids");
+    if (storedAvailability) {
+      try {
+        notifiedAvailabilityIdsRef.current = JSON.parse(storedAvailability);
+      } catch (e) {
+        notifiedAvailabilityIdsRef.current = [];
+      }
+    }
+
+    // Defer initial API calls to allow page to render first
+    const initialFetchTimeout = setTimeout(() => {
+      fetchAvailabilities(loggedInUserId, true);
+    }, 100);
+
+    // Poll every 5 seconds (start after initial fetch)
+    const interval = setInterval(() => {
+      fetchAvailabilities(loggedInUserId, false);
+    }, 5000);
+
+    return () => {
+      clearTimeout(initialFetchTimeout);
+      clearInterval(interval);
+    };
   }, [loggedInUserId]);
 
   const [studentSearchText, setStudentSearchText] = useState("");
@@ -82,6 +108,18 @@ const FacultyAvailabilitiesManagement = () => {
         .toLowerCase()
         .includes(studentSearchText.toLowerCase()) ||
       student.subject_name
+        .toLowerCase()
+        .includes(studentSearchText.toLowerCase()) ||
+      (student.purpose || "")
+        .toLowerCase()
+        .includes(studentSearchText.toLowerCase()) ||
+      (student.approval_name || "")
+        .toLowerCase()
+        .includes(studentSearchText.toLowerCase()) ||
+      (student.discussion || "")
+        .toLowerCase()
+        .includes(studentSearchText.toLowerCase()) ||
+      (student.recommendation || "")
         .toLowerCase()
         .includes(studentSearchText.toLowerCase()) ||
       new Date(student.booking_date)
@@ -128,7 +166,6 @@ const FacultyAvailabilitiesManagement = () => {
     .filter(
       (item) =>
         item.username.toLowerCase().includes(searchText.toLowerCase()) ||
-        item.recurrence_name.toLowerCase().includes(searchText.toLowerCase()) ||
         item.availability_name
           .toLowerCase()
           .includes(searchText.toLowerCase()) ||
@@ -159,14 +196,93 @@ const FacultyAvailabilitiesManagement = () => {
     setCurrentPage(pageNumber);
   };
 
-  const fetchAvailabilities = async () => {
+  const formatTimeTo12Hour = (timeString) => {
+    if (!timeString) return "";
+    
+    // Handle time range format like "13:00:00 - 14:00:00"
+    if (timeString.includes(" - ")) {
+      const [startTime, endTime] = timeString.split(" - ");
+      return `${convertTo12Hour(startTime)} - ${convertTo12Hour(endTime)}`;
+    }
+    
+    // Handle single time format
+    return convertTo12Hour(timeString);
+  };
+
+  const convertTo12Hour = (time24) => {
+    if (!time24) return "";
+    
+    // Extract hours and minutes from "HH:MM:SS" or "HH:MM" format
+    const timeParts = time24.split(":");
+    if (timeParts.length < 2) return time24;
+    
+    let hours = parseInt(timeParts[0], 10);
+    const minutes = timeParts[1];
+    
+    if (isNaN(hours)) return time24;
+    
+    const period = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // Convert to 12-hour format (0 becomes 12)
+    
+    return `${hours}:${minutes} ${period}`;
+  };
+
+  const fetchAvailabilities = async (userId, isInitial = false) => {
     try {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/Facultyavailabilities/fetchallfacultyavailabilites.php`
       );
 
       if (response.data.success) {
-        setAvailabilities(response.data.data);
+        const newAvailability = response.data.data;
+
+        // Extract unique availability IDs
+        const currentIds = newAvailability.map(
+          (item) => item.availabilityfaculty_id
+        );
+
+        // Find IDs that are new
+        const newIds = currentIds.filter(
+          (id) => !notifiedAvailabilityIdsRef.current.includes(id)
+        );
+
+        if (
+          !isInitial &&
+          newIds.length > 0 &&
+          !toastShownAvailabilityRef.current
+        ) {
+          toastShownAvailabilityRef.current = true;
+
+          // ✅ Save notified IDs
+          notifiedAvailabilityIdsRef.current = [
+            ...notifiedAvailabilityIdsRef.current,
+            ...newIds,
+          ];
+
+          sessionStorage.setItem(
+            "notified_faculty_availability_ids",
+            JSON.stringify(notifiedAvailabilityIdsRef.current)
+          );
+
+          // Reset lock after delay
+          setTimeout(() => {
+            toastShownAvailabilityRef.current = false;
+          }, 5000);
+        }
+
+        // ✅ On initial fetch, just mark IDs
+        if (isInitial) {
+          notifiedAvailabilityIdsRef.current = [
+            ...notifiedAvailabilityIdsRef.current,
+            ...currentIds,
+          ];
+          sessionStorage.setItem(
+            "notified_faculty_availability_ids",
+            JSON.stringify(notifiedAvailabilityIdsRef.current)
+          );
+        }
+
+        setAvailabilities(newAvailability);
       } else {
         setAvailabilities([]);
       }
@@ -202,13 +318,8 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
       transition={{ duration: 0.5 }}
     >
       <>
-        <ToastContainer
-          position="top-right"
-          autoClose={1000}
-          theme="light"
-          transition={Bounce}
-        />
 
+        
         <div className="bg-white p-6  shadow-md">
           <h1 className="text-m font-bold text-green-800  pb-2 mt-3">
             Faculty Availabilites / Student Consulted
@@ -251,10 +362,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
                 </th>
 
                 <th className="border px-6 py-3 text-center text-sm font-semibold relative">
-                  Recurrence
-                </th>
-
-                <th className="border px-6 py-3 text-center text-sm font-semibold relative">
                   Status
                 </th>
 
@@ -274,10 +381,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
                       {item.availability_name}
                     </td>
                     <td className="border px-6 py-2 text-center">
-                      {item.time_range}
-                    </td>
-                    <td className="border px-6 py-2 text-center">
-                      {item.recurrence_name}
+                      {formatTimeTo12Hour(item.time_range)}
                     </td>
 
                     <td className="border px-6 py-3 text-center text-sm font-semibold">
@@ -347,14 +451,26 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
                   <table className="w-full border-collapse bg-white shadow-md rounded-md overflow-hidden text-sm">
                     <thead className="bg-gray-100 text-gray-500">
                       <tr>
-                        <th className="w-1/3 border px-4 py-2 text-center font-semibold">
+                        <th className="border px-4 py-2 text-center font-semibold">
                           Student
                         </th>
-                        <th className="w-1/3 border px-4 py-2 text-center font-semibold">
+                        <th className="border px-4 py-2 text-center font-semibold">
                           Subject
                         </th>
-                        <th className="w-1/3 border px-4 py-2 text-center font-semibold">
+                        <th className="border px-4 py-2 text-center font-semibold">
+                          Purpose
+                        </th>
+                        <th className="border px-4 py-2 text-center font-semibold">
                           Booking Date
+                        </th>
+                        <th className="border px-4 py-2 text-center font-semibold">
+                          Discussions
+                        </th>
+                        <th className="border px-4 py-2 text-center font-semibold">
+                          Recommendations
+                        </th>
+                        <th className="border px-4 py-2 text-center font-semibold">
+                          Status
                         </th>
                       </tr>
                     </thead>
@@ -368,6 +484,9 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
                             {student.subject_name}
                           </td>
                           <td className="border px-4 py-2 text-center">
+                            {student.purpose || "-"}
+                          </td>
+                          <td className="border px-4 py-2 text-center">
                             {new Date(student.booking_date).toLocaleString(
                               "en-US",
                               {
@@ -378,6 +497,27 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-avai
                                 minute: "2-digit",
                               }
                             )}
+                          </td>
+                          <td className="border px-4 py-2 text-center">
+                            {student.discussion || "-"}
+                          </td>
+                          <td className="border px-4 py-2 text-center">
+                            {student.recommendation || "-"}
+                          </td>
+                          <td className="border px-4 py-2 text-center">
+                            <span
+                              className={`inline-block px-2 py-1 text-xs font-semibold rounded-md ${
+                                student.approval_name === "Approved" ||
+                                student.approval_name === "Completed"
+                                  ? "bg-green-900 text-white"
+                                  : student.approval_name === "Disapproved" ||
+                                    student.approval_name === "Cancelled"
+                                  ? "bg-red-600 text-white"
+                                  : "bg-yellow-500 text-white"
+                              }`}
+                            >
+                              {student.approval_name || "-"}
+                            </span>
                           </td>
                         </tr>
                       ))}

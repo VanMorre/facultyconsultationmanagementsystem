@@ -10,13 +10,11 @@ try {
     $query = "SELECT 
                   saf.availabilityfaculty_id,
                   saf.user_id,
-                  r.recurrence_name,
                   a.availability_name,
                   CONCAT(t.start_time, ' - ', t.end_time) AS time_range,
                   u.username,
                   st.status_name AS availableslot_status
               FROM tbl_setavailabilityfaculty saf
-              INNER JOIN tbl_recurrence r ON saf.recurrence_id = r.recurrence_id
               INNER JOIN tbl_availabilityday a ON saf.availability_id = a.availability_id
               INNER JOIN tbl_timerange t ON saf.timerange_id = t.timerange_id
               INNER JOIN tbl_users u ON saf.user_id = u.user_id

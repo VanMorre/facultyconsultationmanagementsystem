@@ -24,14 +24,12 @@ const SettingsManagement = dynamic(() => import("./components/settings"), { ssr:
 const ReportManagement = dynamic(() => import("./components/reports"), { ssr: false });
 const StudentrequestManagement = dynamic(() => import("./components/studentrequest"), { ssr: false });
 const AvailabilityManagement = dynamic(() => import("./components/availability"), { ssr: false });
-const ConsultationManagement = dynamic(() => import("../backups/consultation"), { ssr: false });
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect, useRef } from "react";
 import TeacherLayout from "../layouts/teacherlayout";
 import { PiBellRingingFill } from "react-icons/pi";
-import { toast } from "react-toastify";
 
 const TeacherDashboard = () => {
   const [loggedInUserId, setLoggedInUserId] = useState(null);
@@ -368,6 +366,37 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
     }
   };
 
+  const formatTimeTo12Hour = (timeString) => {
+    if (!timeString) return "";
+    
+    // Handle time range format like "13:00:00 - 14:00:00"
+    if (timeString.includes(" - ")) {
+      const [startTime, endTime] = timeString.split(" - ");
+      return `${convertTo12Hour(startTime)} - ${convertTo12Hour(endTime)}`;
+    }
+    
+    // Handle single time format
+    return convertTo12Hour(timeString);
+  };
+
+  const convertTo12Hour = (time24) => {
+    if (!time24) return "";
+    
+    // Extract hours and minutes from "HH:MM:SS" or "HH:MM" format
+    const timeParts = time24.split(":");
+    if (timeParts.length < 2) return time24;
+    
+    let hours = parseInt(timeParts[0], 10);
+    const minutes = timeParts[1];
+    
+    if (isNaN(hours)) return time24;
+    
+    const period = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // Convert to 12-hour format (0 becomes 12)
+    
+    return `${hours}:${minutes} ${period}`;
+  };
+
   const days = [
     "Monday",
     "Tuesday",
@@ -578,7 +607,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
                                   key={slot.availabilityfaculty_id}
                                   className="bg-green-900 text-white text-xs px-3 py-1 rounded-md mt-2"
                                 >
-                                  {slot.time_range}
+                                  {formatTimeTo12Hour(slot.time_range)}
                                 </div>
                               ))
                             ) : (
@@ -604,7 +633,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <h2 className="text-l font-bold text-black">
-                      Student Requests
+                      Consultations
                     </h2>
 
                     {/* Bell with count */}
@@ -630,7 +659,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
                         {/* Header */}
                         <div className="bg-green-900 px-4 py-2">
                           <h3 className="text-white font-semibold text-sm">
-                            Student Request
+                          Consultations
                           </h3>
                         </div>
                         {/* Body */}
@@ -741,7 +770,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
         {currentView === "Settings" && <SettingsManagement />}
         {currentView === "reports" && <ReportManagement />}
         {currentView === "availability" && <AvailabilityManagement />}
-        {currentView === "consultation" && <ConsultationManagement />}
         {currentView === "studentrequest" && <StudentrequestManagement />}
       </motion.div>
     </TeacherLayout>

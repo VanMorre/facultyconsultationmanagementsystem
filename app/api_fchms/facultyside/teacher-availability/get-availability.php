@@ -19,7 +19,6 @@ $id = intval($_GET['id']);
 try {
     $query = "SELECT 
                   saf.availabilityfaculty_id, 
-                  saf.recurrence_id, 
                   saf.availability_id, 
                   saf.timerange_id, 
                   saf.user_id, 

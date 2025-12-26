@@ -21,8 +21,8 @@ $timerange_id = intval($data['timerange_id']);
 
 try {
     $query = "INSERT INTO tbl_setavailabilityfaculty 
-                (recurrence_id, availability_id, timerange_id, availableslotstatus_id, user_id)
-              SELECT recurrence_id, availability_id, :timerange_id, availableslotstatus_id, user_id
+                (availability_id, timerange_id, availableslotstatus_id, user_id)
+              SELECT availability_id, :timerange_id, availableslotstatus_id, user_id
               FROM tbl_setavailabilityfaculty
               WHERE availabilityfaculty_id = :availabilityfaculty_id
               LIMIT 1";
