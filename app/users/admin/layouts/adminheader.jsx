@@ -30,6 +30,7 @@ const AdminHeader = ({ toggleSidebar, setCurrentView }) => {
   const [username, setUsername] = useState("");
   const [userImage, setUserImage] = useState("");
   const [loggedInUserId, setLoggedInUserId] = useState(null);
+  const [userRole, setUserRole] = useState("");
 
    const decryptData = (data) => {
      if (!data) return null;
@@ -74,6 +75,7 @@ useEffect(() => {
   const updateProfile = () => {
     const storedUsername = sessionStorage.getItem("username");
     const storedImage = sessionStorage.getItem("userImage");
+    const storedRole = sessionStorage.getItem("role");
 
     if (storedUsername) {
       const decryptedUsername = decryptData(storedUsername);
@@ -83,6 +85,15 @@ useEffect(() => {
     if (storedImage) {
       const decryptedImage = decryptData(storedImage);
       setUserImage(decryptedImage || "");
+    }
+
+    if (storedRole) {
+      const decryptedRole = decryptData(storedRole);
+      // Capitalize first letter
+      const capitalizedRole = decryptedRole 
+        ? decryptedRole.charAt(0).toUpperCase() + decryptedRole.slice(1).toLowerCase()
+        : "Admin";
+      setUserRole(capitalizedRole);
     }
   };
 
@@ -140,7 +151,7 @@ useEffect(() => {
 
                   {username && (
                     <span className="text-black text-sm font-medium flex items-center space-x-1">
-                      <span>Hello, {username}</span>
+                      <span>Hello {userRole || "Admin"}, {username}</span>
                       <ChevronDown className=" ml-2 mt-1 w-4 h-4 text-black" />
                     </span>
                   )}

@@ -3,7 +3,6 @@ import {
   FaClipboardList,
   FaCheckCircle,
   FaTimesCircle,
-  FaCalendarCheck,
 } from "react-icons/fa";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -14,42 +13,18 @@ import DatePicker from "react-datepicker"; // ✅ install react-datepicker
 import "react-datepicker/dist/react-datepicker.css";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import {
-  Chart as ChartJS,
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  PointElement,
-  Filler,
-} from "chart.js";
-
-ChartJS.register(
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  PointElement,
-  Filler
-);
+import { registerChartJS } from "@/lib/chart-config";
+registerChartJS();
 
 const ReportManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
-  const [ConsultationFetch, setFetchConsultation] = useState([]);
+  const [fetchbooking, setfetchbooking] = useState([]);
   // ❗ Default to "no date filter" so all consultations show initially
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  const notifiedConsultationIdsRef = useRef([]);
-  const toastShownConsultationRef = useRef(false);
+  const notifiedBookingIdsRef = useRef([]);
+  const toastShownBookingRef = useRef(false);
 
 
   
@@ -82,20 +57,20 @@ const ReportManagement = () => {
   useEffect(() => {
     decryptUserId();
     if (loggedInUserId) {
-      const storedConsultation = sessionStorage.getItem(
-        "notified_consultation_ids"
+      const storedBooking = sessionStorage.getItem(
+        "notified_booking_ids"
       );
-      if (storedConsultation) {
-        notifiedConsultationIdsRef.current = JSON.parse(storedConsultation);
+      if (storedBooking) {
+        notifiedBookingIdsRef.current = JSON.parse(storedBooking);
       }
       let isInitial = true;
 
-      fetchConsultationWithNotify(loggedInUserId, isInitial);
+      fetchbookingstudentWithNotify(loggedInUserId, isInitial);
 
       isInitial = false;
 
       const interval = setInterval(() => {
-        fetchConsultationWithNotify(loggedInUserId, false);
+        fetchbookingstudentWithNotify(loggedInUserId, false);
       }, 5000);
 
       return () => clearInterval(interval);
@@ -103,88 +78,86 @@ const ReportManagement = () => {
   }, [loggedInUserId]);
 
 
-const fetchConsultationWithNotify = async (UserID, isInitial = false) => {
+const fetchbookingstudentWithNotify = async (UserID, isInitial = false) => {
     try {
       const response = await axios.get(
         `
-${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/fetch-consultation.php`,
+${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
         { params: { user_id: UserID } }
       );
 
       if (response.data.success) {
-        const newConsultations = response.data.data;
+        const newBookings = response.data.data;
 
-        // Extract unique consultation IDs
-        const currentIds = newConsultations.map(
-          (item) => item.schedulebookings_id
-        );
+        // Extract unique booking IDs
+        const currentIds = newBookings.map((item) => item.booking_id);
 
         // Find IDs that are new
         const newIds = currentIds.filter(
-          (id) => !notifiedConsultationIdsRef.current.includes(id)
+          (id) => !notifiedBookingIdsRef.current.includes(id)
         );
 
         if (
           !isInitial &&
           newIds.length > 0 &&
-          !toastShownConsultationRef.current
+          !toastShownBookingRef.current
         ) {
-          toastShownConsultationRef.current = true;
+          toastShownBookingRef.current = true;
 
           // ✅ Save notified IDs
-          notifiedConsultationIdsRef.current = [
-            ...notifiedConsultationIdsRef.current,
+          notifiedBookingIdsRef.current = [
+            ...notifiedBookingIdsRef.current,
             ...newIds,
           ];
 
           sessionStorage.setItem(
-            "notified_consultation_ids",
-            JSON.stringify(notifiedConsultationIdsRef.current)
+            "notified_booking_ids",
+            JSON.stringify(notifiedBookingIdsRef.current)
           );
 
           // Reset lock after delay
           setTimeout(() => {
-            toastShownConsultationRef.current = false;
+            toastShownBookingRef.current = false;
           }, 5000);
         }
 
         // ✅ On initial fetch, just mark IDs
         if (isInitial) {
-          notifiedConsultationIdsRef.current = [
-            ...notifiedConsultationIdsRef.current,
+          notifiedBookingIdsRef.current = [
+            ...notifiedBookingIdsRef.current,
             ...currentIds,
           ];
           sessionStorage.setItem(
-            "notified_consultation_ids",
-            JSON.stringify(notifiedConsultationIdsRef.current)
+            "notified_booking_ids",
+            JSON.stringify(notifiedBookingIdsRef.current)
           );
         }
 
-        setFetchConsultation(newConsultations);
+        setfetchbooking(newBookings);
       } else {
-        setFetchConsultation([]);
+        setfetchbooking([]);
       }
     } catch (error) {
-      console.error("Error fetching consultation:", error);
-      setFetchConsultation([]);
+      console.error("Error fetching student booking:", error);
+      setfetchbooking([]);
     }
   };
 
   // ✅ Filter consultations based on date range
   const filterData = () => {
-    if (!ConsultationFetch || ConsultationFetch.length === 0) {
+    if (!fetchbooking || fetchbooking.length === 0) {
       return [];
     }
 
     // If either date is not set, do not filter by date
     if (!startDate || !endDate) {
-      return ConsultationFetch;
+      return fetchbooking;
     }
 
-    return ConsultationFetch.filter((c) => {
-      if (!c.schedulebookdate) return true; // keep rows with no date
+    return fetchbooking.filter((c) => {
+      if (!c.booking_date) return true; // keep rows with no date
 
-      const consultDate = new Date(c.schedulebookdate);
+      const consultDate = new Date(c.booking_date);
       if (isNaN(consultDate.getTime())) return true;
 
       // Set time to start/end of day for accurate comparison
@@ -247,9 +220,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-cons
 
   // ✅ Counts
   const totalConsultations = filteredConsultations.length;
-  const scheduledCount = filteredConsultations.filter(
-    (c) => c.approval_name === "Scheduled"
-  ).length;
   const completedCount = filteredConsultations.filter(
     (c) => c.approval_name === "Completed"
   ).length;
@@ -258,7 +228,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-cons
   ).length;
 
 const generatePDF = () => {
-  const doc = new jsPDF("p", "mm", "a4");
+  const doc = new jsPDF("landscape", "mm", "a4");
 
   const logoPath = "/images/CIT-ENCHANCEPIC.png";
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -295,7 +265,7 @@ const generatePDF = () => {
   // Separator line
   doc.setDrawColor(0);
   doc.setLineWidth(0.5);
-  doc.line(10, 40, 200, 40);
+  doc.line(10, 40, pageWidth - 10, 40);
 
   // --- REPORT INFO ---
   doc.setFontSize(10);
@@ -310,20 +280,24 @@ const generatePDF = () => {
     "Schedule date",
     "Time range",
     "Status",
+    "Discussion",
+    "Recommendation",
   ];
 
   let tableRows = [];
   if (filteredConsultations.length > 0) {
     tableRows = filteredConsultations.map((item) => [
-      item.student_name,
-      item.subject_name,
-      item.purpose,
-      item.schedulebookdate,
-      item.timeranges,
-      item.approval_name,
+      item.student_name || "N/A",
+      item.subject_name || "N/A",
+      item.purpose || "N/A",
+      item.booking_date || "N/A",
+      item.time_range || "N/A",
+      item.approval_name || "N/A",
+      item.discussion || "N/A",
+      item.recommendation || "N/A",
     ]);
   } else {
-    tableRows = [["No data available", "", "", "", ""]];
+    tableRows = [["No data available", "", "", "", "", "", "", ""]];
   }
 
   // --- RENDER TABLE ---
@@ -352,15 +326,25 @@ const generatePDF = () => {
         data.row.index === 0 &&
         data.column.index === 0
       ) {
-        data.cell.colSpan = 5;
+        data.cell.colSpan = 8;
       }
+    },
+    columnStyles: {
+      0: { cellWidth: 38 }, // Student name
+      1: { cellWidth: 36 }, // Subject
+      2: { cellWidth: 30 }, // Purpose
+      3: { cellWidth: 32 }, // Schedule date
+      4: { cellWidth: 32 }, // Time range
+      5: { cellWidth: 28 }, // Status
+      6: { cellWidth: 37 }, // Discussion
+      7: { cellWidth: 37 }, // Recommendation
     },
   });
 
   // --- TOTAL STUDENTS RENDERED ---
   if (filteredConsultations.length > 0) {
     const uniqueBookings = new Set(
-      filteredConsultations.map((item) => item.schedulebookings_id)
+      filteredConsultations.map((item) => item.booking_id)
     );
     const totalStudents = uniqueBookings.size;
 
@@ -378,7 +362,7 @@ const generatePDF = () => {
   if (filteredConsultations.length > 0) {
     const finalY = doc.lastAutoTable.finalY || 100;
     const lineWidth = 50;
-    const lineStartX = 140;
+    const lineStartX = (pageWidth - lineWidth) / 2; // Center the line
     const lineEndX = lineStartX + lineWidth;
     const signatureY = finalY + 110;
 
@@ -386,7 +370,7 @@ const generatePDF = () => {
     doc.setFontSize(10);
 
     const authorizedName =
-      filteredConsultations[0].created_by || "Authorized Name";
+      filteredConsultations[0]?.faculty_name || filteredConsultations[0]?.student_name || "Authorized Name";
 
     const textWidth = doc.getTextWidth(authorizedName);
     const textX = lineStartX + (lineWidth - textWidth) / 2;
@@ -461,7 +445,7 @@ const generatePDF = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <motion.div className="border bg-white p-5 rounded-lg shadow-lg flex justify-between items-center">
             <div>
               <p className="text-sm text-green-800 font-semibold">
@@ -485,18 +469,6 @@ const generatePDF = () => {
             </div>
             <div className="bg-green-900 text-white p-3 rounded-full">
               <FaCheckCircle className="text-xl" />
-            </div>
-          </motion.div>
-
-          <motion.div className="border bg-white p-5 rounded-lg shadow-lg flex justify-between items-center">
-            <div>
-              <p className="text-sm text-green-800 font-semibold">Scheduled</p>
-              <h2 className="text-2xl font-bold text-green-800">
-                {scheduledCount}
-              </h2>
-            </div>
-            <div className="bg-green-900 text-white p-3 rounded-full">
-              <FaCalendarCheck className="text-xl" />
             </div>
           </motion.div>
 

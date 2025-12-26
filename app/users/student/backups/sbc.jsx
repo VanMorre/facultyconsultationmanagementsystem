@@ -28,24 +28,14 @@ import axios from "axios";
 
 const BookConsultationManagement = () => {
   const SECRET_KEY = "my_secret_key_123456";
-  
-  // Get current date - ensure it's always fresh
-  const getToday = () => new Date();
-  const today = getToday();
+  const today = new Date();
 
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedDayName, setSelectedDayName] = useState(""); // store weekday
-  // Initialize with current date - will be set properly in useEffect
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    const todayDate = getToday();
-    return todayDate.getMonth();
-  });
-  const [currentYear, setCurrentYear] = useState(() => {
-    const todayDate = getToday();
-    return todayDate.getFullYear();
-  });
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [subject, setSubject] = useState("");
 
   const [AvailabilityFetch, setFetchAvailability] = useState([]); // all availability
@@ -58,8 +48,6 @@ const BookConsultationManagement = () => {
 
   const notifiedAvailabilityIdsRef = useRef([]);
   const toastShownAvailabilityRef = useRef(false);
-  const currentMonthRef = useRef(null);
-  const currentYearRef = useRef(null);
 
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("student_id");
@@ -88,26 +76,6 @@ const BookConsultationManagement = () => {
 
   useEffect(() => {
     decryptUserId();
-    
-    // Ensure calendar starts at current month/year (only set if different to avoid unnecessary updates)
-    const todayDate = getToday();
-    const currentMonthValue = todayDate.getMonth();
-    const currentYearValue = todayDate.getFullYear();
-    
-    // Initialize refs
-    currentMonthRef.current = currentMonthValue;
-    currentYearRef.current = currentYearValue;
-    
-    // Only update if different to prevent unnecessary re-renders
-    setCurrentMonth((prev) => {
-      if (prev !== currentMonthValue) return currentMonthValue;
-      return prev;
-    });
-    setCurrentYear((prev) => {
-      if (prev !== currentYearValue) return currentYearValue;
-      return prev;
-    });
-    
     const storedNotified = sessionStorage.getItem("notified_availability_ids");
     if (storedNotified) {
       notifiedAvailabilityIdsRef.current = JSON.parse(storedNotified);
@@ -165,76 +133,28 @@ const BookConsultationManagement = () => {
   );
 
   useEffect(() => {
-    // Sync refs with state
-    currentMonthRef.current = currentMonth;
-    currentYearRef.current = currentYear;
-  }, [currentMonth, currentYear]);
-
-  useEffect(() => {
-    // Ensure calendar never shows past months/years - reset to current if needed
-    const todayDate = getToday();
-    const todayYear = todayDate.getFullYear();
-    const todayMonth = todayDate.getMonth();
-    
-    // Check if we need to reset to current date
-    if (currentYear < todayYear || 
-        (currentYear === todayYear && currentMonth < todayMonth)) {
-      // Reset to current month/year if somehow set to past
-      setCurrentMonth(todayMonth);
-      setCurrentYear(todayYear);
-      // Rebuild calendar will happen on next render with correct values
-      return;
-    }
-    
-    // Always rebuild calendar with current month/year values
     setCalendarDays(buildCalendarDays(currentMonth, currentYear));
   }, [currentMonth, currentYear]);
 
-  // Navigation with restrictions - prevent going to ANY past month/year
+  // Navigation
   const handlePrevMonth = () => {
-    const todayDate = getToday();
-    const todayYear = todayDate.getFullYear();
-    const todayMonth = todayDate.getMonth();
-    
-    // Use refs to get current values reliably
-    const prevMonth = currentMonthRef.current ?? currentMonth;
-    const prevYear = currentYearRef.current ?? currentYear;
-    
-    let newMonth, newYear;
-    
-    if (prevMonth === 0) {
-      // Going to previous year (December)
-      newYear = prevYear - 1;
-      newMonth = 11;
-    } else {
-      // Going to previous month in same year
-      newYear = prevYear;
-      newMonth = prevMonth - 1;
-    }
-    
-    // Check if this would be a past date
-    if (newYear < todayYear || (newYear === todayYear && newMonth < todayMonth)) {
-      toast.error("Cannot navigate to past dates. You can only book consultations from the current month onwards.");
-      return;
-    }
-    
-    // Update both states
-    setCurrentYear(newYear);
-    setCurrentMonth(newMonth);
+    setCurrentMonth((prev) => {
+      if (prev === 0) {
+        setCurrentYear((y) => y - 1);
+        return 11;
+      }
+      return prev - 1;
+    });
   };
 
   const handleNextMonth = () => {
-    // Use refs to get current values reliably
-    const prevMonth = currentMonthRef.current ?? currentMonth;
-    const prevYear = currentYearRef.current ?? currentYear;
-    
-    if (prevMonth === 11) {
-      // Increment year properly
-      setCurrentYear(prevYear + 1);
-      setCurrentMonth(0);
-    } else {
-      setCurrentMonth(prevMonth + 1);
-    }
+    setCurrentMonth((prev) => {
+      if (prev === 11) {
+        setCurrentYear((y) => y + 1);
+        return 0;
+      }
+      return prev + 1;
+    });
   };
 
   const monthNames = [
@@ -257,40 +177,15 @@ const BookConsultationManagement = () => {
     return AvailabilityFetch.filter((a) => a.availability_name === dayName);
   };
 
-  // Check if a date is in the past (before today) - works for any past year, month, or day
-  const isPastDate = (date) => {
-    const todayDate = getToday();
-    const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const todayDateOnly = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate());
-    return checkDate < todayDateOnly;
-  };
-
-  // Check if current calendar view is in the past (prevents navigation to past months/years)
-  const isCurrentViewPast = () => {
-    const todayDate = getToday();
-    // Block any past year
-    if (currentYear < todayDate.getFullYear()) return true;
-    // Block past months in current year
-    if (currentYear === todayDate.getFullYear() && currentMonth < todayDate.getMonth()) return true;
-    return false;
-  };
-
   const isToday = (date) => {
-    const todayDate = getToday();
     return (
-      date.getDate() === todayDate.getDate() &&
-      date.getMonth() === todayDate.getMonth() &&
-      date.getFullYear() === todayDate.getFullYear()
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
     );
   };
 
   const openDateDialog = (day) => {
-    // Prevent opening dialog for ANY past date (any past year, month, or day)
-    if (isPastDate(day)) {
-      toast.error("Cannot book consultations for past dates. You can only book consultations from today onwards.");
-      return;
-    }
-
     const dayName = day.toLocaleString("en-US", { weekday: "long" });
     setSelectedDate(day.toDateString());
     setSelectedDayName(dayName);
@@ -399,13 +294,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/allavailabilityfacul
       return;
     }
 
-    // Validate selected date is not in the past (any past year, month, or day)
-    const selectedDateObj = new Date(selectedDate);
-    if (isPastDate(selectedDateObj)) {
-      toast.error("Cannot book consultations for past dates. You can only book consultations from today onwards.");
-      return;
-    }
-
     try {
       const parsedTime = JSON.parse(selectedTimerange);
 
@@ -474,12 +362,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
             <div className="flex items-center gap-2 justify-center sm:justify-start">
               <button
                 onClick={handlePrevMonth}
-                disabled={isCurrentViewPast()}
-                className={`p-1 sm:p-2 rounded border border-green-800 transition-colors duration-200 ${
-                  isCurrentViewPast()
-                    ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                    : "text-black hover:bg-green-900 hover:text-white"
-                }`}
+                className="p-1 sm:p-2 rounded border border-green-800 text-black hover:bg-green-900 hover:text-white transition-colors duration-200"
               >
                 <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
@@ -491,9 +374,8 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
               </button>
               <button
                 onClick={() => {
-                  const todayDate = getToday();
-                  setCurrentMonth(todayDate.getMonth());
-                  setCurrentYear(todayDate.getFullYear());
+                  setCurrentMonth(today.getMonth());
+                  setCurrentYear(today.getFullYear());
                 }}
                 className="ml-0 sm:ml-2 px-2 sm:px-3 py-1 rounded border border-green-800 text-black hover:bg-green-900 hover:text-white transition-colors duration-200"
               >
@@ -530,40 +412,49 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
                 <div className="grid grid-cols-7 shadow-xl text-xs sm:text-sm">
                   {calendarDays.map(({ date, currentMonth }) => {
                     const availabilities = getFacultyForDate(date);
-                    const isPast = isPastDate(date); // Check if date is ANY past date
-                    const canBook = availabilities.length > 0 && !isPast;
 
                     return (
                       <div
                         key={date.toISOString()}
-                        onClick={() => !isPast && openDateDialog(date)}
-                        className={`h-20 sm:h-28 border flex flex-col items-start p-1 sm:p-2 ${
-                          isPast
-                            ? "cursor-not-allowed opacity-50 bg-gray-100"
-                            : "cursor-pointer"
-                        }
-                ${!currentMonth ? "text-gray-400 bg-gray-50" : isPast ? "bg-gray-100" : "bg-white"}
+                        onClick={() => openDateDialog(date)}
+                        className={`h-20 sm:h-28 border flex flex-col items-start p-1 sm:p-2 cursor-pointer
+                ${!currentMonth ? "text-gray-400 bg-gray-50" : "bg-white"}
                 ${isToday(date) ? "bg-gray-200 font-bold" : ""}
-                ${!isPast ? "hover:bg-green-100" : ""}`}
+                hover:bg-green-100`}
                       >
                         <div className="self-end">{date.getDate()}</div>
 
-                        {canBook && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openDateDialog(date); // open booking dialog
-                            }}
-                            className="w-full mt-6 text-center text-green-800 text-xs sm:text-sm font-semibold hover:text-green-600"
-                          >
-                            Book Availability
-                          </button>
-                        )}
-                        {isPast && availabilities.length > 0 && (
-                          <div className="w-full mt-6 text-center text-gray-400 text-xs sm:text-sm">
-                            Past Date
-                          </div>
-                        )}
+                        {availabilities.length > 0 &&
+                          [
+                            ...new Map(
+                              availabilities.map((f) => [f.username, f])
+                            ).values(),
+                          ].map((f, i) => (
+                            <button
+                              key={`${f.user_id}-${i}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const clickedDay = f.availability_name;
+
+                                const facultyDayAvailabilities =
+                                  AvailabilityFetch.filter(
+                                    (af) =>
+                                      af.username === f.username &&
+                                      af.availability_name === clickedDay
+                                  );
+
+                                setFacultyDialog({
+                                  username: f.username,
+                                  day: clickedDay,
+                                  availabilities: facultyDayAvailabilities,
+                                });
+                              }}
+                              className="w-full text-center text-green-800 text-xs sm:text-sm font-medium underline hover:text-green-600 truncate"
+                              title={f.username}
+                            >
+                              {f.username}
+                            </button>
+                          ))}
                       </div>
                     );
                   })}

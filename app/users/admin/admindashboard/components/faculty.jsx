@@ -793,18 +793,18 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/edit-ac
                           onClick={() =>
                             handleEdit(usersaccountdetails.user_id)
                           }
-                          className="px-2 py-1 border-2 border-blue-500 text-blue-500 rounded-md focus:outline-none hover:bg-blue-600 hover:text-white transition"
+                            className="px-1 py-1 border-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition"
                         >
-                          <TbEdit className="w-6 h-6" />
+                          <TbEdit className="w-5 h-5" />
                         </button>
 
                         <button
                           onClick={() =>
                             handleView(usersaccountdetails.user_id)
                           }
-                          className="px-2 py-1 border-2 border-yellow-500 text-yellow-500 rounded-md focus:outline-none hover:bg-yellow-600 hover:text-white transition"
+                            className="px-1 py-1 border-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
                         >
-                          <TbEye className="w-6 h-6" />
+                          <TbEye className="w-5 h-5" />
                         </button>
                       </div>
                     </td>

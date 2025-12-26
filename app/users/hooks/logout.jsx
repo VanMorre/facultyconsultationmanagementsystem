@@ -6,12 +6,16 @@ const useLogout = () => {
   const router = useRouter();
 
   const logout = () => {
-    sessionStorage.removeItem("isAuthenticated");
-    sessionStorage.removeItem("role");
-    sessionStorage.removeItem("user_id");
-    sessionStorage.removeItem("username");
+    // Clear sessionStorage synchronously (fast)
     sessionStorage.clear();
-    router.push("/loginpage"); 
+    
+    // Use replace instead of push for faster navigation (no history entry)
+    router.replace("/loginpage");
+    
+    // Force immediate navigation
+    if (typeof window !== "undefined") {
+      window.location.href = "/loginpage";
+    }
   };
 
   return logout;

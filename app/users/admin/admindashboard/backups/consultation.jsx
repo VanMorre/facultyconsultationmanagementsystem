@@ -1,9 +1,7 @@
 import {
   TbZoom,
   TbClipboardList,
-  TbPlus,
   TbFilter,
-  TbDotsVertical,
 } from "react-icons/tb";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -21,15 +19,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FiEye, FiCalendar, FiXCircle, FiMessageSquare } from "react-icons/fi";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,19 +32,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { motion } from "framer-motion";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import CryptoJS from "crypto-js";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const ConsultationManagement = () => {
-  const [fetchbooking, setfetchbooking] = useState([]);
-  const [selectedStudents, setSelectedStudents] = useState([]);
-  const [scheduledStudentIds, setScheduledStudentIds] = useState(new Set()); // Track already scheduled student booking_ids
   const SECRET_KEY = "my_secret_key_123456";
   const [loggedInUserId, setLoggedInUserId] = useState(null);
-  const DEFAULT_APPROVAL_STATUS_ID = 5;
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [ConsultationFetch, setFetchConsultation] = useState([]);
   const [feedback, setFeedback] = useState("");
   const [openFeedbackDialog, setopenFeedbackDialog] = useState(false);
@@ -64,8 +50,6 @@ const ConsultationManagement = () => {
   const [recommendation, setRecommendation] = useState("");
   const [statusFilter, setStatusFilter] = useState(""); // "", "Complete", "Schedule", "Cancel"
   const [isLoading, setIsLoading] = useState(false);
-  const notifiedBookingIdsRef = useRef([]);
-  const toastShownBookingRef = useRef(false);
 
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
@@ -99,27 +83,7 @@ const ConsultationManagement = () => {
   // 🔑 Second effect: runs whenever loggedInUserId changes
   useEffect(() => {
     if (loggedInUserId) {
-      // Always fetch these once
       fetchConsultation(loggedInUserId);
-
-      // Load session-stored notified booking IDs
-      const storedNotified = sessionStorage.getItem("notified_booking_ids");
-      if (storedNotified) {
-        notifiedBookingIdsRef.current = JSON.parse(storedNotified);
-      }
-
-      let isInitial = true;
-
-      // First fetch (initial load)
-      fetchbookingstudentWithNotify(loggedInUserId, isInitial);
-      isInitial = false;
-
-      // Poll every 5 seconds
-      const interval = setInterval(() => {
-        fetchbookingstudentWithNotify(loggedInUserId, false);
-      }, 5000);
-
-      return () => clearInterval(interval);
     }
   }, [loggedInUserId]);
 
@@ -179,115 +143,6 @@ const ConsultationManagement = () => {
     }, 1000); // 1 second effect
   };
 
-  // Filter out already scheduled students and get unique students
-  const uniqueStudents = [
-    ...new Map(
-      fetchbooking
-        .filter((s) => !scheduledStudentIds.has(s.booking_id)) // Exclude already scheduled
-        .map((s) => [s.student_name, s])
-    ).values(),
-  ];
-
-  const fetchbookingstudentWithNotify = async (UserID, isInitial = false) => {
-    try {
-      const response = await axios.get(
-        `
-${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookconsultation/fetch-bookconsultation.php`,
-        { params: { user_id: UserID } }
-      );
-
-      if (response.data.success) {
-        const newBookings = response.data.data;
-
-        // Extract unique booking IDs
-        const currentIds = newBookings.map((item) => item.booking_id);
-
-        // Find IDs that are new compared to stored ones
-        const newIds = currentIds.filter(
-          (id) => !notifiedBookingIdsRef.current.includes(id)
-        );
-
-        // 🚫 Removed toast, but still handle ID tracking
-        if (!isInitial && newIds.length > 0 && !toastShownBookingRef.current) {
-          toastShownBookingRef.current = true;
-
-          // ✅ Save notified IDs
-          notifiedBookingIdsRef.current = [
-            ...notifiedBookingIdsRef.current,
-            ...newIds,
-          ];
-
-          sessionStorage.setItem(
-            "notified_booking_ids",
-            JSON.stringify(notifiedBookingIdsRef.current)
-          );
-
-          // Reset lock after delay
-          setTimeout(() => {
-            toastShownBookingRef.current = false;
-          }, 5000);
-        }
-
-        // ✅ On initial fetch, just mark IDs without showing anything
-        if (isInitial) {
-          notifiedBookingIdsRef.current = [
-            ...notifiedBookingIdsRef.current,
-            ...currentIds,
-          ];
-          sessionStorage.setItem(
-            "notified_booking_ids",
-            JSON.stringify(notifiedBookingIdsRef.current)
-          );
-        }
-
-        setfetchbooking(newBookings);
-      } else {
-        setfetchbooking([]);
-      }
-    } catch (error) {
-      console.error("Error fetching student booking:", error);
-      setfetchbooking([]);
-    }
-  };
-
-
-  const handleSubmitConsultation = async () => {
-    if (selectedStudents.length === 0) {
-      toast.error("Please select at least one student.");
-      return;
-    }
-
-    try {
-      const payload = {
-        students: selectedStudents.map((id) => Number(id)), // ✅ these should be booking_id values
-        approval_id: DEFAULT_APPROVAL_STATUS_ID,
-        user_id: Number(loggedInUserId),
-      };
-
-      const response = await axios.post(
-        `
-${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/add-consultation.php`,
-        payload
-      );
-
-      if (response.data.success) {
-        toast.success("Consultation scheduled successfully!");
-        setSelectedStudents([]);
-        setIsDialogOpen(false);
-        
-        // Refresh both consultations and student bookings to update the list
-        await fetchConsultation(loggedInUserId);
-        await fetchbookingstudentWithNotify(loggedInUserId, false);
-      } else {
-        toast.error(
-          response.data.message || "Failed to schedule consultation."
-        );
-      }
-    } catch (error) {
-      console.error("Error scheduling consultation:", error);
-      toast.error("An error occurred while scheduling consultation.");
-    }
-  };
 
   const fetchConsultation = async (UserID) => {
     try {
@@ -302,15 +157,8 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-cons
       if (response.data.success) {
         const consultations = response.data.data;
         setFetchConsultation(consultations);
-        
-        // Extract booking_ids from scheduled consultations
-        const scheduledIds = new Set(
-          consultations.map((c) => c.booking_id).filter((id) => id != null)
-        );
-        setScheduledStudentIds(scheduledIds);
       } else {
         setFetchConsultation([]);
-        setScheduledStudentIds(new Set());
       }
     } catch (error) {
       console.error("Error fetching consultation:", error);
@@ -344,8 +192,14 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-cons
       return;
     }
 
-    if (!selectedConsultationId || !discussion.trim() || !recommendation.trim()) {
-      toast.error("Please fill in both Key Discussion Points and Recommendations.");
+    if (
+      !selectedConsultationId ||
+      !discussion.trim() ||
+      !recommendation.trim()
+    ) {
+      toast.error(
+        "Please fill in both Key Discussion Points and Recommendations."
+      );
       return;
     }
 
@@ -367,11 +221,13 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-cons
         setRecommendation("");
         setSelectedConsultation(null);
         setSelectedConsultationId(null);
-        
+
         // Refresh consultations list
         await fetchConsultation(loggedInUserId);
       } else {
-        toast.error(response.data.message || "Failed to complete consultation.");
+        toast.error(
+          response.data.message || "Failed to complete consultation."
+        );
       }
     } catch (error) {
       console.error("Error completing consultation:", error);
@@ -463,41 +319,39 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-cons
     }
   };
 
-const handleFeedback = async (schedulebookings_id) => {
-  try {
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/feedback-consultation.php`,
-      {
-        schedulebookings_id,
-        user_id: loggedInUserId,
-        feedback_text: feedback, // ✅ match backend
-      }
-    );
-
-    if (response.data.success) {
-      toast.success("Feedback submitted successfully!");
-
-      setFetchConsultation((prev) =>
-        prev.map((consult) =>
-          consult.schedulebookings_id === schedulebookings_id
-            ? { ...consult, feedback: feedback }
-            : consult
-        )
+  const handleFeedback = async (schedulebookings_id) => {
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/adminside/admin-consultation/feedback-consultation.php`,
+        {
+          schedulebookings_id,
+          user_id: loggedInUserId,
+          feedback_text: feedback, // ✅ match backend
+        }
       );
 
-      setFeedback(""); 
-      setopenFeedbackDialog(false);
-      setSelectedConsultationId(null); 
-    } else {
-      toast.error(response.data.message || "Failed to submit feedback.");
+      if (response.data.success) {
+        toast.success("Feedback submitted successfully!");
+
+        setFetchConsultation((prev) =>
+          prev.map((consult) =>
+            consult.schedulebookings_id === schedulebookings_id
+              ? { ...consult, feedback: feedback }
+              : consult
+          )
+        );
+
+        setFeedback("");
+        setopenFeedbackDialog(false);
+        setSelectedConsultationId(null);
+      } else {
+        toast.error(response.data.message || "Failed to submit feedback.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Server error while submitting feedback.");
     }
-  } catch (error) {
-    console.error(error);
-    toast.error("Server error while submitting feedback.");
-  }
-};
-
-
+  };
 
   return (
     <motion.div
@@ -539,160 +393,6 @@ const handleFeedback = async (schedulebookings_id) => {
               />
               <TbZoom className="absolute inset-y-0 right-3 text-black h-5 w-5 flex items-center justify-center mt-3" />
             </div>
-
-            <Dialog 
-              open={isDialogOpen} 
-              onOpenChange={(open) => {
-                setIsDialogOpen(open);
-                if (open && loggedInUserId) {
-                  // Refresh consultations when dialog opens to get latest scheduled students
-                  fetchConsultation(loggedInUserId);
-                }
-                if (!open) {
-                  setSelectedStudents([]);
-                }
-              }}
-            >
-              <DialogTrigger asChild>
-                <button
-                  onClick={() => setIsDialogOpen(true)}
-                  className="flex items-center gap-2 border border-green-800 text-green-800 px-4 py-2 rounded-lg transition-colors duration-300 hover:bg-green-800 hover:text-white"
-                >
-                  <TbPlus className="h-5 w-5 transition-colors duration-300" />
-                  New Consultation
-                </button>
-              </DialogTrigger>
-              <DialogContent
-                className="w-full h-auto max-h-[85vh] flex flex-col"
-                style={{ maxWidth: "700px", height: "650px" }}
-              >
-                <DialogHeader className="pb-4 flex-shrink-0">
-                  <DialogTitle className="text-green-800 text-xl font-semibold">
-                    Schedule Consultation
-                  </DialogTitle>
-                  <p className="text-sm text-gray-500">
-                    Select students for consultation
-                  </p>
-                </DialogHeader>
-
-                {/* Student list */}
-                <div className="flex flex-col flex-1 min-h-0">
-                  <Label className="mb-3 block text-green-800 font-medium flex-shrink-0">
-                    Student list:
-                  </Label>
-
-                  {/* Select All checkbox */}
-                  <div className="mb-3 pb-2 border-b border-gray-300 flex-shrink-0">
-                    <label className="flex items-center gap-3 px-3 py-2 hover:bg-green-50 cursor-pointer rounded">
-                      <input
-                        type="checkbox"
-                        checked={
-                          uniqueStudents.length > 0 &&
-                          selectedStudents.length === uniqueStudents.length
-                        }
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedStudents(
-                              uniqueStudents.map((s) => s.booking_id)
-                            );
-                          } else {
-                            setSelectedStudents([]);
-                          }
-                        }}
-                        className="h-4 w-4 text-green-800 border-green-800 rounded"
-                      />
-                      <span className="text-sm font-semibold text-green-800">
-                        Select All
-                      </span>
-                    </label>
-                  </div>
-
-                  {/* Student list with scroll */}
-                  <div className="flex-1 overflow-y-auto overflow-x-hidden border border-green-800 shadow-xl bg-green-50 rounded-md pr-1 custom-scrollbar" style={{ maxHeight: "450px" }}>
-                    <div className="grid grid-cols-1 gap-2 p-3">
-                      {uniqueStudents.length > 0 ? (
-                        uniqueStudents.map((student) => (
-                          <label
-                            key={student.booking_id}
-                            className="flex items-start gap-3 px-4 py-3 border border-gray-200 rounded-md hover:bg-green-100 cursor-pointer w-full bg-white"
-                          >
-                            <input
-                              type="checkbox"
-                              value={student.booking_id}
-                              checked={selectedStudents.includes(
-                                student.booking_id
-                              )}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedStudents((prev) => [
-                                    ...prev,
-                                    student.booking_id,
-                                  ]);
-                                } else {
-                                  setSelectedStudents((prev) =>
-                                    prev.filter(
-                                      (id) => id !== student.booking_id
-                                    )
-                                  );
-                                }
-                              }}
-                              className="h-4 w-4 text-green-800 border-green-800 rounded mt-1 flex-shrink-0"
-                            />
-                            <div className="flex flex-col flex-1 min-w-0">
-                              <span className="text-sm font-medium text-gray-900">
-                                {student.student_name}
-                              </span>
-                              {(student.course_name || student.year_name) && (
-                                <span className="text-xs text-gray-600 mt-1">
-                                  {student.course_name || ""}
-                                  {student.course_name && student.year_name
-                                    ? " • "
-                                    : ""}
-                                  {student.year_name || ""}
-                                </span>
-                              )}
-                              {student.booking_date && (
-                                <span className="text-xs text-gray-500 mt-1">
-                                  Request Date: {student.booking_date}
-                                </span>
-                              )}
-                              {student.time_range && (
-                                <span className="text-xs text-gray-500">
-                                  Time: {student.time_range}
-                                </span>
-                              )}
-                            </div>
-                          </label>
-                        ))
-                      ) : (
-                        <p className="text-gray-500 text-sm text-center py-4">
-                          No students found.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sticky Footer Save */}
-                <div className="pt-4 border-t flex justify-end gap-3 bg-white mt-4 flex-shrink-0">
-                  <Button
-                    variant="outline"
-                    className="border-green-800 text-green-800"
-                    onClick={() => {
-                      setSelectedStudents([]);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    className="bg-green-800 hover:bg-green-700 text-white"
-                    onClick={handleSubmitConsultation}
-                  >
-                    Save Consultation
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
 
             {/* Filter Date Button */}
             <DropdownMenu>
@@ -793,65 +493,68 @@ const handleFeedback = async (schedulebookings_id) => {
                       </span>
                     </td>
 
-                    <td className="border px-6 py-3 text-center text-sm font-semibold">
-                      <div className="flex items-center justify-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none hover:bg-gray-100 transition">
-                              <TbDotsVertical className="w-5 h-5 text-gray-700" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem
-                              onClick={async () => {
-                                setSelectedConsultationId(consult.schedulebookings_id);
-                                await fetchConsultationDetails(consult.schedulebookings_id);
-                                setOpenViewDialog(true);
-                              }}
-                              className="cursor-pointer text-blue-700 hover:bg-blue-50"
-                            >
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleSchedule(
-                                  consult.schedulebookings_id,
-                                  consult.approval_name
-                                )
-                              }
-                              className="cursor-pointer text-blue-700 hover:bg-blue-50"
-                            >
-                              Scheduled
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleCancelled(
-                                  consult.schedulebookings_id,
-                                  consult.approval_name
-                                )
-                              }
-                              className="cursor-pointer text-red-700 hover:bg-red-50"
-                            >
-                              Cancelled
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedConsultationId(consult.schedulebookings_id);
-                                setopenFeedbackDialog(true);
-                              }}
-                              className="cursor-pointer text-yellow-700 hover:bg-yellow-50"
-                            >
-                              Send feedback
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                    <td className="border px-6 py-3  text-center text-sm font-semibold">
+                    <div className="flex items-center justify-center gap-3">
+                        {/* View */}
+                        <button
+                          title="View"
+                          onClick={async () => {
+                            setSelectedConsultationId(
+                              consult.schedulebookings_id
+                            );
+                            await fetchConsultationDetails(
+                              consult.schedulebookings_id
+                            );
+                            setOpenViewDialog(true);
+                          }}
+                     className="px-1 py-1 border-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+                        >
+                          <FiEye className="w-5 h-5" />
+                        </button>
+
+                        {/* Scheduled */}
+                        {/* <button
+                          title="Scheduled"
+                          onClick={() =>
+                            handleSchedule(
+                              consult.schedulebookings_id,
+                              consult.approval_name
+                            )
+                          }
+                          className="p-2 rounded-md text-green-600 hover:bg-green-100 transition"
+                        >
+                          <FiCalendar className="w-5 h-5" />
+                        </button> */}
+
+                        {/* Cancelled */}
+                        <button
+                          title="Cancelled"
+                          onClick={() =>
+                            handleCancelled(
+                              consult.schedulebookings_id,
+                              consult.approval_name
+                            )
+                          }
+                       className="px-1 py-1 border-1 bg-red-600 text-white rounded-md hover:bg-red-100 transition"
+                        >
+                          <FiXCircle className="w-5 h-5" />
+                        </button>
+
+                        {/* Send Feedback */}
+                        <button
+                          title="Send Feedback"
+                          onClick={() => {
+                            setSelectedConsultationId(
+                              consult.schedulebookings_id
+                            );
+                            setopenFeedbackDialog(true);
+                          }}
+                         className="px-1 py-1 border-1 bg-yellow-600 text-white rounded-md hover:bg-yellow-100 transition"
+                        >
+                          <FiMessageSquare className="w-5 h-5" />
+                        </button>
                       </div>
                     </td>
-
-
-
-
-                    
                   </tr>
                 ))
               ) : (
@@ -931,27 +634,38 @@ const handleFeedback = async (schedulebookings_id) => {
                 <div className="flex flex-col gap-4 mt-4">
                   {/* Student Information */}
                   <div className="border-b pb-4">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Student Information</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                      Student Information
+                    </h3>
                     <div className="space-y-2">
                       <p className="text-sm">
-                        <span className="font-medium">Name:</span> {selectedConsultation.student_name}
+                        <span className="font-medium">Name:</span>{" "}
+                        {selectedConsultation.student_name}
                       </p>
-                      {(selectedConsultation.course_name || selectedConsultation.year_name) && (
+                      {(selectedConsultation.course_name ||
+                        selectedConsultation.year_name) && (
                         <p className="text-sm">
-                          <span className="font-medium">Course • Year Level:</span>{" "}
+                          <span className="font-medium">
+                            Course • Year Level:
+                          </span>{" "}
                           {selectedConsultation.course_name || ""}
-                          {selectedConsultation.course_name && selectedConsultation.year_name ? " • " : ""}
+                          {selectedConsultation.course_name &&
+                          selectedConsultation.year_name
+                            ? " • "
+                            : ""}
                           {selectedConsultation.year_name || ""}
                         </p>
                       )}
                       {selectedConsultation.subject_name && (
                         <p className="text-sm">
-                          <span className="font-medium">Subject:</span> {selectedConsultation.subject_name}
+                          <span className="font-medium">Subject:</span>{" "}
+                          {selectedConsultation.subject_name}
                         </p>
                       )}
                       {selectedConsultation.purpose && (
                         <p className="text-sm">
-                          <span className="font-medium">Purpose:</span> {selectedConsultation.purpose}
+                          <span className="font-medium">Purpose:</span>{" "}
+                          {selectedConsultation.purpose}
                         </p>
                       )}
                     </div>
@@ -959,33 +673,69 @@ const handleFeedback = async (schedulebookings_id) => {
 
                   {/* Key Discussion Points */}
                   <div>
-                    <Label htmlFor="discussion" className="mb-2 block text-green-800 font-medium">
-                      Key Discussion Points {selectedConsultation.approval_name !== "Completed" && <span className="text-red-500">*</span>}
+                    <Label
+                      htmlFor="discussion"
+                      className="mb-2 block text-green-800 font-medium"
+                    >
+                      Key Discussion Points{" "}
+                      {selectedConsultation.approval_name !== "Completed" && (
+                        <span className="text-red-500">*</span>
+                      )}
                     </Label>
                     <Textarea
                       id="discussion"
-                      placeholder={selectedConsultation.approval_name === "Completed" ? "No discussion points entered." : "Enter key discussion points..."}
-                      className={`w-full min-h-[120px] ${selectedConsultation.approval_name === "Completed" ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      placeholder={
+                        selectedConsultation.approval_name === "Completed"
+                          ? "No discussion points entered."
+                          : "Enter key discussion points..."
+                      }
+                      className={`w-full min-h-[120px] ${
+                        selectedConsultation.approval_name === "Completed"
+                          ? "bg-gray-100 cursor-not-allowed"
+                          : ""
+                      }`}
                       value={discussion}
                       onChange={(e) => setDiscussion(e.target.value)}
-                      readOnly={selectedConsultation.approval_name === "Completed"}
-                      required={selectedConsultation.approval_name !== "Completed"}
+                      readOnly={
+                        selectedConsultation.approval_name === "Completed"
+                      }
+                      required={
+                        selectedConsultation.approval_name !== "Completed"
+                      }
                     />
                   </div>
 
                   {/* Recommendations */}
                   <div>
-                    <Label htmlFor="recommendation" className="mb-2 block text-green-800 font-medium">
-                      Recommendations {selectedConsultation.approval_name !== "Completed" && <span className="text-red-500">*</span>}
+                    <Label
+                      htmlFor="recommendation"
+                      className="mb-2 block text-green-800 font-medium"
+                    >
+                      Recommendations{" "}
+                      {selectedConsultation.approval_name !== "Completed" && (
+                        <span className="text-red-500">*</span>
+                      )}
                     </Label>
                     <Textarea
                       id="recommendation"
-                      placeholder={selectedConsultation.approval_name === "Completed" ? "No recommendations entered." : "Enter recommendations..."}
-                      className={`w-full min-h-[120px] ${selectedConsultation.approval_name === "Completed" ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      placeholder={
+                        selectedConsultation.approval_name === "Completed"
+                          ? "No recommendations entered."
+                          : "Enter recommendations..."
+                      }
+                      className={`w-full min-h-[120px] ${
+                        selectedConsultation.approval_name === "Completed"
+                          ? "bg-gray-100 cursor-not-allowed"
+                          : ""
+                      }`}
                       value={recommendation}
                       onChange={(e) => setRecommendation(e.target.value)}
-                      readOnly={selectedConsultation.approval_name === "Completed"}
-                      required={selectedConsultation.approval_name !== "Completed"}
+                      readOnly={
+                        selectedConsultation.approval_name === "Completed"
+                      }
+                      required={
+                        selectedConsultation.approval_name !== "Completed"
+                      }
                     />
                   </div>
 
@@ -1002,7 +752,9 @@ const handleFeedback = async (schedulebookings_id) => {
                         setSelectedConsultationId(null);
                       }}
                     >
-                      {selectedConsultation.approval_name === "Completed" ? "Close" : "Cancel"}
+                      {selectedConsultation.approval_name === "Completed"
+                        ? "Close"
+                        : "Cancel"}
                     </Button>
                     <Button
                       onClick={handleSubmitConsultationDetails}

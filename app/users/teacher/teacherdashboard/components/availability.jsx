@@ -1,9 +1,11 @@
 import {
   TbZoom,
   TbClipboardList,
-  TbPlus,
   TbFilter,
   TbDotsVertical,
+  TbPlus,
+  TbEdit,
+  TbEye,
 } from "react-icons/tb";
 import {
   Pagination,
@@ -124,6 +126,18 @@ const AvailabilityManagement = () => {
       student.subject_name
         .toLowerCase()
         .includes(studentSearchText.toLowerCase()) ||
+      (student.purpose || "")
+        .toLowerCase()
+        .includes(studentSearchText.toLowerCase()) ||
+      (student.approval_name || "")
+        .toLowerCase()
+        .includes(studentSearchText.toLowerCase()) ||
+      (student.discussion || "")
+        .toLowerCase()
+        .includes(studentSearchText.toLowerCase()) ||
+      (student.recommendation || "")
+        .toLowerCase()
+        .includes(studentSearchText.toLowerCase()) ||
       new Date(student.booking_date)
         .toLocaleString("en-US", {
           month: "short",
@@ -188,7 +202,7 @@ const AvailabilityManagement = () => {
 
       return matchesSearch && matchesStatus;
     })
-    .sort((a, b) => a.availabilityfaculty_id - b.availabilityfaculty_id);
+    .sort((a, b) => b.availabilityfaculty_id - a.availabilityfaculty_id);
 
   const totalPages = Math.ceil(filteredAvailabilitySlots.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -829,44 +843,43 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
                       </span>
                     </td>
 
-                    <td className="border px-6 py-3 text-center text-sm font-semibold">
-                      <div className="flex items-center justify-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none hover:bg-gray-100 transition">
-                              <TbDotsVertical className="w-5 h-5 text-gray-700" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setCurrentAvailabilityFacultyId(
-                                  availday.availabilityfaculty_id
-                                );
-                                setOpenAddSlotDialog(true);
-                              }}
-                              className="cursor-pointer text-green-700 hover:bg-green-50"
-                            >
-                              Add slot
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleEdit(availday.availabilityfaculty_id)
-                              }
-                              className="cursor-pointer text-blue-700 hover:bg-blue-50"
-                            >
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleView(availday.availabilityfaculty_id)
-                              }
-                              className="cursor-pointer text-yellow-700 hover:bg-yellow-50"
-                            >
-                              View
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                    <td className="border px-6 py-3  text-center text-sm font-semibold">
+                      <div className="flex items-center justify-center gap-3">
+                        {/* Add Slot */}
+                        <button
+                          onClick={() => {
+                            setCurrentAvailabilityFacultyId(
+                              availday.availabilityfaculty_id
+                            );
+                            setOpenAddSlotDialog(true);
+                          }}
+                            className="px-1 py-1 border-1 bg-blue-900 text-white rounded-md hover:bg-blue-800 transition"
+                          title="Add Slot"
+                        >
+                          <TbPlus className="w-5 h-5" />
+                        </button>
+
+                        {/* Edit */}
+                        <button
+                          onClick={() =>
+                            handleEdit(availday.availabilityfaculty_id)
+                          }
+                          className="px-1 py-1 border-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition"
+                          title="Edit"
+                        >
+                          <TbEdit className="w-5 h-5" />
+                        </button>
+
+                        {/* View */}
+                        <button
+                          onClick={() =>
+                            handleView(availday.availabilityfaculty_id)
+                          }
+                          className="px-1 py-1 border-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+                          title="View"
+                        >
+                          <TbEye className="w-5 h-5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1023,14 +1036,26 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
                   <table className="w-full border-collapse bg-white shadow-md rounded-md overflow-hidden text-sm">
                     <thead className="bg-gray-100 text-gray-500">
                       <tr>
-                        <th className="w-1/3 border px-4 py-2 text-center font-semibold">
+                        <th className="border px-4 py-2 text-center font-semibold">
                           Student
                         </th>
-                        <th className="w-1/3 border px-4 py-2 text-center font-semibold">
+                        <th className="border px-4 py-2 text-center font-semibold">
                           Subject
                         </th>
-                        <th className="w-1/3 border px-4 py-2 text-center font-semibold">
+                        <th className="border px-4 py-2 text-center font-semibold">
+                          Purpose
+                        </th>
+                        <th className="border px-4 py-2 text-center font-semibold">
                           Booking Date
+                        </th>
+                        <th className="border px-4 py-2 text-center font-semibold">
+                          Discussions
+                        </th>
+                        <th className="border px-4 py-2 text-center font-semibold">
+                          Recommendations
+                        </th>
+                        <th className="border px-4 py-2 text-center font-semibold">
+                          Status
                         </th>
                       </tr>
                     </thead>
@@ -1044,6 +1069,9 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
                             {student.subject_name}
                           </td>
                           <td className="border px-4 py-2 text-center">
+                            {student.purpose || "-"}
+                          </td>
+                          <td className="border px-4 py-2 text-center">
                             {new Date(student.booking_date).toLocaleString(
                               "en-US",
                               {
@@ -1054,6 +1082,27 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
                                 minute: "2-digit",
                               }
                             )}
+                          </td>
+                          <td className="border px-4 py-2 text-center">
+                            {student.discussion || "-"}
+                          </td>
+                          <td className="border px-4 py-2 text-center">
+                            {student.recommendation || "-"}
+                          </td>
+                          <td className="border px-4 py-2 text-center">
+                            <span
+                              className={`inline-block px-2 py-1 text-xs font-semibold rounded-md ${
+                                student.approval_name === "Approved" ||
+                                student.approval_name === "Completed"
+                                  ? "bg-green-900 text-white"
+                                  : student.approval_name === "Disapproved" ||
+                                    student.approval_name === "Cancelled"
+                                  ? "bg-red-600 text-white"
+                                  : "bg-yellow-500 text-white"
+                              }`}
+                            >
+                              {student.approval_name || "-"}
+                            </span>
                           </td>
                         </tr>
                       ))}

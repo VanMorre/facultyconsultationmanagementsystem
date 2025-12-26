@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
 import { LayoutDashboard } from "lucide-react";
@@ -12,12 +13,15 @@ const StudentSidebar = ({ collapsed, setCurrentView, currentView }) => {
       } h-full bg-white shadow-2xl transition-all duration-300 overflow-y-auto`}
     >
       <div className="p-4 flex items-center justify-center pl-1 bg-green-900 shadow-xl">
-        <img
+        <Image
           src="/images/coclogo-removebg.png"
           alt="PatientCare Logo"
+          width={80}
+          height={80}
           className={`transition-all duration-300 ${
             collapsed ? "w-20 opacity-100" : "w-20"
           } h-auto`}
+          priority
         />
         {!collapsed && (
           <div className="flex flex-col items-start pb-1">

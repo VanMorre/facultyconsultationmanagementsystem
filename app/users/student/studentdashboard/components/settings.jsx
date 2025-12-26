@@ -362,7 +362,12 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/yearlevel/fetch-year
         <h1 className="text-lg md:text-xl font-bold mb-4 border-b-2 border-gray-500 pb-3 md:pb-5 mt-2 md:mt-3">
           Student Profile
         </h1>
-      
+        <p className="text-gray-600 mb-6">
+            This section contains your personal profile details including your
+            full name, username, contact information, and other important
+            information associated with your account.
+          </p>
+
    
         <div className="flex flex-col md:flex-row gap-6 md:gap-9 items-center md:items-start">
           {/* Avatar + Role */}

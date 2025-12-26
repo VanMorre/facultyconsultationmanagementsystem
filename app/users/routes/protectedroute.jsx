@@ -1,56 +1,90 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import CryptoJS from "crypto-js";
 
 const SECRET_KEY = "my_secret_key_123456"; // Change this to a secure key
 
-// Function to decrypt session storage values
-const decryptData = (data) => {
-  if (!data) return null;
-  try {
-    const bytes = CryptoJS.AES.decrypt(data, SECRET_KEY);
-    return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
-  } catch (error) {
-    console.error("Decryption error:", error);
-    return null;
-  }
-};
+// Memoized decrypt function for better performance
+const decryptData = (() => {
+  const cache = new Map();
+  return (data) => {
+    if (!data) return null;
+    // Use cache to avoid re-decrypting same values
+    if (cache.has(data)) {
+      return cache.get(data);
+    }
+    try {
+      const bytes = CryptoJS.AES.decrypt(data, SECRET_KEY);
+      const result = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+      cache.set(data, result);
+      return result;
+    } catch (error) {
+      return null;
+    }
+  };
+})();
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
+  // Memoize allowed roles check
+  const allowedRolesSet = useMemo(() => new Set(allowedRoles), [allowedRoles]);
+
   useEffect(() => {
     // Only run on client side
     if (typeof window === "undefined") return;
 
-    // Fetch and decrypt session storage values
-    const encryptedRole = sessionStorage.getItem("role");
-    const encryptedAuth = sessionStorage.getItem("isAuthenticated");
+    // Use requestIdleCallback for non-critical auth check (faster initial render)
+    const checkAuth = () => {
+      try {
+        // Fetch session storage values synchronously (fast)
+        const encryptedRole = sessionStorage.getItem("role");
+        const encryptedAuth = sessionStorage.getItem("isAuthenticated");
 
-    const userRole = decryptData(encryptedRole);
-    const isAuthenticated = decryptData(encryptedAuth);
+        // Quick check: if no auth data, redirect immediately
+        if (!encryptedAuth || !encryptedRole) {
+          setIsAuthorized(false);
+          setIsChecking(false);
+          router.replace("/loginpage");
+          return;
+        }
 
-    console.log("Decrypted Role:", userRole);
-    console.log("Decrypted Authenticated:", isAuthenticated);
+        // Decrypt (cached for performance)
+        const userRole = decryptData(encryptedRole);
+        const isAuthenticated = decryptData(encryptedAuth);
 
-    // Check authorization
-    const authorized = 
-      isAuthenticated && 
-      userRole && 
-      allowedRoles.includes(userRole);
+        // Check authorization
+        const authorized = 
+          (isAuthenticated === "true" || isAuthenticated === true) && 
+          userRole && 
+          allowedRolesSet.has(userRole);
 
-    setIsAuthorized(authorized);
-    setIsChecking(false);
+        setIsAuthorized(authorized);
+        setIsChecking(false);
 
-    // Redirect unauthorized users to login
-    if (!authorized) {
-      router.replace("/loginpage");
+        // Redirect unauthorized users to login
+        if (!authorized) {
+          router.replace("/loginpage");
+        }
+      } catch (error) {
+        setIsAuthorized(false);
+        setIsChecking(false);
+        router.replace("/loginpage");
+      }
+    };
+
+    // Use requestIdleCallback if available, otherwise run immediately
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(checkAuth, { timeout: 100 });
+    } else {
+      // Fallback: use setTimeout with 0 delay to allow initial render
+      setTimeout(checkAuth, 0);
     }
-  }, [router, allowedRoles]);
+  }, [router, allowedRolesSet]);
 
   // Show nothing while checking (prevents flash of content)
   if (isChecking) {

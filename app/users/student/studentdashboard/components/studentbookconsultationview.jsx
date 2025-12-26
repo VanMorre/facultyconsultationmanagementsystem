@@ -464,22 +464,22 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/bookcons
                                   bks.approval_name
                                 )
                               }
-                              className="px-1 py-1 border-2 border-red-500 text-red-500 rounded-md focus:outline-none hover:bg-red-600 hover:text-white transition"
+                              className="px-1 py-1 border-1 bg-red-600 text-white rounded-md hover:bg-red-100 transition"
                             >
                               <HiXCircle className="w-5 h-5" />
                             </button>
 
-                              <button
-                                onClick={() => handleEmailView(bks.booking_id)}
-                                className="relative px-1 py-1 border-2 border-indigo-500 text-indigo-500 rounded-md focus:outline-none hover:bg-indigo-600 hover:text-white transition"
-                              >
-                                <MdEmail className="w-5 h-5" />
+                            <button
+                              onClick={() => handleEmailView(bks.booking_id)}
+                              className="relative px-1 py-1 border-1 bg-blue-500 text-white rounded-md focus:outline-none hover:bg-blue-100 transition"
+                            >
+                              <MdEmail className="w-5 h-5" />
 
-                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold">
-                                  {Number(bks.feedback_count) || 0}{" "}
-                                  {/* always show number, 0 if none */}
-                                </span>
-                              </button>
+                              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold">
+                                {Number(bks.feedback_count) || 0}{" "}
+                                {/* always show number, 0 if none */}
+                              </span>
+                            </button>
                           </div>
                         </td>
                       </tr>

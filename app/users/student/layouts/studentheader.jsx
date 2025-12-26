@@ -34,6 +34,7 @@ const StudentHeader = ({ toggleSidebar, setCurrentView }) => {
   const [username, setUsername] = useState("");
   const [photo_url, setPhotoUrl] = useState("");
   const [loggedInUserId, setLoggedInUserId] = useState(null);
+  const [userRole, setUserRole] = useState("");
 
 
   const decryptData = (data) => {
@@ -79,6 +80,7 @@ const StudentHeader = ({ toggleSidebar, setCurrentView }) => {
     const updateProfile = () => {
     const storedUsername = sessionStorage.getItem("student_email");
     const storedImage = sessionStorage.getItem("photo_url");
+    const storedRole = sessionStorage.getItem("role");
 
     if (storedUsername) {
       const decryptedUsername = decryptData(storedUsername);
@@ -88,6 +90,15 @@ const StudentHeader = ({ toggleSidebar, setCurrentView }) => {
     if (storedImage) {
       const decryptedImage = decryptData(storedImage);
       setPhotoUrl(decryptedImage || "");
+    }
+
+    if (storedRole) {
+      const decryptedRole = decryptData(storedRole);
+      // Capitalize first letter
+      const capitalizedRole = decryptedRole 
+        ? decryptedRole.charAt(0).toUpperCase() + decryptedRole.slice(1).toLowerCase()
+        : "Student";
+      setUserRole(capitalizedRole);
     }
       };
 
@@ -144,7 +155,7 @@ const StudentHeader = ({ toggleSidebar, setCurrentView }) => {
 
                   {username && (
                     <span className="text-black text-sm font-medium flex items-center space-x-1">
-                      <span>Hello, {username}</span>
+                      <span>Hello {userRole || "Student"}, {username}</span>
                       <ChevronDown className=" ml-2 mt-1 w-4 h-4 text-black" />
                     </span>
                   )}

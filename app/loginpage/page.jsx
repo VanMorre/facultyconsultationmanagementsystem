@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AiOutlineMail, AiOutlineLock } from "react-icons/ai";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import CryptoJS from "crypto-js";
@@ -139,31 +138,42 @@ export default function AdminLogin() {
   };
 
   useEffect(() => {
-    fetchcourse();
-    fetchyearlevel();
+    // Defer non-critical operations
     generateCaptcha();
+    
+    // Check authentication first (fast)
+    const encryptedAuth = sessionStorage.getItem("isAuthenticated");
+    const encryptedRole = sessionStorage.getItem("role");
+    
+    if (encryptedAuth && encryptedRole) {
+      const isAuthenticated = decryptData(encryptedAuth);
+      const userRole = decryptData(encryptedRole);
 
-    const isAuthenticated = decryptData(
-      sessionStorage.getItem("isAuthenticated")
-    );
-    const userRole = decryptData(sessionStorage.getItem("role"));
-
-    if (isAuthenticated && userRole) {
-      switch (userRole) {
-        case "admin":
-          router.push("/admin-dashboard");
-          break;
-        case "teacher":
-          router.push("/teacher-dashboard");
-          break;
-        case "student":
-          router.push("/student-dashboard");
-          break;
-        default:
-          sessionStorage.clear();
-          router.push("/");
+      if (isAuthenticated && userRole) {
+        // Use replace for faster navigation
+        switch (userRole) {
+          case "admin":
+            router.replace("/admin-dashboard");
+            break;
+          case "teacher":
+            router.replace("/teacher-dashboard");
+            break;
+          case "student":
+            router.replace("/student-dashboard");
+            break;
+          default:
+            sessionStorage.clear();
+            router.replace("/");
+        }
+        return; // Exit early if redirecting
       }
     }
+
+    // Only fetch course/yearlevel if not authenticated (defer to allow render)
+    setTimeout(() => {
+      fetchcourse();
+      fetchyearlevel();
+    }, 0);
   }, []);
 
   const encryptData = (data) => {
@@ -219,20 +229,21 @@ export default function AdminLogin() {
 
         toast.success("Login Successfully!");
 
+        // Navigate immediately without delay
         setTimeout(() => {
           switch (role_name.toLowerCase()) {
             case "admin":
-              router.push("/admin-dashboard");
+              router.replace("/admin-dashboard");
               break;
             case "teacher":
-              router.push("/teacher-dashboard");
+              router.replace("/teacher-dashboard");
               break;
             default:
               toast.error("Unauthorized role!");
               sessionStorage.clear();
-              router.push("/");
+              router.replace("/");
           }
-        }, 3000);
+        }, 500); // Reduced from 3000ms to 500ms
       } else {
         if (response.data.message.includes("Maximum attempts reached")) {
           toast.error(
@@ -308,17 +319,18 @@ export default function AdminLogin() {
         sessionStorage.setItem("course_name", encryptData(course_name));
 
         toast.success("Student Login Successful!");
+        // Navigate immediately without delay
         setTimeout(() => {
           switch (role_name.toLowerCase()) {
             case "student":
-              router.push("/student-dashboard");
+              router.replace("/student-dashboard");
               break;
             default:
               toast.error("Unauthorized role!");
               sessionStorage.clear();
-              router.push("/");
+              router.replace("/");
           }
-        }, 2000);
+        }, 500); // Reduced from 2000ms to 500ms
       } else {
         response.data.message.includes("Maximum attempts")
           ? handleLockout("Too many failed attempts. Try again later.")
@@ -554,12 +566,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.
         <div className="absolute w-24 h-24 bg-green-800 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 shadow-[0_20px_40px_rgba(0,100,0,0.6)]"></div>
         <div className="absolute w-36 h-20 bg-gray-200 transform rotate-12 skew-x-12 bottom-[10%] left-[40%] z-0 shadow-[0_25px_50px_rgba(100,100,100,0.4)]"></div>
         <div className="absolute w-36 h-20 bg-gray-200 transform rotate-12 skew-x-12 top-[6%] left-[40%] z-0 shadow-[0_25px_50px_rgba(100,100,100,0.4)]"></div>
-        <ToastContainer
-          position="top-right"
-          autoClose={1000}
-          theme="light"
-          transition={Bounce}
-        />
         <div className="flex-1 flex flex-col justify-center items-center w-full relative z-10 px-4 sm:px-8">
           <motion.div className="w-full max-w-md sm:max-w-xl p-6 sm:p-10 bg-white rounded-lg shadow-2xl flex flex-col justify-center">
             {/* Header */}

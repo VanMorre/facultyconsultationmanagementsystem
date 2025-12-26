@@ -24,7 +24,6 @@ try {
             sb.booking_id,
             sb.discussion,
             sb.recommendation,
-            a.approval_id,
             a.approval_name,
             u.user_id,
             b.subject_name,

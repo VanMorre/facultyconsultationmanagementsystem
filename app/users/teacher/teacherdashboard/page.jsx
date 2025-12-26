@@ -1,32 +1,8 @@
 "use client";
-import {
-  Chart as ChartJS,
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  PointElement,
-  Filler,
-} from "chart.js";
-ChartJS.register(
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  PointElement,
-  Filler
-);
+import { registerChartJS } from "@/lib/chart-config";
+registerChartJS();
 import {
   FaClipboardList,
-  FaCalendarCheck,
   FaCheckCircle,
   FaTimesCircle,
 } from "react-icons/fa";
@@ -41,32 +17,21 @@ import {
 
 import { TbUser, TbFilter, TbArrowRight, TbArrowDown } from "react-icons/tb";
 import { Line } from "react-chartjs-2";
-// import SubjectlistManagement from "../backups/subjectslist";
-import SettingsManagement from "./components/settings";
-import ReportManagement from "./components/reports";
-import StudentrequestManagement from "./components/studentrequest";
-import AvailabilityManagement from "./components/availability";
-import ConsultationManagement from "./components/consultation";
+import dynamic from "next/dynamic";
+
+// Lazy load heavy components for better initial load performance
+const SettingsManagement = dynamic(() => import("./components/settings"), { ssr: false });
+const ReportManagement = dynamic(() => import("./components/reports"), { ssr: false });
+const StudentrequestManagement = dynamic(() => import("./components/studentrequest"), { ssr: false });
+const AvailabilityManagement = dynamic(() => import("./components/availability"), { ssr: false });
+const ConsultationManagement = dynamic(() => import("../backups/consultation"), { ssr: false });
 import CryptoJS from "crypto-js";
 import axios from "axios";
 import { motion } from "framer-motion";
 import React, { useState, useEffect, useRef } from "react";
 import TeacherLayout from "../layouts/teacherlayout";
 import { PiBellRingingFill } from "react-icons/pi";
-import { ToastContainer, toast, Bounce } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-
-ChartJS.register(
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  PointElement
-);
+import { toast } from "react-toastify";
 
 const TeacherDashboard = () => {
   const [loggedInUserId, setLoggedInUserId] = useState(null);
@@ -82,75 +47,91 @@ const TeacherDashboard = () => {
   const toastShownAvailabilityRef = useRef(false);
   const notifiedConsultationIdsRef = useRef([]);
   const toastShownConsultationRef = useRef(false);
+  const decryptCacheRef = useRef(new Map());
 
+  // Decrypt user ID function with caching
   const decryptUserId = () => {
     const encryptedUserId = sessionStorage.getItem("user_id");
+    if (!encryptedUserId) return null;
 
-    if (encryptedUserId) {
-      try {
-        const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
-        let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
-
-        // 🔹 Remove wrapping quotes if any
-        decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
-
-        // 🔹 Cast to integer
-        const numericId = parseInt(decryptedUserId, 10);
-
-        if (!isNaN(numericId)) {
-          setLoggedInUserId(numericId);
-        } else {
-          console.error("Invalid decrypted student ID:", decryptedUserId);
-        }
-      } catch (error) {
-        console.error("Error decrypting user ID:", error);
-      }
+    // Use cache to avoid re-decrypting
+    if (decryptCacheRef.current.has(encryptedUserId)) {
+      return decryptCacheRef.current.get(encryptedUserId);
     }
+
+    try {
+      const bytes = CryptoJS.AES.decrypt(encryptedUserId, SECRET_KEY);
+      let decryptedUserId = bytes.toString(CryptoJS.enc.Utf8);
+      decryptedUserId = decryptedUserId.replace(/^"|"$/g, "");
+      const numericId = parseInt(decryptedUserId, 10);
+
+      if (!isNaN(numericId)) {
+        decryptCacheRef.current.set(encryptedUserId, numericId);
+        return numericId;
+      }
+    } catch (error) {
+      console.error("Error decrypting user ID:", error);
+    }
+    return null;
   };
 
   useEffect(() => {
-    decryptUserId();
-
-    if (loggedInUserId) {
-      // Load session-stored notified booking IDs
-      const storedBooking = sessionStorage.getItem("notified_booking_ids");
-      if (storedBooking) {
-        notifiedBookingIdsRef.current = JSON.parse(storedBooking);
-      }
-
-      // Load session-stored notified consultation IDs
-      const storedConsultation = sessionStorage.getItem(
-        "notified_consultation_ids"
-      );
-      if (storedConsultation) {
-        notifiedConsultationIdsRef.current = JSON.parse(storedConsultation);
-      }
-
-      // Load session-stored notified availability IDs
-      const storedAvailability = sessionStorage.getItem(
-        "notified_availability_ids"
-      );
-      if (storedAvailability) {
-        notifiedAvailabilityIdsRef.current = JSON.parse(storedAvailability);
-      }
-
-      let isInitial = true;
-
-      // ✅ First fetch (initial load)
-      fetchbookingstudentWithNotify(loggedInUserId, isInitial);
-      fetchConsultationWithNotify(loggedInUserId, isInitial);
-      fetchAvailabilityWithNotify(loggedInUserId, isInitial);
-      isInitial = false;
-
-      // ✅ Poll every 5 seconds
-      const interval = setInterval(() => {
-        fetchbookingstudentWithNotify(loggedInUserId, false);
-        fetchConsultationWithNotify(loggedInUserId, false);
-        fetchAvailabilityWithNotify(loggedInUserId, false);
-      }, 5000);
-
-      return () => clearInterval(interval);
+    // Decrypt user ID synchronously
+    const userId = decryptUserId();
+    if (userId) {
+      setLoggedInUserId(userId);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!loggedInUserId) return;
+
+    // Load session-stored notified IDs (fast synchronous operation)
+    const storedBooking = sessionStorage.getItem("notified_booking_ids");
+    if (storedBooking) {
+      try {
+        notifiedBookingIdsRef.current = JSON.parse(storedBooking);
+      } catch (e) {
+        notifiedBookingIdsRef.current = [];
+      }
+    }
+
+    const storedConsultation = sessionStorage.getItem("notified_consultation_ids");
+    if (storedConsultation) {
+      try {
+        notifiedConsultationIdsRef.current = JSON.parse(storedConsultation);
+      } catch (e) {
+        notifiedConsultationIdsRef.current = [];
+      }
+    }
+
+    const storedAvailability = sessionStorage.getItem("notified_availability_ids");
+    if (storedAvailability) {
+      try {
+        notifiedAvailabilityIdsRef.current = JSON.parse(storedAvailability);
+      } catch (e) {
+        notifiedAvailabilityIdsRef.current = [];
+      }
+    }
+
+    // Defer initial API calls to allow page to render first
+    const initialFetchTimeout = setTimeout(() => {
+      fetchbookingstudentWithNotify(loggedInUserId, true);
+      fetchConsultationWithNotify(loggedInUserId, true);
+      fetchAvailabilityWithNotify(loggedInUserId, true);
+    }, 100);
+
+    // Poll every 5 seconds (start after initial fetch)
+    const interval = setInterval(() => {
+      fetchbookingstudentWithNotify(loggedInUserId, false);
+      fetchConsultationWithNotify(loggedInUserId, false);
+      fetchAvailabilityWithNotify(loggedInUserId, false);
+    }, 5000);
+
+    return () => {
+      clearTimeout(initialFetchTimeout);
+      clearInterval(interval);
+    };
   }, [loggedInUserId]);
 
   const containerVariants = {
@@ -397,14 +378,11 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
     "Sunday",
   ];
 
-  const totalConsultations = ConsultationFetch.length;
-  const scheduledCount = ConsultationFetch.filter(
-    (c) => c.approval_name === "Scheduled"
-  ).length;
-  const completedCount = ConsultationFetch.filter(
+  const totalConsultations = fetchbooking.length;
+  const completedCount = fetchbooking.filter(
     (c) => c.approval_name === "Completed"
   ).length;
-  const cancelledCount = ConsultationFetch.filter(
+  const cancelledCount = fetchbooking.filter(
     (c) => c.approval_name === "Cancelled"
   ).length;
 
@@ -432,7 +410,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
         {currentView === "dashboard" && (
           <>
             {/* Top Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {/* Total Consultations */}
               <motion.div
                 variants={itemVariants}
@@ -448,24 +426,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
                 </div>
                 <div className="bg-green-800 text-white p-3 rounded-full">
                   <FaClipboardList className="text-xl" />
-                </div>
-              </motion.div>
-
-              {/* Scheduled */}
-              <motion.div
-                variants={itemVariants}
-                className="border bg-white p-5 h-25 rounded-lg shadow flex justify-between items-center"
-              >
-                <div>
-                  <p className="text-sm text-green-800 font-semibold">
-                    Scheduled
-                  </p>
-                  <h2 className="text-2xl font-bold text-green-800">
-                    {scheduledCount}
-                  </h2>
-                </div>
-                <div className="bg-green-800 text-white p-3 rounded-full">
-                  <FaCalendarCheck className="text-xl" />
                 </div>
               </motion.div>
 
@@ -775,20 +735,6 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/facultyside/teacher-
                 </div>
               </motion.div>
             </div>
-
-            <ToastContainer
-              position="top-right"
-              autoClose={1000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="light"
-              transition={Bounce}
-            />
           </>
         )}
 

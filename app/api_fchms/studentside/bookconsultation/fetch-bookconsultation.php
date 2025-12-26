@@ -22,6 +22,8 @@ try {
         CONCAT(tr.start_time, ' - ', tr.end_time) AS time_range,
         a.approval_name,
         sb.schedulebookings_id,
+        sb.discussion,
+        sb.recommendation,
         COALESCE(fc.feedback_count, 0) AS feedback_count
     FROM tbl_booking b
     JOIN tbl_students s ON b.student_id = s.student_id
@@ -42,6 +44,7 @@ try {
 
 
     $params = [];
+    $feedback_user_id = null;
 
     // ✅ Only show records related to a specific student_id
     if (isset($_GET['student_id']) && intval($_GET['student_id']) > 0) {
@@ -53,6 +56,7 @@ try {
     if (isset($_GET['user_id']) && intval($_GET['user_id']) > 0) {
         $query .= " AND f.user_id = :user_id";
         $params[':user_id'] = intval($_GET['user_id']);
+        $feedback_user_id = intval($_GET['user_id']);
     }
 
     $query .= " ORDER BY b.booking_date DESC";
@@ -65,6 +69,46 @@ try {
 
     $stmt->execute();
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Add user_feedback_count to each result if user_id was provided
+    if ($feedback_user_id !== null && !empty($results)) {
+        $scheduleIds = array_filter(array_column($results, 'schedulebookings_id'));
+        if (!empty($scheduleIds)) {
+            $placeholders = implode(',', array_fill(0, count($scheduleIds), '?'));
+            $userFeedbackQuery = "SELECT schedulebookings_id, COUNT(*) AS user_feedback_count 
+                                  FROM tbl_feedback 
+                                  WHERE schedulebookings_id IN ($placeholders) AND user_id = ?
+                                  GROUP BY schedulebookings_id";
+            $userFeedbackStmt = $conn->prepare($userFeedbackQuery);
+            $userFeedbackStmt->execute(array_merge($scheduleIds, [$feedback_user_id]));
+            $userFeedbackCounts = $userFeedbackStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Create a map for quick lookup
+            $userFeedbackMap = [];
+            foreach ($userFeedbackCounts as $ufc) {
+                $userFeedbackMap[$ufc['schedulebookings_id']] = intval($ufc['user_feedback_count']);
+            }
+            
+            // Add user_feedback_count to each result
+            foreach ($results as &$result) {
+                $scheduleId = $result['schedulebookings_id'];
+                $result['user_feedback_count'] = isset($userFeedbackMap[$scheduleId]) ? $userFeedbackMap[$scheduleId] : 0;
+            }
+            unset($result);
+        } else {
+            // No schedulebookings_id found, set all to 0
+            foreach ($results as &$result) {
+                $result['user_feedback_count'] = 0;
+            }
+            unset($result);
+        }
+    } else {
+        // No user_id provided, set all to 0
+        foreach ($results as &$result) {
+            $result['user_feedback_count'] = 0;
+        }
+        unset($result);
+    }
 
     echo json_encode([
         "success" => true,
