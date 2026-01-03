@@ -50,6 +50,9 @@ export default function AdminLogin() {
   // use snake_case consistently
   const [student_email, setStudent_Email] = useState("");
   const [student_password, setStudent_Password] = useState("");
+  // Separate state for create account form to avoid conflicts with login form
+  const [createAccountEmail, setCreateAccountEmail] = useState("");
+  const [createAccountPassword, setCreateAccountPassword] = useState("");
 
   const [preview, setPreview] = useState(null);
   const [photo, setPhoto] = useState(null);
@@ -412,7 +415,7 @@ export default function AdminLogin() {
     e.preventDefault();
 
     // ✅ Validate email before submit
-    const emailValidationError = validateEmail(student_email);
+    const emailValidationError = validateEmail(createAccountEmail);
     if (emailValidationError) {
       setEmailError(emailValidationError);
       return;
@@ -421,7 +424,7 @@ export default function AdminLogin() {
     }
 
     // ✅ Validate password before submit
-    const error = validatePassword(student_password);
+    const error = validatePassword(createAccountPassword);
     if (error) {
       setPasswordError(error);
       return;
@@ -431,8 +434,8 @@ export default function AdminLogin() {
 
     const formData = new FormData();
     formData.append("studentname", studentname);
-    formData.append("studentpassword", student_password);
-    formData.append("studentemail", student_email);
+    formData.append("studentpassword", createAccountPassword);
+    formData.append("studentemail", createAccountEmail);
     formData.append("studentage", age);
     formData.append("studentcontact", contact);
     formData.append("studentcourse", selectedcourse);
@@ -460,14 +463,15 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/studentside/add-stud
         setPhoto(null);
         setPreview(null);
         setStudentname("");
-        setStudent_Password("");
-        setStudent_Email("");
+        setCreateAccountPassword("");
+        setCreateAccountEmail("");
         setAge("");
         setContact("");
         setselectedcourse("");
         setselectedyearlevel("");
         setEmailError("");
         setPasswordError("");
+        setPasswordStrength("");
 
         // ✅ Close dialog
         setStudentDialogOpen(false);
@@ -688,12 +692,13 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.
                   <button
                     type="button"
                     onClick={generateCaptcha}
+                    suppressHydrationWarning
                     className="p-2 sm:p-3 bg-green-800 hover:bg-green-900 text-white rounded-md shadow-xl flex-shrink-0 -ml-0.5 sm:ml-0"
                   >
                     <FiRefreshCcw size={18} className="sm:w-5 sm:h-5" />
                   </button>
                 </div>
-                <motion.input
+                <Input
                   type="text"
                   value={captchaInput}
                   onChange={(e) => setCaptchaInput(e.target.value)}
@@ -718,6 +723,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.
               <motion.div className="flex justify-between items-center mt-4">
                 {activeRole === "faculty" ? (
                   <Button
+                    type="button"
                     variant="link"
                     className="text-sm text-green-800 font-semibold p-0"
                     onClick={(e) => {
@@ -729,6 +735,7 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.
                   </Button>
                 ) : (
                   <Button
+                    type="button"
                     variant="link"
                     className="text-sm text-green-800 font-semibold p-0"
                     onClick={(e) => {
@@ -741,9 +748,11 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.
                 )}
 
                 <Button
+                  type="button"
                   variant="link"
                   className="text-sm text-black-600 p-0"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     if (activeRole === "faculty") {
                       router.push("/forgotpassword-facultyemailform");
                     } else {
@@ -860,8 +869,18 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.
                           placeholder="Enter contact number"
                           className="mt-2"
                           value={contact}
-                          onChange={(e) => setContact(e.target.value)}
+                          maxLength={11}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Only allow digits and limit to 11 characters
+                            if (value === "" || (/^\d+$/.test(value) && value.length <= 11)) {
+                              setContact(value);
+                            }
+                          }}
                         />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Maximum 11 digits
+                        </p>
                       </div>
 
                       {/* Email */}
@@ -872,9 +891,9 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.
                           type="email"
                           placeholder="Enter student email (@phinmaed.com)"
                           className="mt-2"
-                          value={student_email}
+                          value={createAccountEmail}
                           onChange={(e) => {
-                            setStudent_Email(e.target.value);
+                            setCreateAccountEmail(e.target.value);
                             // Clear error when user starts typing
                             if (emailError) setEmailError("");
                           }}
@@ -894,10 +913,10 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/course/fetch-course.
                           type="password"
                           placeholder="Enter password"
                           className="mt-2"
-                          value={student_password}
+                          value={createAccountPassword}
                           onChange={(e) => {
                             const pwd = e.target.value;
-                            setStudent_Password(pwd);
+                            setCreateAccountPassword(pwd);
                             setPasswordStrength(checkPasswordStrength(pwd));
                           }}
                         />

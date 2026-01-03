@@ -458,10 +458,18 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/yearlevel/fetch-year
               <Label>Contact</Label>
               <Input
                 value={studentData.contact}
-                onChange={(e) =>
-                  setStudentData({ ...studentData, contact: e.target.value })
-                }
+                maxLength={11}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Only allow digits and limit to 11 characters
+                  if (value === "" || (/^\d+$/.test(value) && value.length <= 11)) {
+                    setStudentData({ ...studentData, contact: value });
+                  }
+                }}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Maximum 11 digits
+              </p>
 
               <Label>Age</Label>
               <Input

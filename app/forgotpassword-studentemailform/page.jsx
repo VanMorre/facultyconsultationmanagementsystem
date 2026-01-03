@@ -85,10 +85,12 @@ export default function ForgotPasswordStudentEmailForm() {
             placeholder="Enter your student email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            suppressHydrationWarning
             className="w-full border border-green-800 rounded-lg px-4 py-2 md:py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-green-600 text-sm md:text-base"
           />
           <button
             onClick={handleVerifyEmail}
+            suppressHydrationWarning
             className="w-full bg-green-800 text-white py-2 md:py-3 rounded-lg hover:bg-green-700 transition text-base md:text-lg"
           >
             Verify Email

@@ -563,14 +563,22 @@ ${process.env.NEXT_PUBLIC_API_BASE_URL}/fchms/app/api_fchms/useraccounts/changep
                   </Label>
                   <Input
                     value={UserData.contact}
-                    onChange={(e) =>
-                      setUserData({
-                        ...UserData,
-                        contact: e.target.value,
-                      })
-                    }
+                    maxLength={11}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Only allow digits and limit to 11 characters
+                      if (value === "" || (/^\d+$/.test(value) && value.length <= 11)) {
+                        setUserData({
+                          ...UserData,
+                          contact: value,
+                        });
+                      }
+                    }}
                     className="bg-white border border-gray-300 rounded-lg px-4 py-2"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Maximum 11 digits
+                  </p>
                 </div>
 
                 {/* Address */}
