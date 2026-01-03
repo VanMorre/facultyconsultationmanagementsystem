@@ -1,0 +1,33 @@
+FACULTY ACCOUNTS 
+
+ADMIN: 
+email:darwingaludo@phinmaed.com
+pass: darwingaludo	
+
+email:jaylarosa@phinmaed.com	
+pass: jaylarosa
+	
+email:maamololor@phinmaed.om
+pass: maamololor123
+
+
+
+FACULTY ACCOUNTS 
+ANG PASSWORD NILA IS ILANG NAME NAAY 123 all accounts na siya naay 123 ang password
+
+Example:
+Email:clairedragon@phinmaed.com
+pass: clairedragon123 
+
+
+
+
+
+
+Student side sample account
+
+email:banbanguangco@phinmaed.com
+pass: banbanguangco1234	
+
+email:keithcaparases@phinmaed.com
+pass: keithcaparas123
